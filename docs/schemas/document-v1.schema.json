@@ -1,0 +1,303 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://designforge.ai/schemas/v1/document",
+  "title": "DesignForge AI Document Schema v1",
+  "description": "Canonical document model schema for a DesignForge AI project",
+  "type": "object",
+  "required": ["schemaVersion", "id", "name", "pages", "components", "tokens", "assets"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "1.0.0" },
+    "id": { "type": "string", "description": "Stable project UUID" },
+    "name": { "type": "string" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "appVersion": { "type": "string" },
+    "exportProfile": {
+      "type": "object",
+      "properties": {
+        "framework": { "type": "string", "enum": ["react-vite-css", "react-vite-cssmodules", "react-tailwind", "nextjs-approuter"] },
+        "typescript": { "type": "boolean" },
+        "customComponentLibrary": { "type": "string" }
+      }
+    },
+    "pages": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Page" }
+    },
+    "components": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/ComponentDefinition" }
+    },
+    "tokens": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/TokenCollection" }
+    },
+    "assets": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/AssetRecord" }
+    }
+  },
+  "definitions": {
+    "Page": {
+      "type": "object",
+      "required": ["id", "name", "nodes", "rootIds"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "background": { "type": "string" },
+        "nodes": {
+          "type": "object",
+          "description": "Normalized node map keyed by NodeId",
+          "additionalProperties": { "$ref": "#/definitions/Node" }
+        },
+        "rootIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ordered root-level node IDs on this page"
+        },
+        "route": { "type": "string", "description": "Web route for website projects" },
+        "seo": { "$ref": "#/definitions/SEOMeta" }
+      }
+    },
+    "Node": {
+      "type": "object",
+      "required": ["id", "type", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["frame", "section", "group", "rectangle", "ellipse", "vector", "text", "image", "component-instance", "component-definition", "line", "boolean-operation"]
+        },
+        "name": { "type": "string" },
+        "parentId": { "type": ["string", "null"] },
+        "childIds": { "type": "array", "items": { "type": "string" } },
+        "visible": { "type": "boolean", "default": true },
+        "locked": { "type": "boolean", "default": false },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1, "default": 1 },
+        "transform": { "$ref": "#/definitions/Transform" },
+        "layout": { "$ref": "#/definitions/LayoutConfig" },
+        "style": { "$ref": "#/definitions/StyleSet" },
+        "text": { "$ref": "#/definitions/TextConfig" },
+        "componentRef": { "type": "string", "description": "ComponentDefinition ID if this is an instance" },
+        "componentOverrides": { "type": "object", "description": "Property overrides for component instances" },
+        "interactions": { "type": "array", "items": { "$ref": "#/definitions/Interaction" } },
+        "tokenBindings": {
+          "type": "object",
+          "description": "Maps style property paths to token IDs",
+          "additionalProperties": { "type": "string" }
+        },
+        "metadata": { "type": "object" },
+        "semanticTag": { "type": "string", "description": "HTML semantic tag hint (nav, main, button, etc.)" },
+        "accessibilityLabel": { "type": "string" }
+      }
+    },
+    "Transform": {
+      "type": "object",
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "minimum": 0 },
+        "height": { "type": "number", "minimum": 0 },
+        "rotation": { "type": "number", "default": 0 },
+        "scaleX": { "type": "number", "default": 1 },
+        "scaleY": { "type": "number", "default": 1 }
+      }
+    },
+    "LayoutConfig": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["none", "stack-horizontal", "stack-vertical", "grid", "absolute"],
+          "default": "none"
+        },
+        "paddingTop": { "type": "number" },
+        "paddingRight": { "type": "number" },
+        "paddingBottom": { "type": "number" },
+        "paddingLeft": { "type": "number" },
+        "gap": { "type": "number" },
+        "columnGap": { "type": "number" },
+        "rowGap": { "type": "number" },
+        "mainAxisAlignment": { "type": "string", "enum": ["start", "center", "end", "space-between", "space-around"] },
+        "crossAxisAlignment": { "type": "string", "enum": ["start", "center", "end", "stretch"] },
+        "sizing": { "type": "string", "enum": ["fixed", "fill", "hug"] },
+        "widthSizing": { "type": "string", "enum": ["fixed", "fill", "hug"] },
+        "heightSizing": { "type": "string", "enum": ["fixed", "fill", "hug"] },
+        "minWidth": { "type": "number" },
+        "maxWidth": { "type": "number" },
+        "minHeight": { "type": "number" },
+        "maxHeight": { "type": "number" },
+        "overflow": { "type": "string", "enum": ["visible", "hidden", "scroll"] },
+        "constraintH": { "type": "string", "enum": ["left", "right", "center", "stretch", "scale"] },
+        "constraintV": { "type": "string", "enum": ["top", "bottom", "center", "stretch", "scale"] },
+        "breakpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "minWidth": { "type": "number" },
+              "overrides": { "type": "object" }
+            }
+          }
+        }
+      }
+    },
+    "StyleSet": {
+      "type": "object",
+      "properties": {
+        "fills": { "type": "array", "items": { "$ref": "#/definitions/Fill" } },
+        "strokes": { "type": "array", "items": { "$ref": "#/definitions/Stroke" } },
+        "effects": { "type": "array", "items": { "$ref": "#/definitions/Effect" } },
+        "cornerRadius": { "type": "number" },
+        "cornerRadii": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 },
+        "blendMode": { "type": "string" },
+        "clipContent": { "type": "boolean" }
+      }
+    },
+    "Fill": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["solid", "linear-gradient", "radial-gradient", "image"] },
+        "color": { "type": "string" },
+        "opacity": { "type": "number" },
+        "gradient": { "type": "object" },
+        "assetId": { "type": "string" }
+      }
+    },
+    "Stroke": {
+      "type": "object",
+      "properties": {
+        "color": { "type": "string" },
+        "width": { "type": "number" },
+        "position": { "type": "string", "enum": ["inside", "outside", "center"] },
+        "dashArray": { "type": "array", "items": { "type": "number" } }
+      }
+    },
+    "Effect": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["drop-shadow", "inner-shadow", "blur", "background-blur"] },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "blur": { "type": "number" },
+        "spread": { "type": "number" },
+        "color": { "type": "string" }
+      }
+    },
+    "TextConfig": {
+      "type": "object",
+      "properties": {
+        "content": { "type": "string" },
+        "fontFamily": { "type": "string" },
+        "fontWeight": { "type": ["string", "number"] },
+        "fontSize": { "type": "number" },
+        "lineHeight": { "type": ["number", "string"] },
+        "letterSpacing": { "type": "number" },
+        "textAlign": { "type": "string", "enum": ["left", "center", "right", "justify"] },
+        "textDecoration": { "type": "string" },
+        "textTransform": { "type": "string" },
+        "color": { "type": "string" },
+        "paragraphSpacing": { "type": "number" }
+      }
+    },
+    "Interaction": {
+      "type": "object",
+      "required": ["id", "trigger", "action"],
+      "properties": {
+        "id": { "type": "string" },
+        "trigger": { "type": "string", "enum": ["click", "hover", "focus", "press", "scroll", "timer", "drag"] },
+        "condition": { "type": "string" },
+        "action": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["navigate", "open-overlay", "close-overlay", "change-variant", "set-state", "scroll-to", "animation"] },
+            "targetId": { "type": "string" },
+            "transition": { "$ref": "#/definitions/Transition" }
+          }
+        }
+      }
+    },
+    "Transition": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["instant", "dissolve", "slide", "push", "move-in", "smart-animate"] },
+        "duration": { "type": "number" },
+        "easing": { "type": "string", "enum": ["ease", "ease-in", "ease-out", "ease-in-out", "linear", "spring"] }
+      }
+    },
+    "ComponentDefinition": {
+      "type": "object",
+      "required": ["id", "name", "rootNodeId"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "rootNodeId": { "type": "string" },
+        "properties": { "type": "array", "items": { "$ref": "#/definitions/ComponentProperty" } },
+        "variants": { "type": "array", "items": { "$ref": "#/definitions/VariantSet" } },
+        "version": { "type": "string" }
+      }
+    },
+    "ComponentProperty": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["boolean", "text", "instance-swap", "variant"] },
+        "defaultValue": {}
+      }
+    },
+    "VariantSet": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "values": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "TokenCollection": {
+      "type": "object",
+      "required": ["id", "name", "tokens"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "modes": { "type": "array", "items": { "type": "string" } },
+        "tokens": { "type": "array", "items": { "$ref": "#/definitions/DesignToken" } }
+      }
+    },
+    "DesignToken": {
+      "type": "object",
+      "required": ["id", "name", "type"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["color", "dimension", "font-family", "font-weight", "font-size", "line-height", "letter-spacing", "duration", "number", "string", "border-radius"] },
+        "value": {},
+        "aliasTokenId": { "type": "string", "description": "References another token by ID" },
+        "modeValues": { "type": "object", "description": "Mode-keyed values for light/dark etc." },
+        "description": { "type": "string" }
+      }
+    },
+    "AssetRecord": {
+      "type": "object",
+      "required": ["id", "name", "type"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["image", "svg", "font", "video"] },
+        "mimeType": { "type": "string" },
+        "dataUrl": { "type": "string", "description": "Base64 data URL for embedded assets" },
+        "externalUrl": { "type": "string" },
+        "width": { "type": "number" },
+        "height": { "type": "number" }
+      }
+    },
+    "SEOMeta": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "ogImage": { "type": "string" },
+        "canonicalUrl": { "type": "string" }
+      }
+    }
+  }
+}
