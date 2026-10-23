@@ -153,6 +153,70 @@ export class CentralInputRouter {
       return;
     }
 
+    // Layer Reordering: Cmd/Ctrl + [ / ] (Figma Parity)
+    if (isCmdOrCtrl && (e.key === ']' || e.key === '}')) {
+      e.preventDefault();
+      const sel = this.app.engine?.getSelection ? this.app.engine.getSelection() : [];
+      if (sel.length > 0) {
+        const dir = (e.shiftKey || e.altKey) ? 'top' : 'up';
+        for (const id of sel) {
+          this.app.engine.reorderNode(id, dir);
+        }
+        this.app.renderer?.render();
+        if (this.app.updateLayersTree) this.app.updateLayersTree();
+      }
+      return;
+    }
+    if (isCmdOrCtrl && (e.key === '[' || e.key === '{')) {
+      e.preventDefault();
+      const sel = this.app.engine?.getSelection ? this.app.engine.getSelection() : [];
+      if (sel.length > 0) {
+        const dir = (e.shiftKey || e.altKey) ? 'bottom' : 'down';
+        for (const id of [...sel].reverse()) {
+          this.app.engine.reorderNode(id, dir);
+        }
+        this.app.renderer?.render();
+        if (this.app.updateLayersTree) this.app.updateLayersTree();
+      }
+      return;
+    }
+
+    // Group / Ungroup: Cmd/Ctrl + G / Cmd/Ctrl + Shift + G
+    if (isCmdOrCtrl && (e.key === 'g' || e.key === 'G')) {
+      e.preventDefault();
+      const sel = this.app.engine?.getSelection ? this.app.engine.getSelection() : [];
+      if (e.shiftKey) {
+        // Ungroup
+        if (sel.length > 0) {
+          for (const id of sel) {
+            this.app.engine?.ungroupNode(id);
+          }
+          this.app.renderer?.render();
+          if (this.app.updateInspector) this.app.updateInspector();
+          if (this.app.updateLayersTree) this.app.updateLayersTree();
+        }
+      } else {
+        // Group
+        if (sel.length > 0) {
+          this.app.engine?.groupNodes(sel);
+          this.app.renderer?.render();
+          if (this.app.updateInspector) this.app.updateInspector();
+          if (this.app.updateLayersTree) this.app.updateLayersTree();
+        }
+      }
+      return;
+    }
+
+    // Rename Layer: Cmd/Ctrl + R
+    if (isCmdOrCtrl && (e.key === 'r' || e.key === 'R')) {
+      e.preventDefault();
+      const sel = this.app.engine?.getSelection ? this.app.engine.getSelection() : [];
+      if (sel.length > 0 && this.app.enterLayerRename) {
+        this.app.enterLayerRename(sel[0]);
+      }
+      return;
+    }
+
     // Tool activation shortcuts
     const switchTool = (t) => {
       if (this.app.setTool) this.app.setTool(t);

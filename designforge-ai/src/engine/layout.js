@@ -226,3 +226,97 @@ export function findSnapGuides(page, activeBounds, activeIds = [], threshold = 6
 
   return { snapX, snapY, guides };
 }
+
+/**
+ * Compute absolute world coordinates (x, y) for a node by traversing ancestor chain
+ */
+export function computeWorldTransform(page, nodeId) {
+  let x = 0;
+  let y = 0;
+  let curr = page.nodes[nodeId];
+  while (curr) {
+    x += (curr.transform?.x || 0);
+    y += (curr.transform?.y || 0);
+    curr = curr.parentId ? page.nodes[curr.parentId] : null;
+  }
+  return { x, y };
+}
+
+/**
+ * Checks whether candidateId is a descendant of ancestorId
+ */
+export function isDescendant(page, candidateId, ancestorId) {
+  if (!candidateId || !ancestorId) return false;
+  let curr = page.nodes[candidateId];
+  while (curr && curr.parentId) {
+    if (curr.parentId === ancestorId) return true;
+    curr = page.nodes[curr.parentId];
+  }
+  return false;
+}
+
+/**
+ * Checks if a parent container can legally contain a child node type (Section 4.2 rules)
+ */
+export function canContain(parentType, childType) {
+  if (childType === 'section') {
+    // A section can ONLY be a child of a page (parentType is null or 'page')
+    return parentType === null || parentType === 'page';
+  }
+  if (parentType === 'section') {
+    // A section can contain frames, groups, components, shapes, text, but NEVER sections
+    return childType !== 'section';
+  }
+  const LEAF_TYPES = ['rectangle', 'ellipse', 'line', 'arrow', 'polygon', 'star', 'text', 'vector', 'slice'];
+  if (LEAF_TYPES.includes(parentType)) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Resolves the target parent container under a given canvas pointer coordinate (Section 4.3)
+ */
+export function resolveParentForPointer(pointerX, pointerY, childType, page, excludeNodeIds = []) {
+  if (childType === 'section' || !page) {
+    return null; // Sections always live directly on page canvas
+  }
+
+  const excludeSet = new Set(Array.isArray(excludeNodeIds) ? excludeNodeIds : [excludeNodeIds].filter(Boolean));
+  for (const excId of Array.from(excludeSet)) {
+    for (const [id] of Object.entries(page.nodes || {})) {
+      if (isDescendant(page, id, excId)) excludeSet.add(id);
+    }
+  }
+
+  const candidates = [];
+
+  // Traverse tree to find all containers under pointer
+  const checkContainer = (nodeId, depth = 0) => {
+    if (excludeSet.has(nodeId)) return;
+    const node = page.nodes[nodeId];
+    if (!node || !canContain(node.type, childType)) return;
+
+    const b = computeWorldBounds(page, nodeId);
+    if (b && pointerX >= b.x && pointerX <= b.x + b.width && pointerY >= b.y && pointerY <= b.y + b.height) {
+      candidates.push({ id: nodeId, depth, type: node.type, area: b.width * b.height });
+      if (node.childIds) {
+        for (const cid of node.childIds) {
+          checkContainer(cid, depth + 1);
+        }
+      }
+    }
+  };
+
+  if (page.rootIds) {
+    for (const rid of page.rootIds) {
+      checkContainer(rid, 0);
+    }
+  }
+
+  if (candidates.length === 0) return null;
+
+  // Deepest container first; if equal depth, smallest area
+  candidates.sort((a, b) => b.depth - a.depth || a.area - b.area);
+  return candidates[0].id;
+}

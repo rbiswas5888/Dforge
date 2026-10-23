@@ -21,7 +21,7 @@ import { AIEngine } from './engine/ai.js';
 import { ReactCompiler } from './engine/compiler.js';
 import { PrototypeEngine } from './engine/prototype.js';
 import { StorageEngine } from './engine/storage.js';
-import { computeWorldBounds, findSnapGuides } from './engine/layout.js';
+import { computeWorldBounds, findSnapGuides, computeWorldTransform, isDescendant, canContain, resolveParentForPointer } from './engine/layout.js';
 import { DesignSystemLinter } from './engine/linter.js';
 import { InspectCodeGenerator } from './engine/inspect_generator.js';
 import { CommandPaletteEngine } from './engine/palette.js';
@@ -1358,6 +1358,24 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             };
           });
           this.engine.commitMove(moves, 'Move objects');
+
+          // Figma-parity auto-reparenting when dragging across container boundaries on canvas
+          // Suppressed if holding Cmd/Ctrl key
+          const isCmdOrCtrl = window.event?.ctrlKey || window.event?.metaKey;
+          if (!isCmdOrCtrl) {
+            const page = engine.getActivePage();
+            for (const pos of this.dragState.initialPositions) {
+              const cur = engine.getNode(pos.id);
+              if (!cur || cur.type === 'section') continue;
+              const b = computeWorldBounds(page, cur.id);
+              if (b) {
+                const targetParentId = resolveParentForPointer(b.x + b.width / 2, b.y + b.height / 2, cur.type, page, [cur.id]);
+                if (targetParentId !== (cur.parentId || null)) {
+                  this.engine.reparent(cur.id, targetParentId);
+                }
+              }
+            }
+          }
         }
       } else if (this.dragState.type === 'resize') {
         const cur = engine.getNode(this.dragState.nodeId);
@@ -1533,7 +1551,20 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     }
 
     if (node) {
-      this.engine.addNode(node, null, `Create ${node.name}`);
+      let targetParentId = null;
+      if (node.type !== 'section') {
+        const page = this.engine.getActivePage();
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+        targetParentId = resolveParentForPointer(centerX, centerY, node.type, page);
+        if (targetParentId) {
+          const parentWorld = computeWorldTransform(page, targetParentId);
+          node.transform.x = x - parentWorld.x;
+          node.transform.y = y - parentWorld.y;
+          node.parentId = targetParentId;
+        }
+      }
+      this.engine.addNode(node, targetParentId, `Create ${node.name}`);
       this.engine.setSelection([node.id]);
     }
   }
@@ -3760,7 +3791,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       return;
     }
 
+    const visibleLayerIds = [];
     let html = '';
+
     const renderLayerItem = (nodeId, depth = 0) => {
       const node = page.nodes[nodeId];
       if (!node) return;
@@ -3772,6 +3805,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         }
         return;
       }
+
+      visibleLayerIds.push(nodeId);
 
       const isSelected = selectedIds.includes(nodeId);
       const hasChildren = node.childIds && node.childIds.length > 0;
@@ -3789,7 +3824,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       const paddingLeft = 6 + depth * 14;
 
       html += `
-        <div class="layer-item ${isSelected ? 'selected' : ''}" data-node-id="${node.id}" style="padding-left: ${paddingLeft}px;">
+        <div class="layer-item ${isSelected ? 'selected' : ''}" data-node-id="${node.id}" draggable="true" style="padding-left: ${paddingLeft}px;">
           ${hasChildren ? `
             <span class="layer-chevron" data-chevron-id="${node.id}" title="${isCollapsed ? 'Expand' : 'Collapse'}">${isCollapsed ? '▸' : '▾'}</span>
           ` : `<span style="width: 14px; display: inline-block;"></span>`}
@@ -3830,9 +3865,11 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       if (emptyFiltered) emptyFiltered.style.display = 'none';
     }
 
-    // Bind item click listeners
+    // Bind item click & drag listeners
     list.querySelectorAll('.layer-item').forEach(item => {
       const id = item.dataset.nodeId;
+      const node = page.nodes[id];
+      if (!node) return;
 
       // Chevron toggle
       item.querySelector('.layer-chevron')?.addEventListener('click', (e) => {
@@ -3846,7 +3883,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         this.updateLayersTree();
       });
 
-      // Layer click (selection, visibility, lock)
+      // Layer click (selection, visibility, lock, Shift-range, Cmd/Ctrl-toggle)
       item.addEventListener('click', (e) => {
         if (e.target.closest('.layer-chevron')) return;
         if (e.target.classList.contains('toggle-vis')) {
@@ -3859,10 +3896,20 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           this.engine.toggleLock(id);
           return;
         }
-        if (e.shiftKey) {
+
+        if (e.shiftKey && this.lastClickedLayerId && visibleLayerIds.includes(this.lastClickedLayerId)) {
+          const idx1 = visibleLayerIds.indexOf(this.lastClickedLayerId);
+          const idx2 = visibleLayerIds.indexOf(id);
+          const start = Math.min(idx1, idx2);
+          const end = Math.max(idx1, idx2);
+          const range = visibleLayerIds.slice(start, end + 1);
+          this.engine.setSelection(range);
+        } else if (e.metaKey || e.ctrlKey) {
           this.engine.selectToggle(id);
+          this.lastClickedLayerId = id;
         } else {
           this.engine.setSelection([id]);
+          this.lastClickedLayerId = id;
         }
       });
 
@@ -3871,43 +3918,273 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       if (nameSpan) {
         nameSpan.addEventListener('dblclick', (e) => {
           e.stopPropagation();
-          const node = this.engine.getNode(id);
-          if (!node) return;
-          const prevName = node.name;
-
-          const input = document.createElement('input');
-          input.type = 'text';
-          input.className = 'layer-inline-rename-input';
-          input.value = prevName;
-          nameSpan.replaceWith(input);
-          input.focus();
-          input.select();
-
-          let committed = false;
-          const commit = () => {
-            if (committed) return;
-            committed = true;
-            const newName = input.value.trim();
-            if (newName && newName !== prevName) {
-              this.engine.updateNode(id, { name: newName }, 'Rename layer');
-            }
-            this.updateLayersTree();
-          };
-
-          input.addEventListener('keydown', (ke) => {
-            if (ke.key === 'Enter') {
-              ke.preventDefault();
-              commit();
-            } else if (ke.key === 'Escape') {
-              ke.preventDefault();
-              committed = true;
-              this.updateLayersTree();
-            }
-          });
-          input.addEventListener('blur', commit);
+          this.enterLayerRename(id);
         });
       }
+
+      // Dragstart
+      item.addEventListener('dragstart', (e) => {
+        let dragged = this.engine.getSelection();
+        if (!dragged.includes(id)) {
+          this.engine.setSelection([id]);
+          dragged = [id];
+        }
+        this.layerDragState = {
+          draggedIds: [...dragged],
+          sourceId: id
+        };
+
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'copyMove';
+        try {
+          e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'designforge/layers', ids: dragged }));
+        } catch (_) {}
+
+        // Create drag ghost badge
+        const ghost = document.createElement('div');
+        ghost.className = 'layer-drag-ghost';
+        const label = dragged.length > 1 ? `${dragged.length} layers` : (node.name || 'Layer');
+        ghost.textContent = label;
+        document.body.appendChild(ghost);
+        if (e.dataTransfer.setDragImage) {
+          e.dataTransfer.setDragImage(ghost, 12, 12);
+        }
+        setTimeout(() => ghost.remove(), 0);
+      });
+
+      // Dragover
+      item.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!this.layerDragState) return;
+        const { draggedIds } = this.layerDragState;
+
+        // Auto-scroll near top/bottom edges of layers list (8px per frame)
+        const listRect = list.getBoundingClientRect();
+        if (e.clientY < listRect.top + 40) {
+          list.scrollTop -= 8;
+        } else if (e.clientY > listRect.bottom - 40) {
+          list.scrollTop += 8;
+        }
+
+        const targetId = id;
+        const targetNode = page.nodes[targetId];
+        if (!targetNode) return;
+
+        // Invariant check: Cannot drop into self or descendant
+        const isForbidden = draggedIds.includes(targetId) || draggedIds.some(dId => isDescendant(page, targetId, dId));
+        if (isForbidden) {
+          item.classList.add('drop-forbidden');
+          item.classList.remove('drop-above', 'drop-below', 'drop-inside');
+          item.dataset.dropZone = 'forbidden';
+          e.dataTransfer.dropEffect = 'none';
+          return;
+        }
+
+        // Calculate quarter zones (Top 25%, Middle 50%, Bottom 25%)
+        const rect = item.getBoundingClientRect();
+        const relY = e.clientY - rect.top;
+        const ratio = relY / rect.height;
+        const isContainer = ['section', 'frame', 'group', 'component'].includes(targetNode.type);
+
+        item.classList.remove('drop-forbidden', 'drop-above', 'drop-below', 'drop-inside');
+
+        if (ratio < 0.25) {
+          item.classList.add('drop-above');
+          item.dataset.dropZone = 'above';
+        } else if (ratio > 0.75) {
+          item.classList.add('drop-below');
+          item.dataset.dropZone = 'below';
+        } else {
+          // Middle 50%
+          if (isContainer) {
+            // Container check: can target contain all dragged types?
+            const allAllowed = draggedIds.every(dId => {
+              const dn = page.nodes[dId];
+              return dn ? canContain(targetNode.type, dn.type) : true;
+            });
+            if (allAllowed) {
+              item.classList.add('drop-inside');
+              item.dataset.dropZone = 'inside';
+
+              // Auto-expand on hover > 600ms
+              if (this.collapsedNodeIds.has(targetId)) {
+                if (this.hoveredContainerId !== targetId) {
+                  clearTimeout(this.layerHoverTimer);
+                  this.hoveredContainerId = targetId;
+                  this.layerHoverTimer = setTimeout(() => {
+                    if (this.hoveredContainerId === targetId && this.collapsedNodeIds.has(targetId)) {
+                      this.collapsedNodeIds.delete(targetId);
+                      this.updateLayersTree();
+                    }
+                  }, 600);
+                }
+              }
+            } else {
+              item.classList.add('drop-forbidden');
+              item.dataset.dropZone = 'forbidden';
+              e.dataTransfer.dropEffect = 'none';
+              return;
+            }
+          } else {
+            // Non-container: nearest edge
+            if (ratio < 0.5) {
+              item.classList.add('drop-above');
+              item.dataset.dropZone = 'above';
+            } else {
+              item.classList.add('drop-below');
+              item.dataset.dropZone = 'below';
+            }
+          }
+        }
+
+        e.dataTransfer.dropEffect = e.altKey ? 'copy' : 'move';
+      });
+
+      // Dragleave
+      item.addEventListener('dragleave', () => {
+        item.classList.remove('drop-above', 'drop-below', 'drop-inside', 'drop-forbidden');
+        if (this.hoveredContainerId === id) {
+          clearTimeout(this.layerHoverTimer);
+          this.hoveredContainerId = null;
+        }
+      });
+
+      // Drop
+      item.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        clearTimeout(this.layerHoverTimer);
+        this.hoveredContainerId = null;
+
+        const zone = item.dataset.dropZone;
+        item.classList.remove('drop-above', 'drop-below', 'drop-inside', 'drop-forbidden');
+
+        if (!this.layerDragState || zone === 'forbidden') {
+          this.layerDragState = null;
+          return;
+        }
+
+        const { draggedIds } = this.layerDragState;
+        this.layerDragState = null;
+
+        const targetNode = page.nodes[id];
+        if (!targetNode || draggedIds.length === 0) return;
+
+        // Alt/Option key duplication
+        let nodesToOperate = draggedIds;
+        if (e.altKey) {
+          nodesToOperate = this.engine.duplicateNodes(draggedIds);
+        }
+
+        let targetParentId = null;
+        let targetIndex = null;
+
+        if (zone === 'inside') {
+          targetParentId = targetNode.id;
+          targetIndex = targetNode.childIds ? targetNode.childIds.length : 0;
+        } else {
+          targetParentId = targetNode.parentId || null;
+          const siblingList = targetParentId && page.nodes[targetParentId]
+            ? (page.nodes[targetParentId].childIds || [])
+            : page.rootIds;
+          const targetSiblingIdx = siblingList.indexOf(targetNode.id);
+
+          // Sibling visual order is reversed z-index:
+          // Visual "Above" in panel = higher z-index = after in array (targetSiblingIdx + 1)
+          // Visual "Below" in panel = lower z-index = before in array (targetSiblingIdx)
+          if (zone === 'above') {
+            targetIndex = targetSiblingIdx !== -1 ? targetSiblingIdx + 1 : siblingList.length;
+          } else {
+            targetIndex = targetSiblingIdx !== -1 ? targetSiblingIdx : 0;
+          }
+        }
+
+        this.engine.reparentMultiple(nodesToOperate, targetParentId, targetIndex);
+        this.engine.setSelection(nodesToOperate);
+        this.renderer?.render();
+        this.updateInspector();
+        this.updateLayersTree();
+      });
+
+      // Dragend
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging', 'drop-above', 'drop-below', 'drop-inside', 'drop-forbidden');
+        clearTimeout(this.layerHoverTimer);
+        this.hoveredContainerId = null;
+        this.layerDragState = null;
+        list.querySelectorAll('.layer-item').forEach(el => {
+          el.classList.remove('dragging', 'drop-above', 'drop-below', 'drop-inside', 'drop-forbidden');
+        });
+      });
     });
+
+    // Drop onto empty space in layers list container (reparents to root page level)
+    list.ondragover = (e) => {
+      if (e.target === list || e.target.id === 'layersEmptyState') {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = e.altKey ? 'copy' : 'move';
+      }
+    };
+    list.ondrop = (e) => {
+      if ((e.target === list || e.target.id === 'layersEmptyState') && this.layerDragState) {
+        e.preventDefault();
+        const { draggedIds } = this.layerDragState;
+        this.layerDragState = null;
+        let nodesToMove = draggedIds;
+        if (e.altKey) {
+          nodesToMove = this.engine.duplicateNodes(draggedIds);
+        }
+        this.engine.reparentMultiple(nodesToMove, null, null);
+        this.engine.setSelection(nodesToMove);
+        this.renderer?.render();
+        this.updateInspector();
+        this.updateLayersTree();
+      }
+    };
+  }
+
+  enterLayerRename(nodeId) {
+    const item = document.querySelector(`.layer-item[data-node-id="${nodeId}"]`);
+    if (!item) return;
+    const nameSpan = item.querySelector('.layer-name');
+    if (!nameSpan) return;
+    const node = this.engine.getNode(nodeId);
+    if (!node) return;
+    const prevName = node.name;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'layer-inline-rename-input';
+    input.value = prevName;
+    nameSpan.replaceWith(input);
+    input.focus();
+    input.select();
+
+    let committed = false;
+    const commit = () => {
+      if (committed) return;
+      committed = true;
+      const newName = input.value.trim();
+      if (newName && newName !== prevName) {
+        this.engine.updateNode(nodeId, { name: newName }, 'Rename layer');
+      }
+      this.updateLayersTree();
+    };
+
+    input.addEventListener('keydown', (ke) => {
+      if (ke.key === 'Enter') {
+        ke.preventDefault();
+        commit();
+      } else if (ke.key === 'Escape') {
+        ke.preventDefault();
+        committed = true;
+        this.updateLayersTree();
+      }
+    });
+    input.addEventListener('blur', commit);
   }
 
   renderTokensList() {

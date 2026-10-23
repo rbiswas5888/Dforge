@@ -4,6 +4,7 @@
  */
 
 import { createNode, generateId } from './document.js';
+import { computeWorldTransform, isDescendant, canContain } from './layout.js';
 
 export class CommandEngine {
   constructor(document, activePageId) {
@@ -11,6 +12,7 @@ export class CommandEngine {
     this.activePageId = activePageId || (document.pages[0]?.id ?? null);
     this.undoStack = [];
     this.redoStack = [];
+    this.batchStack = [];
     this.listeners = new Set();
     this.selectedIds = new Set();
     this.maxHistory = 100;
@@ -79,15 +81,97 @@ export class CommandEngine {
   }
 
   /**
+   * Transaction Batch Management
+   */
+  beginBatch(description = 'Batch Transaction') {
+    if (!this.batchStack) this.batchStack = [];
+    this.batchStack.push({ description, inverses: [] });
+  }
+
+  commitBatch() {
+    if (!this.batchStack || this.batchStack.length === 0) return false;
+    const batch = this.batchStack.pop();
+    if (!batch.inverses || batch.inverses.length === 0) return true;
+
+    // If nested batch, bubble up inverses
+    if (this.batchStack.length > 0) {
+      this.batchStack[this.batchStack.length - 1].inverses.push(...batch.inverses);
+      return true;
+    }
+
+    const batchInverses = [...batch.inverses].reverse();
+    const batchDesc = batch.description || 'Batch Action';
+
+    const atomicInverse = {
+      type: 'batch',
+      description: `Undo ${batchDesc}`,
+      execute: (engine) => {
+        const reInverses = [];
+        for (const inv of batchInverses) {
+          if (inv && typeof inv.execute === 'function') {
+            const res = inv.execute(engine);
+            if (res) reInverses.push(res);
+          }
+        }
+        return {
+          type: 'batch',
+          description: batchDesc,
+          execute: (eng) => {
+            const undoAgain = [];
+            for (const r of reInverses.reverse()) {
+              if (r && typeof r.execute === 'function') {
+                const u = r.execute(eng);
+                if (u) undoAgain.push(u);
+              }
+            }
+            return atomicInverse;
+          }
+        };
+      }
+    };
+
+    this.undoStack.push(atomicInverse);
+    this.redoStack = [];
+    if (this.undoStack.length > this.maxHistory) {
+      this.undoStack.shift();
+    }
+    this.notify('batch', { description: batchDesc });
+    return true;
+  }
+
+  rollbackBatch() {
+    if (!this.batchStack || this.batchStack.length === 0) return false;
+    const batch = this.batchStack.pop();
+    const batchInverses = [...(batch.inverses || [])].reverse();
+    for (const inv of batchInverses) {
+      if (inv && typeof inv.execute === 'function') {
+        try {
+          inv.execute(this);
+        } catch (err) {
+          console.error('Error rolling back command in batch:', err);
+        }
+      }
+    }
+    this.notify('document-change', { description: `Rollback ${batch.description}` });
+    return true;
+  }
+
+  /**
    * Execute a command with undo/redo capability
    */
   execute(command) {
     const inverse = command.execute(this);
-    if (inverse) {
-      this.undoStack.push(inverse);
-      this.redoStack = []; // Clear redo stack on new action
-      if (this.undoStack.length > this.maxHistory) {
-        this.undoStack.shift();
+    if (this.batchStack && this.batchStack.length > 0) {
+      if (inverse) {
+        this.batchStack[this.batchStack.length - 1].inverses.push(inverse);
+      }
+    } else {
+      if (inverse) {
+        this.undoStack.push(inverse);
+        this.redoStack = []; // Clear redo stack on new action
+        if (this.undoStack.length > this.maxHistory) {
+          this.undoStack.shift();
+        }
       }
     }
     this.notify(command.type || 'document-change', { description: command.description });
@@ -384,14 +468,158 @@ export class CommandEngine {
     };
   }
 
+  /**
+   * Reparent a single node with world-coordinate preservation and hierarchy invariant enforcement
+   */
+  reparent(nodeId, newParentId = null, targetIndex = null) {
+    const page = this.getActivePage();
+    if (!page || !nodeId) return false;
+    const node = page.nodes[nodeId];
+    if (!node) return false;
+
+    // Normalize newParentId: empty string, 'page', or page.id means root level
+    if (!newParentId || newParentId === 'page' || newParentId === page.id) {
+      newParentId = null;
+    }
+
+    // Invariant 1: Cannot drop into self or descendant
+    if (newParentId === nodeId || (newParentId && isDescendant(page, newParentId, nodeId))) {
+      return false;
+    }
+
+    const targetParent = newParentId ? page.nodes[newParentId] : null;
+    const targetParentType = targetParent ? targetParent.type : 'page';
+
+    // Invariant 2: canContain validation (Sections cannot be inside Frames or Sections)
+    if (!canContain(targetParentType, node.type)) {
+      return false;
+    }
+
+    // Invariant 3: Section can ONLY be at root page level
+    if (node.type === 'section' && newParentId !== null) {
+      return false;
+    }
+
+    const oldParentId = node.parentId || null;
+    const oldWorld = computeWorldTransform(page, nodeId);
+    const newParentWorld = newParentId ? computeWorldTransform(page, newParentId) : { x: 0, y: 0 };
+
+    const oldLocalX = node.transform.x;
+    const oldLocalY = node.transform.y;
+    const newLocalX = Math.round(oldWorld.x - newParentWorld.x);
+    const newLocalY = Math.round(oldWorld.y - newParentWorld.y);
+
+    const oldParent = oldParentId ? page.nodes[oldParentId] : null;
+    const oldList = oldParent ? (oldParent.childIds || (oldParent.childIds = [])) : page.rootIds;
+    const oldIndex = oldList.indexOf(nodeId);
+
+    // If same parent and targetIndex is identical, no mutation needed
+    if (oldParentId === newParentId && (targetIndex === null || targetIndex === oldIndex)) {
+      return true;
+    }
+
+    this.execute({
+      type: 'reparent-node',
+      description: `Reparent ${node.name}`,
+      execute: (engine) => {
+        const p = engine.getActivePage();
+        const currNode = p.nodes[nodeId];
+        if (!currNode) return null;
+
+        // 1. Remove from source container
+        const fromParent = currNode.parentId ? p.nodes[currNode.parentId] : null;
+        const fromList = fromParent ? (fromParent.childIds || (fromParent.childIds = [])) : p.rootIds;
+        const removedIdx = fromList.indexOf(nodeId);
+        if (removedIdx !== -1) {
+          fromList.splice(removedIdx, 1);
+        }
+
+        // 2. Set new parent and local relative transform
+        currNode.parentId = newParentId;
+        currNode.transform.x = newLocalX;
+        currNode.transform.y = newLocalY;
+
+        // 3. Insert into target container
+        const toParent = newParentId ? p.nodes[newParentId] : null;
+        if (toParent && !toParent.childIds) toParent.childIds = [];
+        const toList = toParent ? toParent.childIds : p.rootIds;
+
+        if (typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex <= toList.length) {
+          toList.splice(targetIndex, 0, nodeId);
+        } else {
+          toList.push(nodeId);
+        }
+
+        // 4. Return pure inverse command
+        return {
+          type: 'reparent-node',
+          description: `Undo Reparent ${currNode.name}`,
+          execute: (eng) => {
+            const pg = eng.getActivePage();
+            const n = pg.nodes[nodeId];
+            if (!n) return null;
+
+            // Remove from current
+            const curP = n.parentId ? pg.nodes[n.parentId] : null;
+            const curL = curP ? curP.childIds : pg.rootIds;
+            const cIdx = curL.indexOf(nodeId);
+            if (cIdx !== -1) curL.splice(cIdx, 1);
+
+            // Restore previous parent and local coordinates
+            n.parentId = oldParentId;
+            n.transform.x = oldLocalX;
+            n.transform.y = oldLocalY;
+
+            // Restore position in original list
+            const origP = oldParentId ? pg.nodes[oldParentId] : null;
+            const origL = origP ? origP.childIds : pg.rootIds;
+            if (oldIndex !== -1 && oldIndex <= origL.length) {
+              origL.splice(oldIndex, 0, nodeId);
+            } else {
+              origL.push(nodeId);
+            }
+
+            return {
+              type: 'reparent-node',
+              description: `Redo Reparent ${n.name}`,
+              execute: (e2) => {
+                e2.reparent(nodeId, newParentId, targetIndex);
+                return null;
+              }
+            };
+          }
+        };
+      }
+    });
+
+    return true;
+  }
+
+  /**
+   * Reparent multiple nodes preserving relative cluster order
+   */
+  reparentMultiple(nodeIds, newParentId = null, targetIndex = null) {
+    if (!Array.isArray(nodeIds) || nodeIds.length === 0) return false;
+    this.beginBatch(`Reparent ${nodeIds.length} layers`);
+    let idx = targetIndex;
+    for (const id of nodeIds) {
+      this.reparent(id, newParentId, idx);
+      if (typeof idx === 'number') {
+        idx++;
+      }
+    }
+    this.commitBatch();
+    return true;
+  }
+
   reorderNode(nodeId, direction) {
     const page = this.getActivePage();
     const node = page.nodes[nodeId];
-    if (!node) return;
+    if (!node) return false;
 
     const list = node.parentId && page.nodes[node.parentId] ? page.nodes[node.parentId].childIds : page.rootIds;
     const idx = list.indexOf(nodeId);
-    if (idx === -1) return;
+    if (idx === -1) return false;
 
     let targetIdx = idx;
     if (direction === 'up' && idx < list.length - 1) targetIdx = idx + 1;
@@ -399,29 +627,41 @@ export class CommandEngine {
     else if (direction === 'top') targetIdx = list.length - 1;
     else if (direction === 'bottom') targetIdx = 0;
 
-    if (targetIdx === idx) return;
-
-    const prevList = [...list];
-    list.splice(idx, 1);
-    list.splice(targetIdx, 0, nodeId);
+    if (targetIdx === idx) return true;
 
     this.execute({
       type: 'reorder-node',
       description: `Reorder ${node.name}`,
       execute: (engine) => {
+        const p = engine.getActivePage();
+        const l = node.parentId && p.nodes[node.parentId] ? p.nodes[node.parentId].childIds : p.rootIds;
+        const curIdx = l.indexOf(nodeId);
+        if (curIdx === -1) return null;
+        l.splice(curIdx, 1);
+        l.splice(targetIdx, 0, nodeId);
+
         return {
           type: 'reorder-node',
           description: 'Undo Reorder',
           execute: (eng) => {
-            const p = eng.getActivePage();
-            const l = node.parentId && p.nodes[node.parentId] ? p.nodes[node.parentId].childIds : p.rootIds;
-            l.length = 0;
-            l.push(...prevList);
-            return null;
+            const pg = eng.getActivePage();
+            const l2 = node.parentId && pg.nodes[node.parentId] ? pg.nodes[node.parentId].childIds : pg.rootIds;
+            const curIdx2 = l2.indexOf(nodeId);
+            if (curIdx2 !== -1) l2.splice(curIdx2, 1);
+            l2.splice(curIdx, 0, nodeId);
+            return {
+              type: 'reorder-node',
+              description: 'Redo Reorder',
+              execute: () => {
+                engine.reorderNode(nodeId, direction);
+                return null;
+              }
+            };
           }
         };
       }
     });
+    return true;
   }
 
   duplicateNodes(nodeIds) {
@@ -587,12 +827,12 @@ export class CommandEngine {
   ungroupNode(groupId) {
     const page = this.getActivePage();
     const group = page.nodes[groupId];
-    if (!group || (!group.childIds || group.childIds.length === 0)) return false;
+    if (!group) return false;
 
-    const childIds = [...group.childIds];
-    const parentId = group.parentId;
-    const groupX = group.transform.x;
-    const groupY = group.transform.y;
+    const childIds = group.childIds ? [...group.childIds] : [];
+    const parentId = group.type === 'section' ? null : (group.parentId || null);
+    const groupX = group.transform?.x || 0;
+    const groupY = group.transform?.y || 0;
 
     this.execute({
       type: 'ungroup-node',
@@ -609,27 +849,35 @@ export class CommandEngine {
         }
 
         if (parentId && p.nodes[parentId]) {
-          p.nodes[parentId].childIds = p.nodes[parentId].childIds.filter(id => id !== groupId);
-          p.nodes[parentId].childIds.push(...childIds);
+          p.nodes[parentId].childIds = (p.nodes[parentId].childIds || []).filter(id => id !== groupId);
+          if (childIds.length > 0) {
+            p.nodes[parentId].childIds.push(...childIds);
+          }
         } else {
-          p.rootIds = p.rootIds.filter(id => id !== groupId);
-          p.rootIds.push(...childIds);
+          p.rootIds = (p.rootIds || []).filter(id => id !== groupId);
+          if (childIds.length > 0) {
+            p.rootIds.push(...childIds);
+          }
         }
 
         delete p.nodes[groupId];
-        engine.setSelection(childIds);
+        if (childIds.length > 0) {
+          engine.setSelection(childIds);
+        } else {
+          engine.clearSelection();
+        }
 
         return {
           type: 'restore-group',
-          description: 'Undo Ungroup',
+          description: `Undo Ungroup ${group.name}`,
           execute: (eng) => {
             const pg = eng.getActivePage();
             pg.nodes[groupId] = group;
             if (parentId && pg.nodes[parentId]) {
-              pg.nodes[parentId].childIds = pg.nodes[parentId].childIds.filter(id => !childIds.includes(id));
+              pg.nodes[parentId].childIds = (pg.nodes[parentId].childIds || []).filter(id => !childIds.includes(id));
               pg.nodes[parentId].childIds.push(groupId);
             } else {
-              pg.rootIds = pg.rootIds.filter(id => !childIds.includes(id));
+              pg.rootIds = (pg.rootIds || []).filter(id => !childIds.includes(id));
               pg.rootIds.push(groupId);
             }
             for (const cid of childIds) {
