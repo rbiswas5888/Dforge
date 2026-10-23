@@ -79,8 +79,14 @@ export class CentralInputRouter {
     // 4. Active Tool Escape Priority
     const activeTool = this.app.currentTool || this.app.activeTool;
     if (activeTool && activeTool !== 'select' && activeTool !== 'v') {
+      if (e.key === 'Enter' && activeTool === 'pen' && this.app.penAnchors?.length > 1) {
+        e.preventDefault();
+        this.app.finishPenPath?.(false);
+        return;
+      }
       if (e.key === 'Escape') {
         e.preventDefault();
+        if (activeTool === 'pen') this.app.cancelPenPath?.();
         if (this.app.setTool) this.app.setTool('select');
         else if (this.app.setActiveTool) this.app.setActiveTool('select');
         return;

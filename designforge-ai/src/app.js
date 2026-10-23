@@ -1097,6 +1097,32 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         return;
       }
 
+      // 1.4 Freehand Pencil Tool
+      if (this.currentTool === 'pencil') {
+        this.pencilStroke = [{ x: canvasCoords.x, y: canvasCoords.y }];
+        renderer.pencilPreview = this.pencilStroke;
+        renderer.render();
+        return;
+      }
+
+      // 1.5 Vector Pen Tool
+      if (this.currentTool === 'pen') {
+        if (!this.penAnchors) this.penAnchors = [];
+        if (this.penAnchors.length >= 2) {
+          const first = this.penAnchors[0];
+          const distToFirst = Math.hypot(canvasCoords.x - first.x, canvasCoords.y - first.y);
+          if (distToFirst < 14) {
+            this.finishPenPath(true);
+            return;
+          }
+        }
+        this.penAnchors.push({ x: canvasCoords.x, y: canvasCoords.y });
+        renderer.penPreview = { points: this.penAnchors, current: canvasCoords };
+        renderer.render();
+        this.updateInspector();
+        return;
+      }
+
       // 2. Shape Creation Tools (Drag-to-create or click-to-insert)
       if (this.currentTool !== 'select' && this.currentTool !== 'hand') {
         this.dragState = {
@@ -1221,6 +1247,18 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         return;
       }
 
+      if (this.pencilStroke) {
+        this.pencilStroke.push({ x: canvasCoords.x, y: canvasCoords.y });
+        renderer.pencilPreview = this.pencilStroke;
+        renderer.render();
+        return;
+      }
+
+      if (this.currentTool === 'pen' && this.penAnchors && this.penAnchors.length > 0) {
+        renderer.penPreview = { points: this.penAnchors, current: canvasCoords };
+        renderer.render();
+      }
+
       if (this.dragState.type === 'create-shape') {
         this.dragState.currentX = canvasCoords.x;
         this.dragState.currentY = canvasCoords.y;
@@ -1307,6 +1345,18 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     });
 
     window.addEventListener('mouseup', () => {
+      if (this.pencilStroke) {
+        const points = this.pencilStroke;
+        this.pencilStroke = null;
+        renderer.pencilPreview = null;
+        if (points.length >= 2) {
+          this.finishPencilStroke(points);
+        } else {
+          renderer.render();
+        }
+        return;
+      }
+
       if (!this.dragState) return;
 
       if (this.dragState.type === 'create-shape') {
@@ -1430,8 +1480,12 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       }
     });
 
-    // Double click to inline edit text
+    // Double click to inline edit text or finalize pen path
     canvas.addEventListener('dblclick', (e) => {
+      if (this.currentTool === 'pen' && this.penAnchors && this.penAnchors.length >= 2) {
+        this.finishPenPath(false);
+        return;
+      }
       const coords = renderer.screenToCanvas(e.clientX, e.clientY);
       const hitId = renderer.hitTest(coords.x, coords.y);
       if (hitId) {
@@ -1502,28 +1556,74 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         style: { fills: [{ type: 'solid', color: '#8b5cf6' }] }
       });
     } else if (tool === 'line') {
-      node = createNode('line', {
-        name: 'Line',
-        transform: { x, y, width, height: 2 },
-        style: { strokes: [{ color: '#94a3b8', width: 2 }] }
-      });
+      if (isClick) {
+        node = createNode('line', {
+          name: 'Line',
+          transform: { x, y, width: 140, height: 2, rotation: 0 },
+          style: { strokes: [{ color: '#94a3b8', width: 2, style: 'solid' }] }
+        });
+      } else {
+        const dx = currentX - startX;
+        const dy = currentY - startY;
+        const len = Math.max(10, Math.round(Math.hypot(dx, dy)));
+        const rot = Math.round(Math.atan2(dy, dx) * 180 / Math.PI);
+        node = createNode('line', {
+          name: 'Line',
+          transform: { x: Math.round(startX), y: Math.round(startY), width: len, height: 2, rotation: rot },
+          style: { strokes: [{ color: '#94a3b8', width: 2, style: 'solid' }] }
+        });
+      }
     } else if (tool === 'arrow') {
-      node = createNode('arrow', {
-        name: 'Arrow',
-        transform: { x, y, width, height: 2 },
-        style: { strokes: [{ color: '#38bdf8', width: 2 }] }
-      });
+      if (isClick) {
+        node = createNode('arrow', {
+          name: 'Arrow',
+          transform: { x, y, width: 140, height: 2, rotation: 0 },
+          arrowheadStart: 'none',
+          arrowheadEnd: 'triangle',
+          style: { strokes: [{ color: '#38bdf8', width: 2, style: 'solid' }] }
+        });
+      } else {
+        const dx = currentX - startX;
+        const dy = currentY - startY;
+        const len = Math.max(10, Math.round(Math.hypot(dx, dy)));
+        const rot = Math.round(Math.atan2(dy, dx) * 180 / Math.PI);
+        node = createNode('arrow', {
+          name: 'Arrow',
+          transform: { x: Math.round(startX), y: Math.round(startY), width: len, height: 2, rotation: rot },
+          arrowheadStart: 'none',
+          arrowheadEnd: 'triangle',
+          style: { strokes: [{ color: '#38bdf8', width: 2, style: 'solid' }] }
+        });
+      }
     } else if (tool === 'star') {
       node = createNode('star', {
         name: 'Star',
         transform: { x, y, width, height },
+        starPoints: 5,
+        starRatio: 0.45,
         style: { fills: [{ type: 'solid', color: '#f59e0b' }] }
       });
     } else if (tool === 'polygon') {
       node = createNode('polygon', {
         name: 'Polygon',
         transform: { x, y, width, height },
+        polygonSides: 6,
         style: { fills: [{ type: 'solid', color: '#10b981' }] }
+      });
+    } else if (tool === 'pen' || tool === 'pencil') {
+      const w = Math.max(20, width);
+      const h = Math.max(20, height);
+      node = createNode('vector', {
+        name: tool === 'pencil' ? 'Pencil Sketch' : 'Vector Path',
+        transform: { x, y, width: w, height: h },
+        vectorPath: [
+          { type: 'M', x: 0, y: h },
+          { type: 'C', cp1x: w * 0.3, cp1y: 0, cp2x: w * 0.7, cp2y: h, x: w, y: 0 }
+        ],
+        style: {
+          strokes: [{ color: '#38bdf8', width: 2, style: 'solid', cap: 'round', join: 'round' }],
+          fills: []
+        }
       });
     } else if (tool === 'image') {
       node = createNode('image', {
@@ -1537,10 +1637,18 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         transform: { x, y, width, height },
         text: {
           content: 'Heading',
-          fontSize: 18,
+          fontSize: 20,
           fontWeight: '600',
           color: '#f8fafc',
-          fontFamily: 'Inter, sans-serif'
+          fontFamily: "'Inter', sans-serif",
+          lineHeight: 1.3,
+          letterSpacing: 0,
+          textAlign: 'left',
+          verticalAlign: 'top',
+          fontStyle: 'normal',
+          textDecoration: 'none',
+          textCase: 'none',
+          autoResize: 'auto-width'
         }
       });
     } else if (tool === 'button') {
@@ -1584,6 +1692,19 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   setTool(tool) {
     const prevTool = this.currentTool;
     this.currentTool = tool;
+
+    // Clean up temporary active tool previews if switching away
+    if (prevTool === 'pencil' && this.pencilStroke) {
+      this.pencilStroke = null;
+      this.renderer.pencilPreview = null;
+      this.renderer.render();
+    }
+    if (prevTool === 'pen' && this.penAnchors) {
+      this.penAnchors = null;
+      this.renderer.penPreview = null;
+      this.renderer.render();
+    }
+
     const groupMap = {
       select: 'move', scale: 'move',
       frame: 'region', section: 'region', slice: 'region',
@@ -1609,9 +1730,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       else canvas.style.cursor = 'default';
     }
 
-    if (tool === 'frame' || prevTool === 'frame') {
-      this.updateInspector();
-    }
+    // Always refresh inspector so contextual tool studio / settings panel appears on the right
+    this.updateInspector();
   }
 
   setHandMode(active) {
@@ -2048,6 +2168,586 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     this.updateInspector();
   }
 
+  finishPencilStroke(points) {
+    if (!points || points.length < 2) return;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of points) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    const width = Math.max(12, maxX - minX);
+    const height = Math.max(12, maxY - minY);
+    const originX = Math.round(minX);
+    const originY = Math.round(minY);
+
+    const pathData = [{ type: 'M', x: Math.round(points[0].x - originX), y: Math.round(points[0].y - originY) }];
+    for (let i = 1; i < points.length; i++) {
+      pathData.push({ type: 'L', x: Math.round(points[i].x - originX), y: Math.round(points[i].y - originY) });
+    }
+
+    const strokeColor = this.pencilDefaultColor || '#38bdf8';
+    const strokeWidth = this.pencilDefaultWidth || 2;
+    const node = createNode('vector', {
+      name: 'Pencil Sketch',
+      transform: { x: originX, y: originY, width: Math.round(width), height: Math.round(height) },
+      vectorPath: pathData,
+      style: {
+        strokes: [{ color: strokeColor, width: strokeWidth, style: 'solid', cap: 'round', join: 'round' }],
+        fills: []
+      }
+    });
+
+    const page = this.engine.getActivePage();
+    this.engine.addNode(node, page.id);
+    this.engine.setSelection([node.id]);
+    this.renderer.render();
+    this.updateInspector();
+    this.updateLayersTree();
+    this.storage.scheduleAutosave(this.doc);
+  }
+
+  finishPenPath(closed = false) {
+    const points = this.penAnchors;
+    this.penAnchors = null;
+    this.renderer.penPreview = null;
+    if (!points || points.length < 2) {
+      this.renderer.render();
+      this.updateInspector();
+      return;
+    }
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of points) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    const width = Math.max(14, maxX - minX);
+    const height = Math.max(14, maxY - minY);
+    const originX = Math.round(minX);
+    const originY = Math.round(minY);
+
+    const pathData = [{ type: 'M', x: Math.round(points[0].x - originX), y: Math.round(points[0].y - originY) }];
+    for (let i = 1; i < points.length; i++) {
+      pathData.push({ type: 'L', x: Math.round(points[i].x - originX), y: Math.round(points[i].y - originY) });
+    }
+    if (closed) {
+      pathData.push({ type: 'Z' });
+    }
+
+    const strokeColor = this.penDefaultColor || '#38bdf8';
+    const strokeWidth = this.penDefaultWidth || 2;
+    const node = createNode('vector', {
+      name: closed ? 'Vector Shape' : 'Vector Path',
+      transform: { x: originX, y: originY, width: Math.round(width), height: Math.round(height) },
+      vectorPath: pathData,
+      style: {
+        strokes: [{ color: strokeColor, width: strokeWidth, style: 'solid', cap: 'round', join: 'round' }],
+        fills: closed ? [{ type: 'solid', color: 'rgba(56, 189, 248, 0.25)' }] : []
+      }
+    });
+
+    const page = this.engine.getActivePage();
+    this.engine.addNode(node, page.id);
+    this.engine.setSelection([node.id]);
+    this.setTool('select');
+    this.renderer.render();
+    this.updateInspector();
+    this.updateLayersTree();
+    this.storage.scheduleAutosave(this.doc);
+  }
+
+  cancelPenPath() {
+    this.penAnchors = null;
+    this.renderer.penPreview = null;
+    this.renderer.render();
+    this.updateInspector();
+  }
+
+  // --- Active Tool Studios for Right Hand Properties Panel ---
+
+  renderArrowToolStudio() {
+    const startCap = this.arrowDefaultStart || 'none';
+    const endCap = this.arrowDefaultEnd || 'triangle';
+    const strokeWidth = this.arrowDefaultWidth || 2;
+    const strokeColor = this.arrowDefaultColor || '#38bdf8';
+    const strokeStyle = this.arrowDefaultStyle || 'solid';
+
+    return `
+      <div class="tool-active-banner">
+        <div class="tool-active-banner-icon">↗</div>
+        <div class="tool-active-banner-info">
+          <div class="tool-active-banner-title">Arrow Tool Active</div>
+          <div class="tool-active-banner-desc">Click & drag on canvas to draw directional arrows and connectors at any angle.</div>
+        </div>
+      </div>
+
+      <div class="section-group">
+        <div class="section-title">Arrowheads & Caps</div>
+        <div class="props-row">
+          <div class="prop-field">
+            <span class="prop-label">Start</span>
+            <select class="prop-select" id="toolArrowStartCap">
+              <option value="none" ${startCap === 'none' ? 'selected' : ''}>None</option>
+              <option value="triangle" ${startCap === 'triangle' ? 'selected' : ''}>Triangle ▶</option>
+              <option value="stealth" ${startCap === 'stealth' ? 'selected' : ''}>Stealth ▷</option>
+              <option value="circle" ${startCap === 'circle' ? 'selected' : ''}>Circle ●</option>
+              <option value="square" ${startCap === 'square' ? 'selected' : ''}>Square ■</option>
+              <option value="diamond" ${startCap === 'diamond' ? 'selected' : ''}>Diamond ◆</option>
+            </select>
+          </div>
+          <div class="prop-field">
+            <span class="prop-label">End</span>
+            <select class="prop-select" id="toolArrowEndCap">
+              <option value="triangle" ${endCap === 'triangle' ? 'selected' : ''}>Triangle ▶</option>
+              <option value="stealth" ${endCap === 'stealth' ? 'selected' : ''}>Stealth ▷</option>
+              <option value="circle" ${endCap === 'circle' ? 'selected' : ''}>Circle ●</option>
+              <option value="square" ${endCap === 'square' ? 'selected' : ''}>Square ■</option>
+              <option value="diamond" ${endCap === 'diamond' ? 'selected' : ''}>Diamond ◆</option>
+              <option value="none" ${endCap === 'none' ? 'selected' : ''}>None</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-group">
+        <div class="section-title">Stroke Parameters</div>
+        <div class="props-row">
+          <div class="color-swatch-box" id="toolArrowSwatch" style="background: ${strokeColor};" title="Arrow Color"></div>
+          <div class="prop-field">
+            <span class="prop-label">Color</span>
+            <input type="text" class="prop-input" id="toolArrowColorInp" value="${strokeColor}">
+          </div>
+          <div class="prop-field" style="max-width: 80px;">
+            <span class="prop-label">Width</span>
+            <input type="number" class="prop-input" id="toolArrowWidthInp" value="${strokeWidth}" min="1" max="64">
+          </div>
+        </div>
+
+        <div class="props-row" style="margin-top: 8px;">
+          <div class="tool-preset-pills-row">
+            ${[1, 2, 3, 4, 6, 8].map(w => `
+              <button class="tool-preset-pill ${w === strokeWidth ? 'active' : ''}" data-val="${w}">${w}px</button>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="props-row" style="margin-top: 8px;">
+          <div class="sizing-pill-selector" style="width: 100%;">
+            <button class="sizing-pill-btn ${strokeStyle === 'solid' ? 'active' : ''}" data-style="solid">Solid ───</button>
+            <button class="sizing-pill-btn ${strokeStyle === 'dashed' ? 'active' : ''}" data-style="dashed">Dashed ╌╌╌</button>
+            <button class="sizing-pill-btn ${strokeStyle === 'dotted' ? 'active' : ''}" data-style="dotted">Dotted ┈┈┈</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tool-studio-card">
+        <div style="font-size: 11px; font-weight: 600; color: #ffffff;">💡 Pro Tips (Figma & XD Parity)</div>
+        <div style="font-size: 10.5px; color: var(--text-dim); line-height: 1.4;">
+          • Hold <b>Shift</b> while dragging to snap angle to 0°, 45°, 90°, or 180°.<br>
+          • Drag end points on canvas anytime to redirect the arrow.
+        </div>
+      </div>
+    `;
+  }
+
+  bindArrowToolStudioListeners() {
+    document.getElementById('toolArrowStartCap')?.addEventListener('change', (e) => {
+      this.arrowDefaultStart = e.target.value;
+    });
+    document.getElementById('toolArrowEndCap')?.addEventListener('change', (e) => {
+      this.arrowDefaultEnd = e.target.value;
+    });
+    document.getElementById('toolArrowWidthInp')?.addEventListener('change', (e) => {
+      this.arrowDefaultWidth = Math.max(1, parseInt(e.target.value, 10) || 2);
+    });
+    document.querySelectorAll('.tool-preset-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const val = parseInt(pill.dataset.val, 10);
+        this.arrowDefaultWidth = val;
+        const inp = document.getElementById('toolArrowWidthInp');
+        if (inp) inp.value = val;
+        document.querySelectorAll('.tool-preset-pill').forEach(p => p.classList.toggle('active', p === pill));
+      });
+    });
+    document.querySelectorAll('.sizing-pill-btn[data-style]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.arrowDefaultStyle = btn.dataset.style;
+        document.querySelectorAll('.sizing-pill-btn[data-style]').forEach(b => b.classList.toggle('active', b === btn));
+      });
+    });
+    const swatch = document.getElementById('toolArrowSwatch');
+    if (swatch) {
+      swatch.addEventListener('click', () => {
+        this.colorPicker.open({
+          anchorEl: swatch,
+          color: this.arrowDefaultColor || '#38bdf8',
+          palette: this.getDocumentColors(),
+          onChange: (hex) => {
+            this.arrowDefaultColor = hex;
+            swatch.style.background = hex;
+            const inp = document.getElementById('toolArrowColorInp');
+            if (inp) inp.value = hex;
+          },
+          onCommit: (hex) => {
+            this.arrowDefaultColor = hex;
+            swatch.style.background = hex;
+            const inp = document.getElementById('toolArrowColorInp');
+            if (inp) inp.value = hex;
+          }
+        });
+      });
+    }
+  }
+
+  renderLineToolStudio() {
+    const strokeWidth = this.lineDefaultWidth || 2;
+    const strokeColor = this.lineDefaultColor || '#94a3b8';
+    return `
+      <div class="tool-active-banner">
+        <div class="tool-active-banner-icon">╱</div>
+        <div class="tool-active-banner-info">
+          <div class="tool-active-banner-title">Line Tool Active</div>
+          <div class="tool-active-banner-desc">Click & drag on canvas to draw straight divider lines and rules.</div>
+        </div>
+      </div>
+
+      <div class="section-group">
+        <div class="section-title">Stroke Parameters</div>
+        <div class="props-row">
+          <div class="color-swatch-box" id="toolLineSwatch" style="background: ${strokeColor};" title="Line Color"></div>
+          <div class="prop-field">
+            <span class="prop-label">Color</span>
+            <input type="text" class="prop-input" id="toolLineColorInp" value="${strokeColor}">
+          </div>
+          <div class="prop-field" style="max-width: 80px;">
+            <span class="prop-label">Width</span>
+            <input type="number" class="prop-input" id="toolLineWidthInp" value="${strokeWidth}" min="1" max="64">
+          </div>
+        </div>
+        <div class="props-row" style="margin-top: 8px;">
+          <div class="tool-preset-pills-row">
+            ${[1, 2, 3, 4, 6, 8].map(w => `
+              <button class="tool-preset-pill ${w === strokeWidth ? 'active' : ''}" data-val="${w}">${w}px</button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  bindLineToolStudioListeners() {
+    document.getElementById('toolLineWidthInp')?.addEventListener('change', (e) => {
+      this.lineDefaultWidth = Math.max(1, parseInt(e.target.value, 10) || 2);
+    });
+    document.querySelectorAll('.tool-preset-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const val = parseInt(pill.dataset.val, 10);
+        this.lineDefaultWidth = val;
+        const inp = document.getElementById('toolLineWidthInp');
+        if (inp) inp.value = val;
+        document.querySelectorAll('.tool-preset-pill').forEach(p => p.classList.toggle('active', p === pill));
+      });
+    });
+    const swatch = document.getElementById('toolLineSwatch');
+    if (swatch) {
+      swatch.addEventListener('click', () => {
+        this.colorPicker.open({
+          anchorEl: swatch,
+          color: this.lineDefaultColor || '#94a3b8',
+          palette: this.getDocumentColors(),
+          onChange: (hex) => {
+            this.lineDefaultColor = hex;
+            swatch.style.background = hex;
+            const inp = document.getElementById('toolLineColorInp');
+            if (inp) inp.value = hex;
+          },
+          onCommit: (hex) => {
+            this.lineDefaultColor = hex;
+            swatch.style.background = hex;
+            const inp = document.getElementById('toolLineColorInp');
+            if (inp) inp.value = hex;
+          }
+        });
+      });
+    }
+  }
+
+  renderPenToolStudio() {
+    const anchorsCount = this.penAnchors ? this.penAnchors.length : 0;
+    const strokeColor = this.penDefaultColor || '#38bdf8';
+    const strokeWidth = this.penDefaultWidth || 2;
+
+    return `
+      <div class="tool-active-banner">
+        <div class="tool-active-banner-icon">✒️</div>
+        <div class="tool-active-banner-info">
+          <div class="tool-active-banner-title">Pen Tool Active</div>
+          <div class="tool-active-banner-desc">Click canvas to drop vector anchor points and create custom bezier curves.</div>
+        </div>
+      </div>
+
+      <div class="section-group">
+        <div class="section-title">
+          <span>Active Path Status</span>
+          <span style="font-size: 10px; color: var(--accent-blue);">${anchorsCount} points placed</span>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn-inspector-action" id="btnFinishPenPath" style="flex: 1; font-size: 11px;" ${anchorsCount < 2 ? 'disabled' : ''}>✓ Complete Path (Enter)</button>
+          <button class="btn-inspector-action" id="btnCancelPenPath" style="font-size: 11px;" ${anchorsCount === 0 ? 'disabled' : ''}>✕ Cancel (Esc)</button>
+        </div>
+      </div>
+
+      <div class="section-group">
+        <div class="section-title">Default Vector Style</div>
+        <div class="props-row">
+          <div class="color-swatch-box" id="toolPenSwatch" style="background: ${strokeColor};" title="Path Color"></div>
+          <div class="prop-field">
+            <span class="prop-label">Color</span>
+            <input type="text" class="prop-input" id="toolPenColorInp" value="${strokeColor}">
+          </div>
+          <div class="prop-field" style="max-width: 80px;">
+            <span class="prop-label">Width</span>
+            <input type="number" class="prop-input" id="toolPenWidthInp" value="${strokeWidth}" min="1" max="64">
+          </div>
+        </div>
+        <div class="props-row" style="margin-top: 8px;">
+          <div class="tool-preset-pills-row">
+            ${[1, 2, 3, 4, 6].map(w => `
+              <button class="tool-preset-pill ${w === strokeWidth ? 'active' : ''}" data-val="${w}">${w}px</button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="tool-studio-card">
+        <div style="font-size: 11px; font-weight: 600; color: #ffffff;">💡 Pen Guide (Illustrator & Figma)</div>
+        <div style="font-size: 10.5px; color: var(--text-dim); line-height: 1.4;">
+          • Click anywhere to drop an anchor point.<br>
+          • Click back on the <b>first anchor</b> to close into a filled vector shape.<br>
+          • Press <b>Enter</b> or double-click to finish an open vector path.<br>
+          • Press <b>Escape</b> to cancel.
+        </div>
+      </div>
+    `;
+  }
+
+  bindPenToolStudioListeners() {
+    document.getElementById('btnFinishPenPath')?.addEventListener('click', () => this.finishPenPath(false));
+    document.getElementById('btnCancelPenPath')?.addEventListener('click', () => this.cancelPenPath());
+    document.getElementById('toolPenWidthInp')?.addEventListener('change', (e) => {
+      this.penDefaultWidth = Math.max(1, parseInt(e.target.value, 10) || 2);
+    });
+    document.querySelectorAll('.tool-preset-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const val = parseInt(pill.dataset.val, 10);
+        this.penDefaultWidth = val;
+        const inp = document.getElementById('toolPenWidthInp');
+        if (inp) inp.value = val;
+        document.querySelectorAll('.tool-preset-pill').forEach(p => p.classList.toggle('active', p === pill));
+      });
+    });
+    const swatch = document.getElementById('toolPenSwatch');
+    if (swatch) {
+      swatch.addEventListener('click', () => {
+        this.colorPicker.open({
+          anchorEl: swatch,
+          color: this.penDefaultColor || '#38bdf8',
+          palette: this.getDocumentColors(),
+          onChange: (hex) => {
+            this.penDefaultColor = hex;
+            swatch.style.background = hex;
+            const inp = document.getElementById('toolPenColorInp');
+            if (inp) inp.value = hex;
+          },
+          onCommit: (hex) => {
+            this.penDefaultColor = hex;
+            swatch.style.background = hex;
+            const inp = document.getElementById('toolPenColorInp');
+            if (inp) inp.value = hex;
+          }
+        });
+      });
+    }
+  }
+
+  renderPencilToolStudio() {
+    const strokeColor = this.pencilDefaultColor || '#38bdf8';
+    const strokeWidth = this.pencilDefaultWidth || 2;
+
+    return `
+      <div class="tool-active-banner">
+        <div class="tool-active-banner-icon">✏️</div>
+        <div class="tool-active-banner-info">
+          <div class="tool-active-banner-title">Pencil Tool Active</div>
+          <div class="tool-active-banner-desc">Draw freehand sketches directly on the canvas with automatic vector path conversion.</div>
+        </div>
+      </div>
+
+      <div class="section-group">
+        <div class="section-title">Brush & Stroke</div>
+        <div class="props-row">
+          <div class="color-swatch-box" id="toolPencilSwatch" style="background: ${strokeColor};" title="Pencil Color"></div>
+          <div class="prop-field">
+            <span class="prop-label">Color</span>
+            <input type="text" class="prop-input" id="toolPencilColorInp" value="${strokeColor}">
+          </div>
+          <div class="prop-field" style="max-width: 80px;">
+            <span class="prop-label">Width</span>
+            <input type="number" class="prop-input" id="toolPencilWidthInp" value="${strokeWidth}" min="1" max="64">
+          </div>
+        </div>
+
+        <div class="props-row" style="margin-top: 8px;">
+          <div class="tool-preset-pills-row">
+            ${[1, 2, 3, 4, 6, 8].map(w => `
+              <button class="tool-preset-pill ${w === strokeWidth ? 'active' : ''}" data-val="${w}">${w}px</button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="tool-studio-card">
+        <div style="font-size: 11px; font-weight: 600; color: #ffffff;">💡 Freehand Sketching</div>
+        <div style="font-size: 10.5px; color: var(--text-dim); line-height: 1.4;">
+          • Click & drag freely on canvas to sketch.<br>
+          • When you release the mouse, your stroke is instantly converted to a vectorized layer with full stroke and editability.
+        </div>
+      </div>
+    `;
+  }
+
+  bindPencilToolStudioListeners() {
+    document.getElementById('toolPencilWidthInp')?.addEventListener('change', (e) => {
+      this.pencilDefaultWidth = Math.max(1, parseInt(e.target.value, 10) || 2);
+    });
+    document.querySelectorAll('.tool-preset-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const val = parseInt(pill.dataset.val, 10);
+        this.pencilDefaultWidth = val;
+        const inp = document.getElementById('toolPencilWidthInp');
+        if (inp) inp.value = val;
+        document.querySelectorAll('.tool-preset-pill').forEach(p => p.classList.toggle('active', p === pill));
+      });
+    });
+    const swatch = document.getElementById('toolPencilSwatch');
+    if (swatch) {
+      swatch.addEventListener('click', () => {
+        this.colorPicker.open({
+          anchorEl: swatch,
+          color: this.pencilDefaultColor || '#38bdf8',
+          palette: this.getDocumentColors(),
+          onChange: (hex) => {
+            this.pencilDefaultColor = hex;
+            swatch.style.background = hex;
+            const inp = document.getElementById('toolPencilColorInp');
+            if (inp) inp.value = hex;
+          },
+          onCommit: (hex) => {
+            this.pencilDefaultColor = hex;
+            swatch.style.background = hex;
+            const inp = document.getElementById('toolPencilColorInp');
+            if (inp) inp.value = hex;
+          }
+        });
+      });
+    }
+  }
+
+  renderTextToolStudio() {
+    return `
+      <div class="tool-active-banner">
+        <div class="tool-active-banner-icon">T</div>
+        <div class="tool-active-banner-info">
+          <div class="tool-active-banner-title">Text Tool Active</div>
+          <div class="tool-active-banner-desc">Click anywhere to type, or drag on the canvas to create a fixed-width text box.</div>
+        </div>
+      </div>
+
+      <div class="section-group">
+        <div class="section-title">Word & Typography Presets</div>
+        <div class="typography-presets-bar">
+          <button class="typo-preset-chip" data-size="40" data-weight="800">Display</button>
+          <button class="typo-preset-chip" data-size="32" data-weight="700">H1</button>
+          <button class="typo-preset-chip" data-size="24" data-weight="600">H2</button>
+          <button class="typo-preset-chip" data-size="18" data-weight="600">H3</button>
+          <button class="typo-preset-chip active" data-size="14" data-weight="400">Body</button>
+          <button class="typo-preset-chip" data-size="11" data-weight="400">Caption</button>
+          <button class="typo-preset-chip" data-size="13" data-weight="500" data-mono="true">Code</button>
+        </div>
+      </div>
+
+      <div class="tool-studio-card">
+        <div style="font-size: 11px; font-weight: 600; color: #ffffff;">💡 Text Placement</div>
+        <div style="font-size: 10.5px; color: var(--text-dim); line-height: 1.4;">
+          • Click canvas to place an <b>Auto Width</b> text block.<br>
+          • Drag canvas to define a custom <b>Fixed Width</b> container with automatic word-wrapping.
+        </div>
+      </div>
+    `;
+  }
+
+  bindTextToolStudioListeners() {
+    document.querySelectorAll('.typo-preset-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.typo-preset-chip').forEach(c => c.classList.toggle('active', c === chip));
+      });
+    });
+  }
+
+  renderShapeToolStudio(tool) {
+    const title = tool.charAt(0).toUpperCase() + tool.slice(1);
+    return `
+      <div class="tool-active-banner">
+        <div class="tool-active-banner-icon">▢</div>
+        <div class="tool-active-banner-info">
+          <div class="tool-active-banner-title">${title} Tool Active</div>
+          <div class="tool-active-banner-desc">Click & drag on canvas to create a ${tool} shape with live dimension preview.</div>
+        </div>
+      </div>
+
+      ${tool === 'star' ? `
+      <div class="section-group">
+        <div class="section-title">Star Geometry</div>
+        <div class="props-row">
+          <div class="prop-field">
+            <span class="prop-label">Points</span>
+            <input type="number" class="prop-input" id="toolStarPoints" value="5" min="3" max="32">
+          </div>
+          <div class="prop-field">
+            <span class="prop-label">Ratio %</span>
+            <input type="number" class="prop-input" id="toolStarRatio" value="45" min="10" max="90">
+          </div>
+        </div>
+      </div>` : ''}
+
+      ${tool === 'polygon' ? `
+      <div class="section-group">
+        <div class="section-title">Polygon Geometry</div>
+        <div class="props-row">
+          <div class="prop-field">
+            <span class="prop-label">Sides</span>
+            <input type="number" class="prop-input" id="toolPolygonSides" value="6" min="3" max="24">
+          </div>
+        </div>
+      </div>` : ''}
+
+      <div class="tool-studio-card">
+        <div style="font-size: 11px; font-weight: 600; color: #ffffff;">💡 Alignment Tip</div>
+        <div style="font-size: 10.5px; color: var(--text-dim); line-height: 1.4;">
+          Hold <b>Shift</b> while dragging to lock a 1:1 aspect ratio (square, perfect circle, symmetrical star).
+        </div>
+      </div>
+    `;
+  }
+
+  bindShapeToolStudioListeners(tool) {
+    // Optional reactive listeners for live shape defaults
+  }
+
   // --- Contextual Figma-Identical Design Tab Inspector (Section 4.1 & Appendix A2.2) ---
   updateInspector() {
     this.updateBreadcrumbs();
@@ -2064,18 +2764,63 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     if (badge) badge.textContent = `${selectedIds.length} selected`;
 
-    // 0. When Frame Tool is Active: Show Device Presets
-    if (this.currentTool === 'frame') {
-      if (title) title.textContent = 'Frame Presets';
-      if (badge) badge.textContent = 'Select Preset';
-      container.innerHTML = `
-        <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">
-          Choose a preset below to insert an artboard, or click and drag on the canvas.
-        </div>
-        ${this.renderDevicePresetsHTML()}
-      `;
-      this.bindDevicePresetListeners();
-      return;
+    // 0. When Specific Design Tools are Active with no selection: Show Tool Studios
+    if (selectedIds.length === 0 && this.currentTool !== 'select' && this.currentTool !== 'hand') {
+      if (this.currentTool === 'frame') {
+        if (title) title.textContent = 'Frame Presets';
+        if (badge) badge.textContent = 'Active Tool';
+        container.innerHTML = `
+          <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">
+            Choose a preset below to insert an artboard, or click and drag on the canvas.
+          </div>
+          ${this.renderDevicePresetsHTML()}
+        `;
+        this.bindDevicePresetListeners();
+        return;
+      }
+      if (this.currentTool === 'arrow') {
+        if (title) title.textContent = 'Arrow Tool';
+        if (badge) badge.textContent = 'Active Tool';
+        container.innerHTML = this.renderArrowToolStudio();
+        this.bindArrowToolStudioListeners();
+        return;
+      }
+      if (this.currentTool === 'line') {
+        if (title) title.textContent = 'Line Tool';
+        if (badge) badge.textContent = 'Active Tool';
+        container.innerHTML = this.renderLineToolStudio();
+        this.bindLineToolStudioListeners();
+        return;
+      }
+      if (this.currentTool === 'pen') {
+        if (title) title.textContent = 'Pen Tool';
+        if (badge) badge.textContent = 'Active Tool';
+        container.innerHTML = this.renderPenToolStudio();
+        this.bindPenToolStudioListeners();
+        return;
+      }
+      if (this.currentTool === 'pencil') {
+        if (title) title.textContent = 'Pencil Tool';
+        if (badge) badge.textContent = 'Active Tool';
+        container.innerHTML = this.renderPencilToolStudio();
+        this.bindPencilToolStudioListeners();
+        return;
+      }
+      if (this.currentTool === 'text') {
+        if (title) title.textContent = 'Text Tool';
+        if (badge) badge.textContent = 'Active Tool';
+        container.innerHTML = this.renderTextToolStudio();
+        this.bindTextToolStudioListeners();
+        return;
+      }
+      if (['rectangle', 'ellipse', 'star', 'polygon'].includes(this.currentTool)) {
+        const toolName = this.currentTool.charAt(0).toUpperCase() + this.currentTool.slice(1);
+        if (title) title.textContent = `${toolName} Tool`;
+        if (badge) badge.textContent = 'Active Tool';
+        container.innerHTML = this.renderShapeToolStudio(this.currentTool);
+        this.bindShapeToolStudioListeners(this.currentTool);
+        return;
+      }
     }
 
     // 1. When Nothing is Selected: Canvas & Page Settings + Device Presets
@@ -2380,6 +3125,114 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         </div>
       </div>
 
+      <!-- Arrow & Line Studio if arrow or line node -->
+      ${(node.type === 'arrow' || node.type === 'line') ? `
+      <div class="section-group">
+        <div class="section-title">
+          <span>${node.type === 'arrow' ? '↗ Arrowhead & Vector' : '╱ Line'} Studio</span>
+        </div>
+        ${node.type === 'arrow' ? `
+        <div class="props-row">
+          <div class="prop-field">
+            <span class="prop-label">Start Cap</span>
+            <select class="prop-select" id="propArrowheadStart">
+              <option value="none" ${(!node.arrowheadStart || node.arrowheadStart === 'none') ? 'selected' : ''}>None</option>
+              <option value="triangle" ${node.arrowheadStart === 'triangle' ? 'selected' : ''}>Triangle ▶</option>
+              <option value="stealth" ${node.arrowheadStart === 'stealth' ? 'selected' : ''}>Stealth ▷</option>
+              <option value="circle" ${node.arrowheadStart === 'circle' ? 'selected' : ''}>Circle ●</option>
+              <option value="square" ${node.arrowheadStart === 'square' ? 'selected' : ''}>Square ■</option>
+              <option value="diamond" ${node.arrowheadStart === 'diamond' ? 'selected' : ''}>Diamond ◆</option>
+            </select>
+          </div>
+          <div class="prop-field">
+            <span class="prop-label">End Cap</span>
+            <select class="prop-select" id="propArrowheadEnd">
+              <option value="triangle" ${(node.arrowheadEnd === 'triangle' || !node.arrowheadEnd) ? 'selected' : ''}>Triangle ▶</option>
+              <option value="stealth" ${node.arrowheadEnd === 'stealth' ? 'selected' : ''}>Stealth ▷</option>
+              <option value="circle" ${node.arrowheadEnd === 'circle' ? 'selected' : ''}>Circle ●</option>
+              <option value="square" ${node.arrowheadEnd === 'square' ? 'selected' : ''}>Square ■</option>
+              <option value="diamond" ${node.arrowheadEnd === 'diamond' ? 'selected' : ''}>Diamond ◆</option>
+              <option value="none" ${node.arrowheadEnd === 'none' ? 'selected' : ''}>None</option>
+            </select>
+          </div>
+        </div>` : ''}
+        <div class="props-row">
+          <div class="prop-field">
+            <span class="prop-label">Length</span>
+            <input type="text" class="prop-input" id="propLineLength" value="${Math.round(t.width)}">
+          </div>
+          <div class="prop-field">
+            <span class="prop-label">Angle</span>
+            <input type="text" class="prop-input" id="propLineAngle" value="${Math.round(t.rotation || 0)}°">
+          </div>
+        </div>
+      </div>` : ''}
+
+      <!-- Star Geometry Settings if star node -->
+      ${node.type === 'star' ? `
+      <div class="section-group">
+        <div class="section-title">
+          <span>★ Star Geometry</span>
+        </div>
+        <div class="props-row">
+          <div class="prop-field">
+            <span class="prop-label">Points</span>
+            <input type="number" class="prop-input" id="propStarPoints" value="${node.starPoints || 5}" min="3" max="32">
+          </div>
+          <div class="prop-field">
+            <span class="prop-label">Ratio %</span>
+            <input type="number" class="prop-input" id="propStarRatio" value="${Math.round((node.starRatio !== undefined ? node.starRatio : 0.45) * 100)}" min="10" max="90">
+          </div>
+        </div>
+      </div>` : ''}
+
+      <!-- Polygon Geometry Settings if polygon node -->
+      ${node.type === 'polygon' ? `
+      <div class="section-group">
+        <div class="section-title">
+          <span>⬡ Polygon Geometry</span>
+        </div>
+        <div class="props-row">
+          <div class="prop-field">
+            <span class="prop-label">Sides</span>
+            <input type="number" class="prop-input" id="propPolygonSides" value="${node.polygonSides || 6}" min="3" max="24">
+          </div>
+        </div>
+      </div>` : ''}
+
+      <!-- Ellipse & Donut Settings if ellipse node -->
+      ${node.type === 'ellipse' ? `
+      <div class="section-group">
+        <div class="section-title">
+          <span>● Arc & Donut Studio</span>
+        </div>
+        <div class="props-row">
+          <div class="prop-field">
+            <span class="prop-label">Sweep ∠</span>
+            <input type="number" class="prop-input" id="propArcSweep" value="${node.arcSweep !== undefined ? node.arcSweep : 360}" min="1" max="360">
+          </div>
+          <div class="prop-field">
+            <span class="prop-label">Hole %</span>
+            <input type="number" class="prop-input" id="propArcRatio" value="${Math.round((node.arcRatio || 0) * 100)}" min="0" max="90">
+          </div>
+        </div>
+      </div>` : ''}
+
+      <!-- Vector Path Studio if vector node -->
+      ${node.type === 'vector' ? `
+      <div class="section-group">
+        <div class="section-title">
+          <span>✒️ Vector Path Studio</span>
+          <span style="font-size: 10px; color: var(--accent-blue);">${node.vectorPath ? node.vectorPath.length : 0} vertices</span>
+        </div>
+        <div class="props-row">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-muted); cursor: pointer;">
+            <input type="checkbox" id="chkVectorClosed" ${node.vectorPath?.some(c => c.type === 'Z') ? 'checked' : ''}>
+            <span>Closed Shape (Enables Fills)</span>
+          </label>
+        </div>
+      </div>` : ''}
+
       <!-- 3. Auto Layout 2.0 (Figma-Class Flexbox) -->
       <div class="section-group">
         <div class="section-title">
@@ -2579,16 +3432,38 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         `).join('') : '<div style="font-size: 11px; color: var(--text-dim);">No effects applied</div>'}
       </div>
 
-      <!-- 8. Typography Section if text node -->
+      <!-- 8. Comprehensive Word + Figma Typography Studio if text node -->
       ${isText ? `
       <div class="section-group">
         <div class="section-title">
-          <span>Typography</span>
-          <span style="font-size: 10px; color: var(--accent-blue);">System & Web</span>
+          <span>Typography Studio</span>
+          <span style="font-size: 10px; color: var(--accent-blue);">Word & Figma Parity</span>
         </div>
+
+        <!-- Word Quick Style Presets Chips -->
+        <div class="typography-presets-bar">
+          <button class="typo-preset-chip" data-preset="display" title="Display Hero (40px Bold)">Display</button>
+          <button class="typo-preset-chip" data-preset="h1" title="Heading 1 (32px Bold)">H1</button>
+          <button class="typo-preset-chip" data-preset="h2" title="Heading 2 (24px Semibold)">H2</button>
+          <button class="typo-preset-chip" data-preset="h3" title="Heading 3 (18px Semibold)">H3</button>
+          <button class="typo-preset-chip" data-preset="body" title="Body Text (14px Regular)">Body</button>
+          <button class="typo-preset-chip" data-preset="caption" title="Caption (11px Regular)">Caption</button>
+          <button class="typo-preset-chip" data-preset="code" title="Monospace Code (13px Mono)">Code</button>
+        </div>
+
+        <!-- Font Family & Weight -->
         <div class="props-row">
           <div class="prop-field">
             <select class="prop-select" id="propFontFamily">
+              <optgroup label="Modern Sans (Web / Google Fonts)">
+                <option value="'Inter', sans-serif" ${node.text?.fontFamily?.includes('Inter') || !node.text?.fontFamily ? 'selected' : ''}>Inter</option>
+                <option value="'Outfit', sans-serif" ${node.text?.fontFamily?.includes('Outfit') ? 'selected' : ''}>Outfit</option>
+                <option value="'Roboto', sans-serif" ${node.text?.fontFamily?.includes('Roboto') ? 'selected' : ''}>Roboto</option>
+                <option value="'Poppins', sans-serif" ${node.text?.fontFamily?.includes('Poppins') ? 'selected' : ''}>Poppins</option>
+                <option value="'Montserrat', sans-serif" ${node.text?.fontFamily?.includes('Montserrat') ? 'selected' : ''}>Montserrat</option>
+                <option value="'Open Sans', sans-serif" ${node.text?.fontFamily?.includes('Open Sans') ? 'selected' : ''}>Open Sans</option>
+                <option value="'Lato', sans-serif" ${node.text?.fontFamily?.includes('Lato') ? 'selected' : ''}>Lato</option>
+              </optgroup>
               <optgroup label="System / Native Fonts">
                 <option value="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" ${node.text?.fontFamily?.includes('system-ui') ? 'selected' : ''}>System Default</option>
                 <option value="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif" ${node.text?.fontFamily?.includes('SF Pro') || node.text?.fontFamily?.includes('-apple-system') ? 'selected' : ''}>Apple SF Pro</option>
@@ -2598,15 +3473,6 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
                 <option value="Georgia, serif" ${node.text?.fontFamily?.includes('Georgia') ? 'selected' : ''}>Georgia</option>
                 <option value="'Times New Roman', Times, serif" ${node.text?.fontFamily?.includes('Times') ? 'selected' : ''}>Times New Roman</option>
                 <option value="Menlo, Monaco, Consolas, monospace" ${node.text?.fontFamily?.includes('Menlo') ? 'selected' : ''}>Menlo / Monaco</option>
-              </optgroup>
-              <optgroup label="Modern Sans (Web / Google Fonts)">
-                <option value="'Inter', sans-serif" ${node.text?.fontFamily?.includes('Inter') || !node.text?.fontFamily ? 'selected' : ''}>Inter</option>
-                <option value="'Outfit', sans-serif" ${node.text?.fontFamily?.includes('Outfit') ? 'selected' : ''}>Outfit</option>
-                <option value="'Roboto', sans-serif" ${node.text?.fontFamily?.includes('Roboto') ? 'selected' : ''}>Roboto</option>
-                <option value="'Poppins', sans-serif" ${node.text?.fontFamily?.includes('Poppins') ? 'selected' : ''}>Poppins</option>
-                <option value="'Montserrat', sans-serif" ${node.text?.fontFamily?.includes('Montserrat') ? 'selected' : ''}>Montserrat</option>
-                <option value="'Open Sans', sans-serif" ${node.text?.fontFamily?.includes('Open Sans') ? 'selected' : ''}>Open Sans</option>
-                <option value="'Lato', sans-serif" ${node.text?.fontFamily?.includes('Lato') ? 'selected' : ''}>Lato</option>
               </optgroup>
               <optgroup label="Monospace & Code">
                 <option value="'JetBrains Mono', monospace" ${node.text?.fontFamily?.includes('JetBrains Mono') ? 'selected' : ''}>JetBrains Mono</option>
@@ -2621,12 +3487,6 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
               </optgroup>
             </select>
           </div>
-        </div>
-        <div class="props-row">
-          <div class="prop-field">
-            <span class="prop-label scrubbable" id="lblFontSize">Size</span>
-            <input type="text" class="prop-input" id="propFontSize" value="${node.text?.fontSize || 16}">
-          </div>
           <div class="prop-field">
             <select class="prop-select" id="propFontWeight">
               <option value="300" ${node.text?.fontWeight === '300' ? 'selected' : ''}>Light (300)</option>
@@ -2639,27 +3499,76 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             </select>
           </div>
         </div>
+
+        <!-- Size, Line Height & Letter Spacing -->
         <div class="props-row">
+          <div class="prop-field">
+            <span class="prop-label scrubbable" id="lblFontSize">Size</span>
+            <input type="text" class="prop-input" id="propFontSize" value="${node.text?.fontSize || 16}">
+          </div>
+          <div class="prop-field">
+            <span class="prop-label scrubbable" id="lblLineHeight">LH</span>
+            <input type="text" class="prop-input" id="propLineHeight" value="${node.text?.lineHeight || 'Auto'}" placeholder="Auto">
+          </div>
+          <div class="prop-field">
+            <span class="prop-label scrubbable" id="lblLetterSpacing">LS</span>
+            <input type="text" class="prop-input" id="propLetterSpacing" value="${node.text?.letterSpacing || 0}" placeholder="0px">
+          </div>
+        </div>
+
+        <!-- Word Style Formatting Action Bar (B, I, U, S) & Text Case -->
+        <div class="props-row">
+          <div class="text-formatting-toolbar">
+            <button class="btn-format-toggle ${node.text?.fontWeight === '700' || node.text?.fontWeight === '800' ? 'active' : ''}" id="btnFormatBold" title="Bold (⌘B)"><b>B</b></button>
+            <button class="btn-format-toggle ${node.text?.fontStyle === 'italic' ? 'active' : ''}" id="btnFormatItalic" title="Italic (⌘I)"><i>I</i></button>
+            <button class="btn-format-toggle ${node.text?.textDecoration?.includes('underline') ? 'active' : ''}" id="btnFormatUnderline" title="Underline (⌘U)"><u>U</u></button>
+            <button class="btn-format-toggle ${node.text?.textDecoration?.includes('line-through') || node.text?.textDecoration?.includes('strikethrough') ? 'active' : ''}" id="btnFormatStrike" title="Strikethrough"><s>S</s></button>
+            <div class="shelf-divider" style="height: 14px;"></div>
+            <button class="btn-case-toggle ${node.text?.textCase === 'uppercase' ? 'active' : ''}" id="btnCaseUpper" title="Uppercase">TT</button>
+            <button class="btn-case-toggle ${node.text?.textCase === 'lowercase' ? 'active' : ''}" id="btnCaseLower" title="Lowercase">tt</button>
+            <button class="btn-case-toggle ${node.text?.textCase === 'capitalize' ? 'active' : ''}" id="btnCaseTitle" title="Title Case">Tt</button>
+            <button class="btn-case-toggle ${!node.text?.textCase || node.text?.textCase === 'none' ? 'active' : ''}" id="btnCaseNormal" title="As Typed">Tᴛ</button>
+          </div>
+        </div>
+
+        <!-- Alignments (Horizontal & Vertical) -->
+        <div class="props-row">
+          <div class="sizing-pill-selector" style="width: 100%;">
+            <button class="sizing-pill-btn ${node.text?.textAlign === 'left' || !node.text?.textAlign ? 'active' : ''}" id="btnAlignLeft" title="Align Left">Left</button>
+            <button class="sizing-pill-btn ${node.text?.textAlign === 'center' ? 'active' : ''}" id="btnAlignCenter" title="Align Center">Center</button>
+            <button class="sizing-pill-btn ${node.text?.textAlign === 'right' ? 'active' : ''}" id="btnAlignRight" title="Align Right">Right</button>
+            <button class="sizing-pill-btn ${node.text?.textAlign === 'justify' ? 'active' : ''}" id="btnAlignJustify" title="Justify">Justify</button>
+          </div>
+        </div>
+        <div class="props-row" style="margin-top: 4px;">
+          <div class="sizing-pill-selector" style="width: 100%;">
+            <button class="sizing-pill-btn ${node.text?.verticalAlign === 'top' || !node.text?.verticalAlign ? 'active' : ''}" id="btnVAlignTop" title="Align Top">⤊ Top</button>
+            <button class="sizing-pill-btn ${node.text?.verticalAlign === 'middle' ? 'active' : ''}" id="btnVAlignMiddle" title="Align Middle">↕ Middle</button>
+            <button class="sizing-pill-btn ${node.text?.verticalAlign === 'bottom' ? 'active' : ''}" id="btnVAlignBottom" title="Align Bottom">⤋ Bottom</button>
+          </div>
+        </div>
+
+        <!-- Text Box Auto-Sizing (Figma Parity) -->
+        <div class="props-row" style="margin-top: 4px;">
+          <div class="sizing-pill-selector" style="width: 100%;">
+            <button class="sizing-pill-btn ${node.text?.autoResize === 'auto-width' || !node.text?.autoResize ? 'active' : ''}" id="btnTextAutoW" title="Auto Width">↔ Auto W</button>
+            <button class="sizing-pill-btn ${node.text?.autoResize === 'auto-height' ? 'active' : ''}" id="btnTextAutoH" title="Auto Height">↕ Auto H</button>
+            <button class="sizing-pill-btn ${node.text?.autoResize === 'fixed' ? 'active' : ''}" id="btnTextFixed" title="Fixed Size">⛶ Fixed</button>
+          </div>
+        </div>
+
+        <!-- Color & Swatch -->
+        <div class="props-row" style="margin-top: 6px;">
           <div class="color-swatch-box" id="swatchTextColor" style="background: ${node.text?.color || '#f8fafc'};" title="Text Color"></div>
           <div class="prop-field">
             <span class="prop-label">Color</span>
             <input type="text" class="prop-input" id="propTextColor" value="${node.text?.color || '#f8fafc'}">
           </div>
-          <div class="prop-field" style="max-width: 80px;">
-            <span class="prop-label scrubbable" id="lblLineHeight">LH</span>
-            <input type="text" class="prop-input" id="propLineHeight" value="${node.text?.lineHeight || 'Auto'}" placeholder="Auto">
-          </div>
         </div>
-        <div class="props-row">
-          <div class="sizing-pill-selector" style="width: 100%;">
-            <button class="sizing-pill-btn ${node.text?.textAlign === 'left' || !node.text?.textAlign ? 'active' : ''}" id="btnAlignLeft">Left</button>
-            <button class="sizing-pill-btn ${node.text?.textAlign === 'center' ? 'active' : ''}" id="btnAlignCenter">Center</button>
-            <button class="sizing-pill-btn ${node.text?.textAlign === 'right' ? 'active' : ''}" id="btnAlignRight">Right</button>
-            <button class="sizing-pill-btn ${node.text?.textAlign === 'justify' ? 'active' : ''}" id="btnAlignJustify">Justify</button>
-          </div>
-        </div>
-        <div class="props-row">
-          <textarea class="prop-input" id="propTextContent" rows="3" style="padding: 6px; width: 100%; border-radius: 4px; border: 1px solid var(--border-subtle);">${node.text?.content || ''}</textarea>
+
+        <!-- Live Content Editor -->
+        <div class="props-row" style="margin-top: 6px;">
+          <textarea class="prop-input" id="propTextContent" rows="3" placeholder="Type text here..." style="padding: 6px; width: 100%; border-radius: 4px; border: 1px solid var(--border-subtle);">${node.text?.content || ''}</textarea>
         </div>
       </div>` : ''}
 
@@ -2872,6 +3781,72 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     });
     document.getElementById('btnFlipV')?.addEventListener('click', () => {
       this.engine.updateNode(node.id, { transform: { scaleY: (t.scaleY || 1) * -1 } }, 'Flip Vertical');
+    });
+
+    // Arrow & Line Studio Listeners
+    document.getElementById('propArrowheadStart')?.addEventListener('change', (e) => {
+      this.engine.updateNode(node.id, { arrowheadStart: e.target.value, arrowStart: e.target.value }, 'Change Arrowhead Start');
+      this.renderer.render();
+    });
+    document.getElementById('propArrowheadEnd')?.addEventListener('change', (e) => {
+      this.engine.updateNode(node.id, { arrowheadEnd: e.target.value, arrowEnd: e.target.value }, 'Change Arrowhead End');
+      this.renderer.render();
+    });
+    document.getElementById('propLineLength')?.addEventListener('change', (e) => {
+      const len = Math.max(2, parseFloat(e.target.value) || t.width);
+      this.engine.updateNode(node.id, { transform: { width: len } }, 'Change Line Length');
+      this.renderer.render();
+    });
+    document.getElementById('propLineAngle')?.addEventListener('change', (e) => {
+      const deg = parseFloat(e.target.value) || 0;
+      this.engine.updateNode(node.id, { transform: { rotation: deg } }, 'Change Line Angle');
+      this.renderer.render();
+    });
+
+    // Star Studio Listeners
+    document.getElementById('propStarPoints')?.addEventListener('change', (e) => {
+      const pts = Math.max(3, parseInt(e.target.value, 10) || 5);
+      this.engine.updateNode(node.id, { starPoints: pts }, 'Change Star Points');
+      this.renderer.render();
+    });
+    document.getElementById('propStarRatio')?.addEventListener('change', (e) => {
+      const ratio = Math.max(0.1, Math.min(0.9, (parseFloat(e.target.value) || 45) / 100));
+      this.engine.updateNode(node.id, { starRatio: ratio }, 'Change Star Ratio');
+      this.renderer.render();
+    });
+
+    // Polygon Studio Listeners
+    document.getElementById('propPolygonSides')?.addEventListener('change', (e) => {
+      const sides = Math.max(3, parseInt(e.target.value, 10) || 6);
+      this.engine.updateNode(node.id, { polygonSides: sides }, 'Change Polygon Sides');
+      this.renderer.render();
+    });
+
+    // Ellipse & Donut Studio Listeners
+    document.getElementById('propArcSweep')?.addEventListener('change', (e) => {
+      const sweep = Math.max(1, Math.min(360, parseFloat(e.target.value) || 360));
+      this.engine.updateNode(node.id, { arcSweep: sweep }, 'Change Arc Sweep');
+      this.renderer.render();
+    });
+    document.getElementById('propArcRatio')?.addEventListener('change', (e) => {
+      const ratio = Math.max(0, Math.min(0.9, (parseFloat(e.target.value) || 0) / 100));
+      this.engine.updateNode(node.id, { arcRatio: ratio }, 'Change Donut Ratio');
+      this.renderer.render();
+    });
+
+    // Vector Path Closed Toggle Listener
+    document.getElementById('chkVectorClosed')?.addEventListener('change', (e) => {
+      if (!Array.isArray(node.vectorPath)) return;
+      const curPath = JSON.parse(JSON.stringify(node.vectorPath));
+      const hasZ = curPath.some(c => c.type === 'Z');
+      if (e.target.checked && !hasZ) {
+        curPath.push({ type: 'Z' });
+      } else if (!e.target.checked && hasZ) {
+        const zIdx = curPath.findIndex(c => c.type === 'Z');
+        if (zIdx !== -1) curPath.splice(zIdx, 1);
+      }
+      this.engine.updateNode(node.id, { vectorPath: curPath }, 'Toggle Vector Path Closed');
+      this.renderer.render();
     });
 
     // 3. Auto Layout 2.0 Controls
@@ -3153,7 +4128,28 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       });
     });
 
-    // 8. Typography
+    // 8. Typography Studio Listeners (Word & Figma Parity)
+    document.querySelectorAll('.typo-preset-chip[data-preset]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const p = chip.dataset.preset;
+        const presets = {
+          display: { fontSize: 40, fontWeight: '800', lineHeight: 1.15, letterSpacing: -0.5 },
+          h1: { fontSize: 32, fontWeight: '700', lineHeight: 1.2, letterSpacing: -0.3 },
+          h2: { fontSize: 24, fontWeight: '600', lineHeight: 1.25, letterSpacing: 0 },
+          h3: { fontSize: 18, fontWeight: '600', lineHeight: 1.3, letterSpacing: 0 },
+          body: { fontSize: 14, fontWeight: '400', lineHeight: 1.45, letterSpacing: 0 },
+          caption: { fontSize: 11, fontWeight: '400', lineHeight: 1.4, letterSpacing: 0.2 },
+          code: { fontSize: 13, fontWeight: '500', fontFamily: "'JetBrains Mono', monospace", lineHeight: 1.4, letterSpacing: 0 }
+        };
+        const cfg = presets[p];
+        if (cfg) {
+          this.engine.updateNode(node.id, { text: cfg }, `Apply Typography Preset ${p}`);
+          this.renderer.render();
+          this.updateInspector();
+        }
+      });
+    });
+
     document.getElementById('propFontFamily')?.addEventListener('change', (e) => {
       this.engine.updateNode(node.id, { text: { fontFamily: e.target.value } }, 'Change Font Family');
       this.renderer.render();
@@ -3209,9 +4205,65 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       this.engine.updateNode(node.id, { text: { lineHeight: isNaN(val) ? 1.3 : val } }, 'Change Line Height');
     });
 
-    document.getElementById('propTextContent')?.addEventListener('input', (e) => {
-      this.engine.updateNode(node.id, { text: { content: e.target.value } }, 'Edit Text');
+    this.makeScrubbable(document.getElementById('lblLetterSpacing'), (delta) => {
+      const curLs = typeof node.text?.letterSpacing === 'number' ? node.text.letterSpacing : 0;
+      const next = Math.round((curLs + delta * 0.2) * 10) / 10;
+      this.engine.updateNode(node.id, { text: { letterSpacing: next } }, 'Scrub Letter Spacing');
     });
+    document.getElementById('propLetterSpacing')?.addEventListener('change', (e) => {
+      const val = parseFloat(e.target.value);
+      this.engine.updateNode(node.id, { text: { letterSpacing: isNaN(val) ? 0 : val } }, 'Change Letter Spacing');
+    });
+
+    // Word Style Formatting Buttons (B, I, U, S)
+    document.getElementById('btnFormatBold')?.addEventListener('click', () => {
+      const isBold = node.text?.fontWeight === '700' || node.text?.fontWeight === '800';
+      this.engine.updateNode(node.id, { text: { fontWeight: isBold ? '400' : '700' } }, 'Toggle Bold');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnFormatItalic')?.addEventListener('click', () => {
+      const isItalic = node.text?.fontStyle === 'italic';
+      this.engine.updateNode(node.id, { text: { fontStyle: isItalic ? 'normal' : 'italic' } }, 'Toggle Italic');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnFormatUnderline')?.addEventListener('click', () => {
+      const isUnder = node.text?.textDecoration?.includes('underline');
+      this.engine.updateNode(node.id, { text: { textDecoration: isUnder ? 'none' : 'underline' } }, 'Toggle Underline');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnFormatStrike')?.addEventListener('click', () => {
+      const isStrike = node.text?.textDecoration?.includes('line-through') || node.text?.textDecoration?.includes('strikethrough');
+      this.engine.updateNode(node.id, { text: { textDecoration: isStrike ? 'none' : 'line-through' } }, 'Toggle Strikethrough');
+      this.renderer.render();
+      this.updateInspector();
+    });
+
+    // Letter Casing Buttons
+    document.getElementById('btnCaseUpper')?.addEventListener('click', () => {
+      this.engine.updateNode(node.id, { text: { textCase: 'uppercase' } }, 'Set Uppercase');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnCaseLower')?.addEventListener('click', () => {
+      this.engine.updateNode(node.id, { text: { textCase: 'lowercase' } }, 'Set Lowercase');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnCaseTitle')?.addEventListener('click', () => {
+      this.engine.updateNode(node.id, { text: { textCase: 'capitalize' } }, 'Set Title Case');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnCaseNormal')?.addEventListener('click', () => {
+      this.engine.updateNode(node.id, { text: { textCase: 'none' } }, 'Set Normal Case');
+      this.renderer.render();
+      this.updateInspector();
+    });
+
+    // Alignments (Horizontal & Vertical)
     document.getElementById('btnAlignLeft')?.addEventListener('click', () => {
       this.engine.updateNode(node.id, { text: { textAlign: 'left' } }, 'Align Text Left');
     });
@@ -3223,6 +4275,57 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     });
     document.getElementById('btnAlignJustify')?.addEventListener('click', () => {
       this.engine.updateNode(node.id, { text: { textAlign: 'justify' } }, 'Align Text Justify');
+    });
+
+    document.getElementById('btnVAlignTop')?.addEventListener('click', () => {
+      this.engine.updateNode(node.id, { text: { verticalAlign: 'top' } }, 'Align Vertical Top');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnVAlignMiddle')?.addEventListener('click', () => {
+      this.engine.updateNode(node.id, { text: { verticalAlign: 'middle' } }, 'Align Vertical Middle');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnVAlignBottom')?.addEventListener('click', () => {
+      this.engine.updateNode(node.id, { text: { verticalAlign: 'bottom' } }, 'Align Vertical Bottom');
+      this.renderer.render();
+      this.updateInspector();
+    });
+
+    // Auto-Sizing (Figma Parity)
+    document.getElementById('btnTextAutoW')?.addEventListener('click', () => {
+      const fontStyle = node.text?.fontStyle === 'italic' ? 'italic ' : '';
+      const weight = node.text?.fontWeight || '400';
+      const size = node.text?.fontSize || 16;
+      const family = node.text?.fontFamily || 'Inter, sans-serif';
+      const lines = String(node.text?.content || 'Heading').split('\n');
+      const estCharW = size * 0.58;
+      let maxLen = 0;
+      for (const line of lines) {
+        maxLen = Math.max(maxLen, line.length);
+      }
+      const measuredW = Math.max(40, Math.round(maxLen * estCharW + 16));
+      this.engine.updateNode(node.id, {
+        transform: { width: measuredW },
+        text: { autoResize: 'auto-width' }
+      }, 'Set Text Auto Width');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnTextAutoH')?.addEventListener('click', () => {
+      this.engine.updateNode(node.id, { text: { autoResize: 'auto-height' } }, 'Set Text Auto Height');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnTextFixed')?.addEventListener('click', () => {
+      this.engine.updateNode(node.id, { text: { autoResize: 'fixed' } }, 'Set Text Fixed Size');
+      this.renderer.render();
+      this.updateInspector();
+    });
+
+    document.getElementById('propTextContent')?.addEventListener('input', (e) => {
+      this.engine.updateNode(node.id, { text: { content: e.target.value } }, 'Edit Text');
     });
 
     // 9. Recolor Hex with Color Picker Popover

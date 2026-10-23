@@ -3029,3 +3029,206 @@ html {
   background: var(--bg-hover);
   color: var(--text-main);
 }
+
+/* =========================================================================
+   Tool Studio & Contextual Right Panel Enhancements (Section 1 & 4.1)
+   ========================================================================= */
+
+.tool-active-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, rgba(13, 153, 255, 0.15), rgba(99, 102, 241, 0.12));
+  border: 1px solid rgba(13, 153, 255, 0.35);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.tool-active-banner-icon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: rgba(13, 153, 255, 0.2);
+  color: var(--accent-blue);
+  flex-shrink: 0;
+}
+
+.tool-active-banner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tool-active-banner-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.2px;
+}
+
+.tool-active-banner-desc {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.tool-studio-card {
+  background: var(--bg-subtle, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool-preset-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tool-preset-pill {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tool-preset-pill:hover {
+  border-color: var(--accent-blue);
+  color: #ffffff;
+  background: rgba(13, 153, 255, 0.15);
+}
+
+.tool-preset-pill.active {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #ffffff;
+}
+
+/* --- Word + Figma Typography Suite --- */
+
+.typography-presets-bar {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.typo-preset-chip {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.typo-preset-chip:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--bg-hover);
+}
+
+.typo-preset-chip.active {
+  background: rgba(13, 153, 255, 0.25);
+  border-color: var(--accent-blue);
+  color: #38bdf8;
+}
+
+.text-formatting-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 3px;
+  width: 100%;
+}
+
+.btn-format-toggle {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-size: 11px;
+  padding: 3px 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+  font-weight: 600;
+}
+
+.btn-format-toggle:hover {
+  color: #ffffff;
+  background: var(--bg-hover);
+}
+
+.btn-format-toggle.active {
+  background: var(--accent-blue);
+  color: #ffffff;
+}
+
+.btn-case-toggle {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-size: 10.5px;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+}
+
+.btn-case-toggle:hover {
+  color: #ffffff;
+  background: var(--bg-hover);
+}
+
+.btn-case-toggle.active {
+  background: rgba(13, 153, 255, 0.25);
+  border-color: var(--accent-blue);
+  color: #38bdf8;
+}
+
+.range-slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.range-slider-input {
+  flex: 1;
+  accent-color: var(--accent-blue);
+  cursor: pointer;
+  height: 4px;
+}
+
+.range-slider-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  min-width: 34px;
+  text-align: right;
+}

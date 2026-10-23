@@ -151,6 +151,8 @@ export function createNode(type, overrides = {}) {
   } else if (type === 'ellipse') {
     baseNode.style.fills = overrides.style?.fills || [{ type: 'solid', color: '#8b5cf6', opacity: 1 }];
     baseNode.style.cornerRadius = 9999;
+    baseNode.arcSweep = overrides.arcSweep !== undefined ? overrides.arcSweep : 360;
+    baseNode.arcRatio = overrides.arcRatio || 0;
   } else if (type === 'line') {
     baseNode.style.strokes = overrides.style?.strokes || [{ color: '#38bdf8', width: 2, align: 'center', style: 'solid' }];
     baseNode.style.fills = [];
@@ -162,7 +164,9 @@ export function createNode(type, overrides = {}) {
     baseNode.style.fills = [];
     baseNode.transform.width = overrides.transform?.width || 140;
     baseNode.transform.height = overrides.transform?.height || 2;
-    baseNode.arrowhead = overrides.arrowhead || 'triangle';
+    baseNode.arrowhead = overrides.arrowhead || overrides.arrowheadEnd || 'triangle';
+    baseNode.arrowheadEnd = overrides.arrowheadEnd || overrides.arrowhead || 'triangle';
+    baseNode.arrowheadStart = overrides.arrowheadStart || 'none';
   } else if (type === 'vector') {
     baseNode.type = 'vector';
     baseNode.name = overrides.name || 'Vector';
@@ -175,6 +179,12 @@ export function createNode(type, overrides = {}) {
   } else if (type === 'polygon' || type === 'star') {
     baseNode.style.fills = overrides.style?.fills || [{ type: 'solid', color: '#f59e0b', opacity: 1 }];
     baseNode.style.cornerRadius = 0;
+    if (type === 'star') {
+      baseNode.starPoints = overrides.starPoints || 5;
+      baseNode.starRatio = overrides.starRatio !== undefined ? overrides.starRatio : 0.45;
+    } else {
+      baseNode.polygonSides = overrides.polygonSides || 6;
+    }
   } else if (type === 'image') {
     baseNode.style.fills = overrides.style?.fills || [{ type: 'image', url: overrides.imageUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80', opacity: 1 }];
     baseNode.style.cornerRadius = overrides.style?.cornerRadius !== undefined ? overrides.style.cornerRadius : 8;

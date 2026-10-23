@@ -159,6 +159,16 @@ export class CanvasRenderer {
       this.drawCreationPreview(ctx);
     }
 
+    // 11. Draw Live Freehand Pencil Stroke
+    if (this.pencilPreview && this.pencilPreview.length > 1) {
+      this.drawPencilPreview(ctx);
+    }
+
+    // 12. Draw Live Pen Vector Path
+    if (this.penPreview) {
+      this.drawPenPreview(ctx);
+    }
+
     ctx.restore();
     ctx.restore();
   }
@@ -184,7 +194,8 @@ export class CanvasRenderer {
     if (!node || !node.visible) return;
 
     const bounds = computeWorldBounds(page, nodeId, boundsCache);
-    if (!bounds || bounds.width <= 0 || bounds.height <= 0) return;
+    const isLineLike = node.type === 'line' || node.type === 'arrow';
+    if (!bounds || bounds.width <= 0 || (!isLineLike && bounds.height <= 0)) return;
 
     ctx.save();
     ctx.globalAlpha = (node.opacity !== undefined ? node.opacity : (node.style?.opacity !== undefined ? node.style.opacity : 1));
@@ -224,24 +235,36 @@ export class CanvasRenderer {
     const radius = node.style?.cornerRadius !== undefined ? node.style.cornerRadius : 0;
     ctx.beginPath();
     if (node.type === 'ellipse') {
-      ctx.ellipse(
-        bounds.x + bounds.width / 2,
-        bounds.y + bounds.height / 2,
-        bounds.width / 2,
-        bounds.height / 2,
-        0, 0, Math.PI * 2
-      );
+      const cx = bounds.x + bounds.width / 2;
+      const cy = bounds.y + bounds.height / 2;
+      const rx = bounds.width / 2;
+      const ry = bounds.height / 2;
+      const sweep = node.arcSweep !== undefined ? (node.arcSweep * Math.PI) / 180 : Math.PI * 2;
+      const ratio = node.arcRatio || 0;
+      if (ratio > 0 && ratio < 1) {
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, sweep);
+        ctx.ellipse(cx, cy, rx * (1 - ratio), ry * (1 - ratio), 0, sweep, 0, true);
+        ctx.closePath();
+      } else if (sweep < Math.PI * 2) {
+        ctx.moveTo(cx, cy);
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, sweep);
+        ctx.closePath();
+      } else {
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      }
     } else if (node.type === 'star') {
       const cx = bounds.x + bounds.width / 2;
       const cy = bounds.y + bounds.height / 2;
       const outerR = Math.min(bounds.width, bounds.height) / 2;
-      const innerR = outerR * 0.45;
-      this.drawStarPath(ctx, cx, cy, 5, outerR, innerR);
+      const points = node.starPoints || 5;
+      const innerR = outerR * (node.starRatio !== undefined ? node.starRatio : 0.45);
+      this.drawStarPath(ctx, cx, cy, points, outerR, innerR);
     } else if (node.type === 'polygon') {
       const cx = bounds.x + bounds.width / 2;
       const cy = bounds.y + bounds.height / 2;
       const r = Math.min(bounds.width, bounds.height) / 2;
-      this.drawPolygonPath(ctx, cx, cy, 3, r);
+      const sides = node.polygonSides || 3;
+      this.drawPolygonPath(ctx, cx, cy, sides, r);
     } else if (node.type === 'line' || node.type === 'arrow') {
       ctx.moveTo(bounds.x, bounds.y + bounds.height / 2);
       ctx.lineTo(bounds.x + bounds.width, bounds.y + bounds.height / 2);
@@ -291,6 +314,19 @@ export class CanvasRenderer {
       ctx.setLineDash([]);
     }
 
+    // Arrowheads for Arrow Nodes
+    if (node.type === 'arrow') {
+      const firstStroke = node.style?.strokes?.[0] || { color: '#38bdf8', width: 2 };
+      const endMarker = node.arrowheadEnd || node.arrowEnd || 'triangle';
+      const startMarker = node.arrowheadStart || node.arrowStart;
+      if (endMarker && endMarker !== 'none') {
+        this.drawArrowhead(ctx, bounds, firstStroke.color, firstStroke.width, endMarker);
+      }
+      if (startMarker && startMarker !== 'none') {
+        this.drawArrowheadStart(ctx, bounds, firstStroke.color, firstStroke.width, startMarker);
+      }
+    }
+
     // Text rendering
     if (node.type === 'text' && node.text) {
       this.drawTextNode(ctx, node, bounds);
@@ -332,23 +368,70 @@ export class CanvasRenderer {
     ctx.save();
     const fillCol = (node.style?.fills && node.style.fills[0]?.color) || t.color || '#f8fafc';
     ctx.fillStyle = fillCol;
+    const fontStyle = t.fontStyle === 'italic' ? 'italic ' : '';
     const weight = t.fontWeight || '400';
     const size = t.fontSize || 16;
     const family = t.fontFamily || 'Inter, sans-serif';
-    ctx.font = `${weight} ${size}px ${family}`;
+    ctx.font = `${fontStyle}${weight} ${size}px ${family}`;
     ctx.textAlign = t.textAlign || 'left';
     ctx.textBaseline = 'top';
 
+    if (t.letterSpacing) {
+      try {
+        ctx.letterSpacing = `${t.letterSpacing}px`;
+      } catch (_) {}
+    }
+
     const textX = t.textAlign === 'center' ? bounds.x + bounds.width / 2 :
                   t.textAlign === 'right' ? bounds.x + bounds.width : bounds.x;
-    const textY = bounds.y;
 
-    // Handle single or multiline text
-    const lines = String(t.content || '').split('\n');
+    let lines = String(t.content || '').split('\n');
+    if (t.textCase === 'uppercase') {
+      lines = lines.map(l => l.toUpperCase());
+    } else if (t.textCase === 'lowercase') {
+      lines = lines.map(l => l.toLowerCase());
+    } else if (t.textCase === 'capitalize') {
+      lines = lines.map(l => l.replace(/\b\w/g, c => c.toUpperCase()));
+    }
+
     const lhMultiplier = typeof t.lineHeight === 'number' ? (t.lineHeight > 3 ? t.lineHeight / size : t.lineHeight) : 1.3;
     const lineHeight = size * lhMultiplier;
+    const totalTextH = lines.length * lineHeight;
+
+    let textY = bounds.y;
+    if (t.verticalAlign === 'middle') {
+      textY = bounds.y + Math.max(0, (bounds.height - totalTextH) / 2);
+    } else if (t.verticalAlign === 'bottom') {
+      textY = bounds.y + Math.max(0, bounds.height - totalTextH);
+    }
+
     for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], textX, textY + i * lineHeight);
+      const lineStr = lines[i];
+      const curY = textY + i * lineHeight;
+      ctx.fillText(lineStr, textX, curY);
+
+      if (t.textDecoration) {
+        const textMetrics = ctx.measureText(lineStr);
+        let startX = textX;
+        if (t.textAlign === 'center') startX = textX - textMetrics.width / 2;
+        else if (t.textAlign === 'right') startX = textX - textMetrics.width;
+
+        ctx.strokeStyle = fillCol;
+        ctx.lineWidth = Math.max(1, size / 16);
+
+        if (t.textDecoration.includes('underline')) {
+          ctx.beginPath();
+          ctx.moveTo(startX, curY + size + 2);
+          ctx.lineTo(startX + textMetrics.width, curY + size + 2);
+          ctx.stroke();
+        }
+        if (t.textDecoration.includes('line-through') || t.textDecoration.includes('strikethrough')) {
+          ctx.beginPath();
+          ctx.moveTo(startX, curY + size * 0.55);
+          ctx.lineTo(startX + textMetrics.width, curY + size * 0.55);
+          ctx.stroke();
+        }
+      }
     }
     ctx.restore();
   }
@@ -547,20 +630,92 @@ export class CanvasRenderer {
     ctx.restore();
   }
 
-  drawArrowhead(ctx, bounds, color = '#38bdf8', width = 2) {
+  drawArrowhead(ctx, bounds, color = '#38bdf8', width = 2, type = 'triangle') {
     ctx.save();
     ctx.fillStyle = color;
+    ctx.strokeStyle = color;
     const endX = bounds.x + bounds.width;
     const endY = bounds.y + bounds.height / 2;
-    const arrowSize = Math.max(8, width * 4);
+    const arrowSize = Math.max(8, width * 3.5);
 
-    ctx.beginPath();
-    ctx.moveTo(endX, endY);
-    ctx.lineTo(endX - arrowSize, endY - arrowSize * 0.5);
-    ctx.lineTo(endX - arrowSize * 0.8, endY);
-    ctx.lineTo(endX - arrowSize, endY + arrowSize * 0.5);
-    ctx.closePath();
-    ctx.fill();
+    if (type === 'circle') {
+      ctx.beginPath();
+      ctx.arc(endX - arrowSize * 0.3, endY, arrowSize * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (type === 'square') {
+      const sz = arrowSize * 0.6;
+      ctx.fillRect(endX - sz, endY - sz / 2, sz, sz);
+    } else if (type === 'diamond') {
+      const sz = arrowSize * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(endX - sz, endY - sz);
+      ctx.lineTo(endX - sz * 2, endY);
+      ctx.lineTo(endX - sz, endY + sz);
+      ctx.closePath();
+      ctx.fill();
+    } else if (type === 'stealth' || type === 'open') {
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(endX - arrowSize, endY - arrowSize * 0.5);
+      ctx.lineTo(endX, endY);
+      ctx.lineTo(endX - arrowSize, endY + arrowSize * 0.5);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(endX - arrowSize, endY - arrowSize * 0.45);
+      ctx.lineTo(endX - arrowSize * 0.75, endY);
+      ctx.lineTo(endX - arrowSize, endY + arrowSize * 0.45);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  drawArrowheadStart(ctx, bounds, color = '#38bdf8', width = 2, type = 'none') {
+    if (!type || type === 'none') return;
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    const startX = bounds.x;
+    const startY = bounds.y + bounds.height / 2;
+    const arrowSize = Math.max(8, width * 3.5);
+
+    if (type === 'circle') {
+      ctx.beginPath();
+      ctx.arc(startX + arrowSize * 0.3, startY, arrowSize * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (type === 'square') {
+      const sz = arrowSize * 0.6;
+      ctx.fillRect(startX, startY - sz / 2, sz, sz);
+    } else if (type === 'diamond') {
+      const sz = arrowSize * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(startX + sz, startY - sz);
+      ctx.lineTo(startX + sz * 2, startY);
+      ctx.lineTo(startX + sz, startY + sz);
+      ctx.closePath();
+      ctx.fill();
+    } else if (type === 'stealth' || type === 'open') {
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(startX + arrowSize, startY - arrowSize * 0.5);
+      ctx.lineTo(startX, startY);
+      ctx.lineTo(startX + arrowSize, startY + arrowSize * 0.5);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(startX + arrowSize, startY - arrowSize * 0.45);
+      ctx.lineTo(startX + arrowSize * 0.75, startY);
+      ctx.lineTo(startX + arrowSize, startY + arrowSize * 0.45);
+      ctx.closePath();
+      ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -856,6 +1011,62 @@ export class CanvasRenderer {
       ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+    } else if (tool === 'arrow') {
+      ctx.strokeStyle = '#0d99ff';
+      ctx.fillStyle = '#0d99ff';
+      ctx.lineWidth = 2 / this.zoom;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(currentX, currentY);
+      ctx.stroke();
+      const angle = Math.atan2(currentY - startY, currentX - startX);
+      const headLen = 14 / this.zoom;
+      ctx.beginPath();
+      ctx.moveTo(currentX, currentY);
+      ctx.lineTo(currentX - headLen * Math.cos(angle - Math.PI / 6), currentY - headLen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(currentX - headLen * Math.cos(angle + Math.PI / 6), currentY - headLen * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    } else if (tool === 'star') {
+      ctx.fillStyle = 'rgba(13, 153, 255, 0.15)';
+      ctx.strokeStyle = '#0d99ff';
+      ctx.lineWidth = 1.5 / this.zoom;
+      const cx = x + w / 2;
+      const cy = y + h / 2;
+      const outerR = Math.min(w, h) / 2;
+      const innerR = outerR * 0.4;
+      const points = 5;
+      ctx.beginPath();
+      for (let i = 0; i < points * 2; i++) {
+        const r = (i % 2 === 0) ? outerR : innerR;
+        const angle = -Math.PI / 2 + (i * Math.PI) / points;
+        const px = cx + r * Math.cos(angle);
+        const py = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else if (tool === 'polygon') {
+      ctx.fillStyle = 'rgba(13, 153, 255, 0.15)';
+      ctx.strokeStyle = '#0d99ff';
+      ctx.lineWidth = 1.5 / this.zoom;
+      const cx = x + w / 2;
+      const cy = y + h / 2;
+      const r = Math.min(w, h) / 2;
+      const sides = 6;
+      ctx.beginPath();
+      for (let i = 0; i < sides; i++) {
+        const angle = -Math.PI / 2 + (i * 2 * Math.PI) / sides;
+        const px = cx + r * Math.cos(angle);
+        const py = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
     } else if (tool === 'line') {
       ctx.strokeStyle = '#0d99ff';
       ctx.lineWidth = 2 / this.zoom;
@@ -863,6 +1074,17 @@ export class CanvasRenderer {
       ctx.moveTo(startX, startY);
       ctx.lineTo(currentX, currentY);
       ctx.stroke();
+    } else if (tool === 'text') {
+      ctx.fillStyle = 'rgba(13, 153, 255, 0.08)';
+      ctx.strokeStyle = '#0d99ff';
+      ctx.lineWidth = 1 / this.zoom;
+      ctx.setLineDash([3 / this.zoom, 3 / this.zoom]);
+      ctx.strokeRect(x, y, w, h);
+      ctx.fillRect(x, y, w, h);
+      ctx.setLineDash([]);
+      ctx.font = `${Math.max(12 / this.zoom, 9)}px Inter, sans-serif`;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.fillText('Type text...', x + 4 / this.zoom, y + 14 / this.zoom);
     } else {
       ctx.fillStyle = tool === 'section' ? 'rgba(99, 102, 241, 0.12)' : 'rgba(13, 153, 255, 0.12)';
       ctx.strokeStyle = tool === 'section' ? '#6366f1' : '#0d99ff';
@@ -888,6 +1110,61 @@ export class CanvasRenderer {
     ctx.textBaseline = 'middle';
     ctx.fillText(label, x + w / 2, badgeY + badgeH / 2);
 
+    ctx.restore();
+  }
+
+  drawPencilPreview(ctx) {
+    if (!this.pencilPreview || this.pencilPreview.length < 2) return;
+    ctx.save();
+    ctx.strokeStyle = '#0d99ff';
+    ctx.lineWidth = 2.5 / this.zoom;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(this.pencilPreview[0].x, this.pencilPreview[0].y);
+    for (let i = 1; i < this.pencilPreview.length; i++) {
+      ctx.lineTo(this.pencilPreview[i].x, this.pencilPreview[i].y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawPenPreview(ctx) {
+    if (!this.penPreview) return;
+    const { points, current } = this.penPreview;
+    if (!points || points.length === 0) return;
+    ctx.save();
+    ctx.strokeStyle = '#0d99ff';
+    ctx.lineWidth = 1.5 / this.zoom;
+    ctx.setLineDash([4 / this.zoom, 4 / this.zoom]);
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    if (current) {
+      ctx.lineTo(current.x, current.y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw vertex anchors
+    const anchorR = 3.5 / this.zoom;
+    for (const pt of points) {
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#0d99ff';
+      ctx.lineWidth = 1.5 / this.zoom;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, anchorR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    if (current) {
+      ctx.fillStyle = 'rgba(13, 153, 255, 0.4)';
+      ctx.beginPath();
+      ctx.arc(current.x, current.y, anchorR, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
