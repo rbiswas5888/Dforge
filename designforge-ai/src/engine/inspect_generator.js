@@ -50,7 +50,20 @@ export class InspectCodeGenerator {
     };
   }
 
+  _resolveParams(node, t, l, s, text, fill, stroke, radius, opacity) {
+    const _t = t || node?.transform || { x: 0, y: 0, width: 100, height: 100, rotation: 0 };
+    const _l = l || node?.layout || { mode: 'none', gap: 0, paddingTop: 0, paddingRight: 0, paddingBottom: 0, paddingLeft: 0 };
+    const _s = s || node?.style || {};
+    const _text = text || node?.text || {};
+    const _fill = fill !== undefined ? fill : (_s.fills?.[0]?.color || 'transparent');
+    const _stroke = stroke !== undefined ? stroke : _s.strokes?.[0];
+    const _radius = radius !== undefined ? radius : (_s.cornerRadius || 0);
+    const _opacity = opacity !== undefined ? opacity : (node?.opacity !== undefined ? node.opacity : 1);
+    return { t: _t, l: _l, s: _s, text: _text, fill: _fill, stroke: _stroke, radius: _radius, opacity: _opacity };
+  }
+
   generateCSS(node, t, l, s, text, fill, stroke, radius, opacity) {
+    ({ t, l, s, text, fill, stroke, radius, opacity } = this._resolveParams(node, t, l, s, text, fill, stroke, radius, opacity));
     const lines = [];
     lines.push(`/* ${node.name} (${node.type}) */`);
 
@@ -105,6 +118,7 @@ export class InspectCodeGenerator {
   }
 
   generateTailwind(node, t, l, s, text, fill, stroke, radius, opacity) {
+    ({ t, l, s, text, fill, stroke, radius, opacity } = this._resolveParams(node, t, l, s, text, fill, stroke, radius, opacity));
     const classes = [];
 
     if (l.mode === 'stack-horizontal') {
@@ -150,6 +164,7 @@ export class InspectCodeGenerator {
   }
 
   generateReact(node, t, l, s, text, fill, stroke, radius, opacity) {
+    ({ t, l, s, text, fill, stroke, radius, opacity } = this._resolveParams(node, t, l, s, text, fill, stroke, radius, opacity));
     const componentName = (node.name || 'Component').replace(/[^a-zA-Z0-9]/g, '');
     const tw = this.generateTailwind(node, t, l, s, text, fill, stroke, radius, opacity);
 
@@ -161,6 +176,7 @@ export class InspectCodeGenerator {
   }
 
   generateSwiftUI(node, t, l, s, text, fill, stroke, radius, opacity) {
+    ({ t, l, s, text, fill, stroke, radius, opacity } = this._resolveParams(node, t, l, s, text, fill, stroke, radius, opacity));
     const structName = (node.name || 'View').replace(/[^a-zA-Z0-9]/g, '');
     const isVStack = l.mode === 'stack-vertical';
     const isHStack = l.mode === 'stack-horizontal';

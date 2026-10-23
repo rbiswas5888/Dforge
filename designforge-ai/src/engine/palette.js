@@ -4,17 +4,32 @@
  */
 
 export class CommandPaletteEngine {
-  constructor(appController) {
+  constructor(appController = null) {
     this.app = appController;
+    this.registeredActions = [];
+  }
+
+  registerAction(id, title, category = 'Action', shortcut = '', action = () => {}) {
+    this.registeredActions.push({
+      id,
+      title,
+      category,
+      shortcut,
+      icon: '⌘',
+      action
+    });
   }
 
   /**
    * Builds an aggregated index of all searchable items
    */
   buildIndex() {
-    const items = [];
+    const items = [...this.registeredActions];
+    if (!this.app || !this.app.engine) {
+      return items;
+    }
     const engine = this.app.engine;
-    const page = engine.getActivePage();
+    const page = engine.getActivePage ? engine.getActivePage() : null;
 
     // 1. Tool commands
     const tools = [
@@ -111,5 +126,9 @@ export class CommandPaletteEngine {
         return titleMatch || catMatch || shortcutMatch;
       })
       .slice(0, 15);
+  }
+
+  query(query) {
+    return this.search(query);
   }
 }

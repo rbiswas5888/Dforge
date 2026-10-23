@@ -86,6 +86,10 @@ export class StorageEngine {
     return JSON.stringify(document, null, 2);
   }
 
+  serialize(document) {
+    return this.serializeDocument(document);
+  }
+
   /**
    * Parses an imported .dforge file content
    */
@@ -102,5 +106,9 @@ export class StorageEngine {
    */
   deserializeDocument(jsonString) {
     return this.parseDForgeContent(jsonString);
+  }
+
+  deserialize(jsonString) {
+    return this.deserializeDocument(jsonString);
   }
 }

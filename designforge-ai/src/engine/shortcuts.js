@@ -384,6 +384,7 @@ export class ShortcutRegistry {
 
 
   bindGlobalListener() {
+    if (typeof window === 'undefined') return;
     window.addEventListener('keydown', (e) => {
       // Don't intercept if user is typing in an active text input or textarea
       const tag = document.activeElement?.tagName?.toLowerCase();
