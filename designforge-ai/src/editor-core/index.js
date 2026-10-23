@@ -15,3 +15,7 @@ export * from './export-handoff.js';
 export * from './input-router.js';
 export * from './prototype-diagnostics.js';
 export * from './color-picker.js';
+export * from './device-presets.js';
+export * from './color-math-engine.js';
+export * from './advanced-prototype-engine.js';
+export * from './design-tools-suite.js';

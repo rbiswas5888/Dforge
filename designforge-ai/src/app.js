@@ -52,7 +52,10 @@ import {
   ExportHandoffEngine,
   CentralInputRouter,
   PrototypeDiagnosticsEngine,
-  ColorPickerPopover
+  ColorPickerPopover,
+  queryDevicePresets,
+  DEVICE_PRESET_CATALOG,
+  CustomFrameEngine
 } from './editor-core/index.js';
 
 export class DesignForgeApp {
@@ -100,6 +103,11 @@ export class DesignForgeApp {
     this.protoInspectorMode = 'quick'; // 'quick' | 'advanced'
     this.inputRouter = new CentralInputRouter(this);
     this.colorPicker = new ColorPickerPopover();
+    this.customFrameEngine = new CustomFrameEngine();
+    this.devicePresetCategory = 'All';
+    this.devicePresetQuery = '';
+    this.customFrameW = 1440;
+    this.customFrameH = 900;
     this.collapsedNodeIds = new Set();
 
     if (typeof window !== 'undefined') {
@@ -1574,6 +1582,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   }
 
   setTool(tool) {
+    const prevTool = this.currentTool;
     this.currentTool = tool;
     const groupMap = {
       select: 'move', scale: 'move',
@@ -1598,6 +1607,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       else if (tool === 'text') canvas.style.cursor = 'text';
       else if (tool === 'pen' || tool === 'pencil') canvas.style.cursor = 'crosshair';
       else canvas.style.cursor = 'default';
+    }
+
+    if (tool === 'frame' || prevTool === 'frame') {
+      this.updateInspector();
     }
   }
 
@@ -1801,9 +1814,248 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     });
   }
 
+  // --- Device Presets & Custom Frame Generator (Section 4) ---
+  renderDevicePresetsHTML(selectedFrame = null) {
+    const categories = ['All', 'Phone', 'Tablet', 'Desktop', 'Custom'];
+    const activeCategory = this.devicePresetCategory || 'All';
+    const query = this.devicePresetQuery || '';
+
+    let presets = queryDevicePresets({ query });
+    if (activeCategory === 'Phone') {
+      presets = presets.filter(p => (p.subcategory && (p.subcategory.includes('Phone') || p.subcategory.includes('iPhone') || p.subcategory.includes('Foldable') || p.subcategory.includes('Note'))));
+    } else if (activeCategory === 'Tablet') {
+      presets = presets.filter(p => (p.subcategory && (p.subcategory.includes('iPad') || p.subcategory.includes('Tablet'))));
+    } else if (activeCategory === 'Desktop') {
+      presets = presets.filter(p => p.category === 'Laptop/Desktop');
+    }
+
+    const currentW = selectedFrame ? Math.round(selectedFrame.transform?.width || 1440) : (this.customFrameW || 1440);
+    const currentH = selectedFrame ? Math.round(selectedFrame.transform?.height || 900) : (this.customFrameH || 900);
+
+    return `
+      <div class="device-preset-container" id="devicePresetContainer">
+        <div class="device-preset-header">
+          <span>📱 Device & Frame Presets</span>
+          <span style="font-size: 10px; color: var(--accent-blue);">${presets.length} models</span>
+        </div>
+
+        <!-- Category Pills (All, Phone, Tablet, Desktop, Custom) -->
+        <div class="device-category-pills">
+          ${categories.map(cat => `
+            <button class="device-pill-btn ${cat === activeCategory ? 'active' : ''}" data-cat="${cat}">${cat}</button>
+          `).join('')}
+        </div>
+
+        ${activeCategory === 'Custom' ? `
+          <!-- Custom Frame Form -->
+          <div class="custom-frame-controls">
+            <div class="props-row">
+              <div class="prop-field">
+                <span class="prop-label">W</span>
+                <input type="number" class="prop-input" id="inpCustomFrameW" value="${currentW}">
+              </div>
+              <button class="btn-aspect-ratio ${this.aspectRatioLocked ? 'locked' : ''}" id="btnLockCustomAspect" title="Lock Aspect Ratio">
+                ${this.aspectRatioLocked ? '🔒' : '🔓'}
+              </button>
+              <div class="prop-field">
+                <span class="prop-label">H</span>
+                <input type="number" class="prop-input" id="inpCustomFrameH" value="${currentH}">
+              </div>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button class="orientation-toggle-btn" id="btnToggleCustomOrientation" style="flex: 1;" title="Toggle Orientation (Portrait <-> Landscape)">
+                <span>↔ Orientation</span>
+              </button>
+              <button class="btn-inspector-action" id="btnInsertCustomFrame" style="flex: 1.5; font-size: 11px; background: var(--accent-blue); color: #fff;">
+                ${selectedFrame ? 'Apply Dimensions' : '＋ Add Custom Frame'}
+              </button>
+            </div>
+          </div>
+        ` : `
+          <!-- Search input -->
+          <input type="text" class="device-search-input" id="inpDeviceSearch" placeholder="Search devices (iPhone, iPad, Galaxy, MacBook)..." value="${query}">
+
+          <!-- Device Presets List -->
+          <div class="device-preset-list">
+            ${presets.map(p => `
+              <div class="device-preset-item" data-preset-id="${p.id}" data-w="${p.width}" data-h="${p.height}" data-name="${p.name}" data-category="${p.category}" data-subcategory="${p.subcategory || ''}">
+                <div>
+                  <div class="device-preset-name">${p.name}</div>
+                  <div class="device-preset-era">${p.category} • ${p.era}</div>
+                </div>
+                <div class="device-preset-meta">
+                  <div class="device-preset-dims">${p.width} × ${p.height} ${p.unit}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+    `;
+  }
+
+  bindDevicePresetListeners(selectedFrame = null) {
+    // 1. Category pills
+    document.querySelectorAll('.device-pill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.devicePresetCategory = btn.dataset.cat;
+        this.updateInspector();
+      });
+    });
+
+    // 2. Search input
+    const searchInp = document.getElementById('inpDeviceSearch');
+    if (searchInp) {
+      searchInp.addEventListener('input', (e) => {
+        this.devicePresetQuery = e.target.value;
+        const container = document.getElementById('devicePresetContainer');
+        if (container) {
+          const list = container.querySelector('.device-preset-list');
+          if (list) {
+            let presets = queryDevicePresets({ query: this.devicePresetQuery });
+            const activeCategory = this.devicePresetCategory || 'All';
+            if (activeCategory === 'Phone') {
+              presets = presets.filter(p => (p.subcategory && (p.subcategory.includes('Phone') || p.subcategory.includes('iPhone') || p.subcategory.includes('Foldable') || p.subcategory.includes('Note'))));
+            } else if (activeCategory === 'Tablet') {
+              presets = presets.filter(p => (p.subcategory && (p.subcategory.includes('iPad') || p.subcategory.includes('Tablet'))));
+            } else if (activeCategory === 'Desktop') {
+              presets = presets.filter(p => p.category === 'Laptop/Desktop');
+            }
+            list.innerHTML = presets.map(p => `
+              <div class="device-preset-item" data-preset-id="${p.id}" data-w="${p.width}" data-h="${p.height}" data-name="${p.name}" data-category="${p.category}" data-subcategory="${p.subcategory || ''}">
+                <div>
+                  <div class="device-preset-name">${p.name}</div>
+                  <div class="device-preset-era">${p.category} • ${p.era}</div>
+                </div>
+                <div class="device-preset-meta">
+                  <div class="device-preset-dims">${p.width} × ${p.height} ${p.unit}</div>
+                </div>
+              </div>
+            `).join('');
+            this.bindPresetItemClicks(selectedFrame);
+          }
+        }
+      });
+    }
+
+    // 3. Preset item clicks
+    this.bindPresetItemClicks(selectedFrame);
+
+    // 4. Custom Frame controls
+    document.getElementById('btnLockCustomAspect')?.addEventListener('click', () => {
+      this.aspectRatioLocked = !this.aspectRatioLocked;
+      this.updateInspector();
+    });
+
+    document.getElementById('inpCustomFrameW')?.addEventListener('change', (e) => {
+      this.customFrameW = Math.max(10, parseInt(e.target.value, 10) || 1440);
+      if (this.aspectRatioLocked && this.customFrameH > 0) {
+        this.customFrameH = Math.max(10, Math.round(this.customFrameW * (900 / 1440)));
+      }
+    });
+
+    document.getElementById('inpCustomFrameH')?.addEventListener('change', (e) => {
+      this.customFrameH = Math.max(10, parseInt(e.target.value, 10) || 900);
+      if (this.aspectRatioLocked && this.customFrameW > 0) {
+        this.customFrameW = Math.max(10, Math.round(this.customFrameH * (1440 / 900)));
+      }
+    });
+
+    document.getElementById('btnToggleCustomOrientation')?.addEventListener('click', () => {
+      if (selectedFrame) {
+        const oldW = selectedFrame.transform?.width || 1440;
+        const oldH = selectedFrame.transform?.height || 900;
+        this.engine.updateNode(selectedFrame.id, { transform: { width: oldH, height: oldW } }, 'Toggle Frame Orientation');
+        this.renderer.render();
+        this.updateInspector();
+      } else {
+        const oldW = this.customFrameW || 1440;
+        const oldH = this.customFrameH || 900;
+        this.customFrameW = oldH;
+        this.customFrameH = oldW;
+        this.updateInspector();
+      }
+    });
+
+    document.getElementById('btnInsertCustomFrame')?.addEventListener('click', () => {
+      const w = this.customFrameW || 1440;
+      const h = this.customFrameH || 900;
+      if (selectedFrame) {
+        this.engine.updateNode(selectedFrame.id, { transform: { width: w, height: h } }, 'Update Frame Dimensions');
+        this.renderer.render();
+        this.updateInspector();
+      } else {
+        this.insertDeviceFrame({ name: 'Custom Frame', width: w, height: h, category: 'Custom', subcategory: '' });
+      }
+    });
+  }
+
+  bindPresetItemClicks(selectedFrame = null) {
+    document.querySelectorAll('.device-preset-item').forEach(item => {
+      item.onclick = () => {
+        const w = parseInt(item.dataset.w, 10);
+        const h = parseInt(item.dataset.h, 10);
+        const name = item.dataset.name;
+        const category = item.dataset.category;
+        const subcategory = item.dataset.subcategory || '';
+
+        if (selectedFrame) {
+          this.engine.updateNode(selectedFrame.id, {
+            name,
+            transform: { width: w, height: h }
+          }, `Resize Frame to ${name}`);
+          this.renderer.render();
+          this.updateInspector();
+        } else {
+          this.insertDeviceFrame({ name, width: w, height: h, category, subcategory });
+        }
+      };
+    });
+  }
+
+  insertDeviceFrame({ name, width, height, category, subcategory = '' }) {
+    const viewW = this.canvas ? this.canvas.width : 1200;
+    const viewH = this.canvas ? this.canvas.height : 800;
+    const z = this.renderer ? this.renderer.zoom : 1;
+    const px = this.renderer ? this.renderer.panX : 0;
+    const py = this.renderer ? this.renderer.panY : 0;
+
+    const posX = Math.round(-px / z + (viewW / z) / 2 - width / 2);
+    const posY = Math.round(-py / z + (viewH / z) / 2 - height / 2);
+
+    const isPhone = subcategory.includes('iPhone') || subcategory.includes('Phone');
+    const isTablet = subcategory.includes('iPad') || subcategory.includes('Tablet');
+    const radius = isPhone ? 40 : (isTablet ? 24 : 8);
+
+    const newFrame = createNode('frame', {
+      name,
+      transform: {
+        x: Math.max(40, posX),
+        y: Math.max(40, posY),
+        width,
+        height
+      },
+      style: {
+        fills: [{ type: 'solid', color: '#161a24' }],
+        cornerRadius: radius
+      }
+    });
+
+    this.engine.addNode(newFrame);
+    this.engine.setSelection([newFrame.id]);
+    this.setTool('select');
+    this.renderer.render();
+    this.updateInspector();
+  }
+
   // --- Contextual Figma-Identical Design Tab Inspector (Section 4.1 & Appendix A2.2) ---
   updateInspector() {
     this.updateBreadcrumbs();
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.classList?.contains('prop-input') || activeEl.classList?.contains('device-search-input'))) {
+      return;
+    }
+
     const selectedIds = this.engine.getSelection();
     const container = document.getElementById('inspectorProperties');
     const badge = document.getElementById('selectionCountBadge');
@@ -1812,13 +2064,30 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     if (badge) badge.textContent = `${selectedIds.length} selected`;
 
-    // 1. When Nothing is Selected: Canvas & Page Settings
+    // 0. When Frame Tool is Active: Show Device Presets
+    if (this.currentTool === 'frame') {
+      if (title) title.textContent = 'Frame Presets';
+      if (badge) badge.textContent = 'Select Preset';
+      container.innerHTML = `
+        <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">
+          Choose a preset below to insert an artboard, or click and drag on the canvas.
+        </div>
+        ${this.renderDevicePresetsHTML()}
+      `;
+      this.bindDevicePresetListeners();
+      return;
+    }
+
+    // 1. When Nothing is Selected: Canvas & Page Settings + Device Presets
     if (selectedIds.length === 0) {
       if (title) title.textContent = 'Page Canvas';
       const page = this.engine.getActivePage();
       const tokens = this.linter.getAllTokens();
 
       container.innerHTML = `
+        <!-- Device & Frame Presets -->
+        ${this.renderDevicePresetsHTML()}
+
         <!-- Canvas Background & Layout Grid Settings -->
         <div class="section-group">
           <div class="section-title">Canvas Settings</div>
@@ -1927,6 +2196,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           }
         });
       });
+      this.bindDevicePresetListeners();
       return;
     }
 
@@ -2041,6 +2311,16 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             </select>
           </div>
         </div>
+      </div>` : ''}
+
+      <!-- Frame Presets if selected node is a frame -->
+      ${node.type === 'frame' ? `
+      <div class="section-group">
+        <div class="section-title">
+          <span>📱 Frame Presets</span>
+          <span style="font-size: 10px; color: var(--accent-blue);">${Math.round(t.width)} × ${Math.round(t.height)}</span>
+        </div>
+        ${this.renderDevicePresetsHTML(node)}
       </div>` : ''}
 
       <!-- 2. Transform Section (Position, Dimensions, Aspect Ratio Lock, Rotation, Corners) -->
@@ -2425,6 +2705,11 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       </div>
     `;
 
+    // 0. Frame Preset Listeners if node is a frame
+    if (node.type === 'frame') {
+      this.bindDevicePresetListeners(node);
+    }
+
     // 1. Top Alignment Bar
     document.getElementById('inspAlignLeft')?.addEventListener('click', () => this.alignSelected('left'));
     document.getElementById('inspAlignHCenter')?.addEventListener('click', () => this.alignSelected('center'));
@@ -2706,11 +2991,15 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             swatch.style.background = hex;
             const inp = document.querySelector(`.fill-hex-input[data-index="${idx}"]`);
             if (inp) inp.value = hex;
-            this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Live Fill Color');
+            if (node.style?.fills?.[idx]) {
+              node.style.fills[idx].color = hex;
+              this.renderer.render();
+            }
           },
           onCommit: (hex) => {
             curFills[idx].color = hex;
             this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Change Fill Color');
+            this.renderer.render();
             this.updateInspector();
           }
         });
@@ -2801,11 +3090,15 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             swatch.style.background = hex;
             const inp = document.querySelector(`.stroke-hex-input[data-index="${idx}"]`);
             if (inp) inp.value = hex;
-            this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Live Stroke Color');
+            if (node.style?.strokes?.[idx]) {
+              node.style.strokes[idx].color = hex;
+              this.renderer.render();
+            }
           },
           onCommit: (hex) => {
             curStrokes[idx].color = hex;
             this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Change Stroke Color');
+            this.renderer.render();
             this.updateInspector();
           }
         });
@@ -2887,10 +3180,14 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             swatchTextColor.style.background = hex;
             const inp = document.getElementById('propTextColor');
             if (inp) inp.value = hex;
-            this.engine.updateNode(node.id, { text: { color: hex } }, 'Live Text Color');
+            if (node.text) {
+              node.text.color = hex;
+              this.renderer.render();
+            }
           },
           onCommit: (hex) => {
             this.engine.updateNode(node.id, { text: { color: hex } }, 'Change Text Color');
+            this.renderer.render();
             this.updateInspector();
           }
         });

@@ -530,7 +530,16 @@ export function queryDevicePresets({ category = null, query = '', year = null } 
   let list = DEVICE_PRESET_CATALOG;
 
   if (category && category !== 'All') {
-    list = list.filter(p => p.category.toLowerCase() === category.toLowerCase());
+    const cat = category.toLowerCase();
+    list = list.filter(p => {
+      const pCat = (p.category || '').toLowerCase();
+      const pSub = (p.subcategory || '').toLowerCase();
+      if (pCat === cat || pSub.includes(cat)) return true;
+      if (cat === 'phone') return pSub.includes('phone') || pSub.includes('foldable') || pSub.includes('note');
+      if (cat === 'tablet') return pSub.includes('tablet') || pSub.includes('pad');
+      if (cat === 'desktop') return pCat.includes('desktop') || pCat.includes('laptop') || pSub.includes('macbook');
+      return false;
+    });
   }
 
   if (year !== null) {
@@ -538,13 +547,11 @@ export function queryDevicePresets({ category = null, query = '', year = null } 
   }
 
   if (query && query.trim()) {
-    const q = query.toLowerCase().trim();
-    list = list.filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      p.subcategory.toLowerCase().includes(q) ||
-      p.era.includes(q) ||
-      `${p.width}x${p.height}`.includes(q)
-    );
+    const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    list = list.filter(p => {
+      const searchTarget = `${p.name} ${p.name.replace(/\//g, ' ')} ${p.category} ${p.subcategory} ${p.era} ${p.width}x${p.height}`.toLowerCase();
+      return words.every(w => searchTarget.includes(w));
+    });
   }
 
   return list;

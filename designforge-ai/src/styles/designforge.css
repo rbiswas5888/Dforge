@@ -1449,6 +1449,9 @@ html {
   border-left: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   z-index: 20;
   transition: width 0.05s ease-out;
 }
@@ -1517,9 +1520,17 @@ html {
 
 .inspector-panel {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
+}
+
+#inspectorProperties {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 .inspector-subhead {
@@ -2529,9 +2540,10 @@ html {
 .remote-cursor-badge {
   padding: 2px 6px;
   border-radius: 4px;
+}
 
-  /* Canvas Breadcrumbs Bar */
-  .canvas-breadcrumb-bar {
+/* Canvas Breadcrumbs Bar */
+.canvas-breadcrumb-bar {
     position: absolute;
     top: 12px;
     left: 16px;
@@ -2612,7 +2624,7 @@ html {
 
   .color-picker-popover {
     position: fixed;
-    z-index: 9999;
+    z-index: 99999;
     width: 264px;
     background: #181d28;
     border: 1px solid #2d3748;
@@ -2861,3 +2873,159 @@ html {
     transform: scale(1.15);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   }
+
+/* ==========================================================================
+   Device Presets & Custom Frame Inspector Panel (Figma / Adobe XD Parity)
+   ========================================================================== */
+
+.device-preset-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.device-preset-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.device-category-pills {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.device-pill-btn {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.device-pill-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.device-pill-btn.active {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #ffffff;
+}
+
+.device-search-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-size: 11px;
+  padding: 5px 8px;
+  width: 100%;
+  outline: none;
+}
+
+.device-search-input:focus {
+  border-color: var(--border-focus);
+}
+
+.device-preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.device-preset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: var(--bg-panel);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.device-preset-item:hover {
+  background: var(--bg-hover);
+  border-color: rgba(13, 153, 255, 0.3);
+}
+
+.device-preset-item.active {
+  background: rgba(13, 153, 255, 0.15);
+  border-color: var(--accent-blue);
+}
+
+.device-preset-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.device-preset-era {
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+
+.device-preset-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.device-preset-dims {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent-blue);
+  font-weight: 500;
+}
+
+.custom-frame-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.orientation-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.orientation-toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}

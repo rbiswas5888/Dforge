@@ -64,9 +64,9 @@ export function rgbToHsv(r, g, b) {
     h /= 6;
   }
   return {
-    h: Math.round(h * 360),
-    s: Math.round(s * 100),
-    v: Math.round(v * 100)
+    h: h * 360,
+    s: s * 100,
+    v: v * 100
   };
 }
 
@@ -300,23 +300,25 @@ export class ColorPickerPopover {
     const hex = rgbToHex(rgb.r, rgb.g, rgb.b, this.a);
     this.currentColor = hex;
 
-    const prevCurrent = document.getElementById('cpPreviewCurrent');
-    if (prevCurrent) prevCurrent.style.background = hex;
+    if (typeof document !== 'undefined') {
+      const prevCurrent = document.getElementById('cpPreviewCurrent');
+      if (prevCurrent) prevCurrent.style.background = hex;
 
-    const hexInp = document.getElementById('cpHexInput');
-    if (hexInp && document.activeElement !== hexInp) hexInp.value = hex;
+      const hexInp = document.getElementById('cpHexInput');
+      if (hexInp && document.activeElement !== hexInp) hexInp.value = hex;
 
-    const opInp = document.getElementById('cpOpacityInput');
-    if (opInp && document.activeElement !== opInp) opInp.value = Math.round(this.a * 100);
+      const opInp = document.getElementById('cpOpacityInput');
+      if (opInp && document.activeElement !== opInp) opInp.value = Math.round(this.a * 100);
 
-    const rInp = document.getElementById('cpRInput');
-    const gInp = document.getElementById('cpGInput');
-    const bInp = document.getElementById('cpBInput');
-    if (rInp && document.activeElement !== rInp) rInp.value = rgb.r;
-    if (gInp && document.activeElement !== gInp) gInp.value = rgb.g;
-    if (bInp && document.activeElement !== bInp) bInp.value = rgb.b;
+      const rInp = document.getElementById('cpRInput');
+      const gInp = document.getElementById('cpGInput');
+      const bInp = document.getElementById('cpBInput');
+      if (rInp && document.activeElement !== rInp) rInp.value = rgb.r;
+      if (gInp && document.activeElement !== gInp) gInp.value = rgb.g;
+      if (bInp && document.activeElement !== bInp) bInp.value = rgb.b;
 
-    this.updateThumbPositions();
+      this.updateThumbPositions();
+    }
 
     if (this.onInputCallback) {
       this.onInputCallback(hex, { r: rgb.r, g: rgb.g, b: rgb.b, a: this.a });
@@ -324,8 +326,8 @@ export class ColorPickerPopover {
   }
 
   notifyChange() {
-    const rgb = hsvToRgb(this.h, this.s, this.v);
-    const hex = rgbToHex(rgb.r, rgb.g, rgb.b, this.a);
+    const hex = this.currentColor;
+    const rgb = hexToRgb(hex);
     if (this.onChangeCallback) {
       this.onChangeCallback(hex, { r: rgb.r, g: rgb.g, b: rgb.b, a: this.a });
     }
@@ -546,15 +548,21 @@ export class ColorPickerPopover {
     this.s = hsv.s;
     this.v = hsv.v;
     this.a = rgb.a !== undefined ? rgb.a : 1;
-    this.currentColor = rgbToHex(rgb.r, rgb.g, rgb.b, this.a);
+    this.currentColor = String(colorStr).startsWith('#') ? colorStr.toUpperCase() : rgbToHex(rgb.r, rgb.g, rgb.b, this.a);
     if (this.isOpen) {
       this.drawSBCanvas();
       this.updateThumbPositions();
     }
   }
 
-  open({ targetElement, initialColor, onInput, onChange, documentColors = [] }) {
-    this.initialColor = initialColor || '#3B82F6';
+  open(options = {}) {
+    const targetElement = options.targetElement || options.anchorEl;
+    const initialColor = options.initialColor || options.color || '#3B82F6';
+    const onInput = options.onInput || (options.onCommit ? options.onChange : null) || options.onChange;
+    const onChange = options.onCommit || options.onChange || options.onInput;
+    const documentColors = options.documentColors || options.palette || [];
+
+    this.initialColor = initialColor;
     this.setColor(this.initialColor);
     this.onInputCallback = onInput;
     this.onChangeCallback = onChange;
@@ -563,27 +571,35 @@ export class ColorPickerPopover {
     this.render();
 
     // Position popover intelligently relative to targetElement
-    if (targetElement && this.container) {
-      const rect = targetElement.getBoundingClientRect();
+    if (this.container) {
       const popoverW = 264;
-      const popoverH = 390;
+      const popoverH = 410;
+      let left = window.innerWidth - popoverW - 290;
+      let top = 80;
 
-      let left = rect.left - popoverW - 12;
-      let top = rect.top - 20;
+      if (targetElement) {
+        const rect = targetElement.getBoundingClientRect();
+        left = rect.left - popoverW - 12;
+        top = rect.top - 20;
 
-      if (left < 10) {
-        left = rect.right + 12;
+        if (left < 10) {
+          left = rect.right + 12;
+        }
       }
+
       if (top + popoverH > window.innerHeight - 10) {
         top = window.innerHeight - popoverH - 10;
       }
       if (top < 10) top = 10;
+      if (left < 10) left = 10;
 
       this.container.style.left = `${Math.round(left)}px`;
       this.container.style.top = `${Math.round(top)}px`;
     }
 
-    this.container.style.display = 'block';
+    if (this.container) {
+      this.container.style.display = 'block';
+    }
     this.isOpen = true;
   }
 
