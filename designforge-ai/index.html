@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DesignForge AI — Professional AI-Native Design Platform & React Compiler</title>
+  <meta name="description" content="Professional Figma-grade AI-native design platform with infinite canvas, contextual properties, native AI assistant, markdown parser, and deterministic React compiler.">
+  
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&family=Merriweather:wght@400;700&family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@400;600;700&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@600;700&family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="src/styles/designforge.css">
+  <link rel="stylesheet" href="src/styles/mcp.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Application Bar -->
+    <header class="top-bar">
+      <div class="top-bar-left">
+        <div class="brand-badge" id="brandLogoBtn" title="DesignForge AI">
+          <div class="brand-logo">⚡</div>
+          <span>DesignForge</span>
+        </div>
+        
+        <!-- Application Desktop Menus -->
+        <nav class="app-menu-bar">
+          <div class="menu-item" data-menu="file">
+            <button class="menu-btn">File</button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" id="menuNewProject">New Project</button>
+              <button class="dropdown-item" id="menuOpenProject">Open Project (.dforge)...</button>
+              <button class="dropdown-item" id="menuSaveProject">Save Project (⌘S)</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" id="menuExportReact">Export to React & TypeScript (⌘⇧E)</button>
+              <button class="dropdown-item" id="menuExportSvg">Export Selection as SVG</button>
+              <button class="dropdown-item" id="menuExportPng">Export Selection as PNG</button>
+            </div>
+          </div>
+
+          <div class="menu-item" data-menu="edit">
+            <button class="menu-btn">Edit</button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" id="menuUndo">Undo (⌘Z)</button>
+              <button class="dropdown-item" id="menuRedo">Redo (⌘⇧Z)</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" id="menuDuplicate">Duplicate (⌘D)</button>
+              <button class="dropdown-item" id="menuDelete">Delete (⌫)</button>
+              <button class="dropdown-item" id="menuSelectAll">Select All (⌘A)</button>
+            </div>
+          </div>
+
+          <div class="menu-item" data-menu="view">
+            <button class="menu-btn">View</button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" id="menuZoomIn">Zoom In (⌘+)</button>
+              <button class="dropdown-item" id="menuZoomOut">Zoom Out (⌘-)</button>
+              <button class="dropdown-item" id="menuZoomFit">Zoom to Fit (⇧1)</button>
+              <button class="dropdown-item" id="menuZoom100">Zoom to 100% (⌘0)</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" id="menuToggleGrid">Toggle Grid (⌘')</button>
+              <button class="dropdown-item" id="menuToggleRulers">Toggle Rulers (⇧R)</button>
+            </div>
+          </div>
+
+          <div class="menu-item" data-menu="object">
+            <button class="menu-btn">Object</button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" id="menuGroup">Group Selection (⌘G)</button>
+              <button class="dropdown-item" id="menuUngroup">Ungroup (⌘⇧G)</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" id="menuBooleanUnion">Boolean Union</button>
+              <button class="dropdown-item" id="menuBooleanSubtract">Boolean Subtract</button>
+              <button class="dropdown-item" id="menuBooleanIntersect">Boolean Intersect</button>
+              <button class="dropdown-item" id="menuBooleanExclude">Boolean Exclude</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" id="menuBringForward">Bring Forward</button>
+              <button class="dropdown-item" id="menuSendBackward">Send Backward</button>
+              <button class="dropdown-item" id="menuBringToFront">Bring to Front</button>
+              <button class="dropdown-item" id="menuSendToBack">Send to Back</button>
+            </div>
+          </div>
+
+          <div class="menu-item" data-menu="arrange">
+            <button class="menu-btn">Arrange</button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" id="menuAlignLeft">Align Left</button>
+              <button class="dropdown-item" id="menuAlignCenter">Align Horizontal Center</button>
+              <button class="dropdown-item" id="menuAlignRight">Align Right</button>
+              <button class="dropdown-item" id="menuAlignTop">Align Top</button>
+              <button class="dropdown-item" id="menuAlignMiddle">Align Vertical Middle</button>
+              <button class="dropdown-item" id="menuAlignBottom">Align Bottom</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" id="menuDistributeH">Distribute Horizontally</button>
+              <button class="dropdown-item" id="menuDistributeV">Distribute Vertically</button>
+            </div>
+          </div>
+
+          <div class="menu-item" data-menu="components">
+            <button class="menu-btn">Components</button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" id="menuCreateComponent">Create Component (⌥⌘K)</button>
+              <button class="dropdown-item" id="menuDetachInstance">Detach Instance</button>
+              <button class="dropdown-item" id="menuResetOverrides">Reset Overrides</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" id="menuAddAutoLayout">Add Auto Layout (⇧A)</button>
+              <button class="dropdown-item" id="menuRemoveAutoLayout">Remove Auto Layout (⌥⇧A)</button>
+            </div>
+          </div>
+
+          <div class="menu-item" data-menu="mcp">
+            <button class="menu-btn">MCP</button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" id="menuOpenMcpHub">MCP Hub & Registry (⌘⌥M)</button>
+              <button class="dropdown-item" id="menuMcpTools">Browse Discovered Tools</button>
+              <button class="dropdown-item" id="menuMcpPermissions">Review Approvals & Scopes</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" id="menuMcpWorkflow">Run Markdown → React Workflow</button>
+            </div>
+          </div>
+
+          <div class="menu-item" data-menu="preferences">
+            <button class="menu-btn">Preferences</button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" id="menuPrefTheme">Toggle Theme (🌙/☀️)</button>
+              <button class="dropdown-item" id="menuPrefSnap">Smart Snapping</button>
+              <button class="dropdown-item" id="menuPrefRulers">Show Rulers (⇧R)</button>
+              <button class="dropdown-item" id="menuPrefGrid">Show Pixel Grid (⌘')</button>
+            </div>
+          </div>
+
+          <div class="menu-item" data-menu="help">
+            <button class="menu-btn">Help</button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" id="menuOpenLearn">Tutorials & Learning Center</button>
+              <button class="dropdown-item" id="menuStartTour">Start Interactive Tour</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" id="menuShortcuts">Keyboard Shortcuts (?)</button>
+              <button class="dropdown-item" id="menuAudit">Audit Design (WCAG & Spacing)</button>
+            </div>
+          </div>
+        </nav>
+
+        <!-- Project / File Name with Inline Rename on Double-Click & Saved Status -->
+        <div class="project-title-wrapper" id="projectTitleWrapper" title="Double click to rename project">
+          <span class="project-title-display" id="projectTitleDisplay">Fintech Experience Platform</span>
+          <input type="text" class="project-title-input" id="projectTitleInput" value="Fintech Experience Platform" style="display: none;" title="Press Enter to save">
+          <span class="project-save-status" id="projectSaveStatus" title="Changes saved locally">Saved</span>
+        </div>
+      </div>
+
+      <!-- Center Mode Switcher: Design | Prototype | Code -->
+      <div class="top-bar-center">
+        <div class="mode-switcher" id="topModeSwitcher">
+          <button class="mode-tab active" data-mode="design" id="tabModeDesign">Design</button>
+          <button class="mode-tab" data-mode="prototype" id="tabModePrototype">Prototype</button>
+          <button class="mode-tab" data-mode="code" id="tabModeCode">Code</button>
+        </div>
+      </div>
+
+      <!-- Right Top Bar: Command Palette, Collab, Share, Export (secondary), Play (only primary) -->
+      <div class="top-bar-right">
+        <button class="btn-ghost" id="btnOpenCommandPalette" title="Open Command Palette (⌘K)" style="font-size: 11px; padding: 4px 8px;">
+          <span style="color: var(--accent-blue); font-weight: 700;">⌘K</span>
+        </button>
+
+        <!-- Collaborators -->
+        <div class="collab-group" title="Active workspace members">
+          <div class="collab-avatar" style="background: #3b82f6;">RB</div>
+          <div class="collab-avatar" style="background: #10b981;">AI</div>
+        </div>
+
+        <button class="btn-secondary" id="btnShareModal" title="Share & Collaborate">Share</button>
+        <button class="btn-secondary" id="btnExportReactTop" title="Export Project (⌘⇧E)">Export</button>
+        <button class="btn-primary" id="btnPlayProtoTop" title="Present Prototype (⌥⌘P)">▶ Play</button>
+      </div>
+    </header>
+
+    <!-- Main 3-Column Workspace -->
+    <main class="main-workspace">
+      <!-- Left Sidebar: Pages (Collapsible) above Layers | Assets -->
+      <aside class="left-sidebar" id="leftSidebar">
+        <!-- 1. Collapsible Pages Section (Top) -->
+        <div class="left-sidebar-pages-section" id="pagesSection">
+          <div class="pages-section-header" id="pagesSectionToggle" title="Toggle Pages list">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="pages-chevron" id="pagesChevron">▾</span>
+              <span style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">Pages</span>
+            </div>
+            <button class="btn-icon-xs" id="btnAddNewPage" title="Add Page" style="color: var(--accent-blue); font-size: 13px; background: none; border: none; cursor: pointer;">+</button>
+          </div>
+          <div id="pagesListContainer" class="pages-list-container"></div>
+        </div>
+
+        <!-- 2. Tabs Switcher: Layers | Assets -->
+        <div class="left-sidebar-tabs">
+          <button class="sidebar-tab-btn active" data-tab="layers" id="tabLayersBtn">Layers</button>
+          <button class="sidebar-tab-btn" data-tab="assets" id="tabAssetsBtn">Assets</button>
+        </div>
+
+        <!-- Layers Panel Content -->
+        <div class="sidebar-content" id="tabLayers">
+          <div class="sidebar-search-box">
+            <input type="text" class="sidebar-search-input" id="layerSearchInput" placeholder="Filter layers...">
+          </div>
+          <div id="layersTreeList"></div>
+          <div class="layers-empty-state" id="layersEmptyState" style="display: none; padding: 24px 16px; text-align: center; color: var(--text-dim); font-size: 12px; line-height: 1.5;">
+            No layers on this page yet. Press <strong style="color: var(--text-main);">F</strong> to draw a frame, or press <strong style="color: var(--text-main);">⌘K</strong> to browse templates and commands.
+          </div>
+          <div class="layers-empty-filtered" id="layersEmptyFiltered" style="display: none; padding: 24px 16px; text-align: center; color: var(--text-dim); font-size: 12px;">
+            No matching layers
+          </div>
+        </div>
+
+        <!-- Assets Panel Content -->
+        <div class="sidebar-content" id="tabAssets" style="display: none; padding: 12px;">
+          <!-- Component Library -->
+          <div class="asset-section-header">
+            <span>Component Library</span>
+          </div>
+          <div class="asset-items-list" id="assetsComponentList">
+            <div class="asset-card" data-component="button-primary">
+              <div class="asset-card-title">❖ Button / Primary</div>
+              <div class="asset-card-desc">Interactive CTA button with Auto-Layout</div>
+              <button class="btn-insert-asset" data-action="insert-component" data-type="button">Insert</button>
+            </div>
+            <div class="asset-card" data-component="card-stat">
+              <div class="asset-card-title">❖ Card / Metric Stat</div>
+              <div class="asset-card-desc">KPI Metric card with trend badge</div>
+              <button class="btn-insert-asset" data-action="insert-component" data-type="card">Insert</button>
+            </div>
+            <div class="asset-card" data-component="row-transaction">
+              <div class="asset-card-title">❖ Row / Transaction</div>
+              <div class="asset-card-desc">Ledger record row with status tag</div>
+              <button class="btn-insert-asset" data-action="insert-component" data-type="row">Insert</button>
+            </div>
+          </div>
+
+          <!-- Icons & Vector Shapes -->
+          <div class="asset-section-header" style="margin-top: 16px;">
+            <span>Vector Shapes & Icons</span>
+          </div>
+          <div class="shapes-quick-grid">
+            <button class="shape-grid-btn" data-insert-shape="star" title="Insert Star">★ Star</button>
+            <button class="shape-grid-btn" data-insert-shape="polygon" title="Insert Polygon">▲ Polygon</button>
+            <button class="shape-grid-btn" data-insert-shape="line" title="Insert Line">─ Line</button>
+            <button class="shape-grid-btn" data-insert-shape="image" title="Insert Image Box">🖼 Image</button>
+          </div>
+
+          <!-- Design Tokens & Variables -->
+          <div class="asset-section-header" style="margin-top: 16px;">
+            <span>Design Tokens & Variables</span>
+            <button class="btn-icon-xs" id="btnAddTokenBtn" title="Add design token">+</button>
+          </div>
+          <div id="tokensTreeList"></div>
+        </div>
+      </aside>
+
+      <!-- Center Infinite Canvas Workspace -->
+      <section class="canvas-wrapper" id="canvasWrapper">
+        <!-- Top Canvas Coordinate Ruler -->
+        <div class="canvas-ruler horizontal" id="canvasRulerH"></div>
+        <!-- Left Canvas Coordinate Ruler -->
+        <div class="canvas-ruler vertical" id="canvasRulerV"></div>
+
+        <!-- Interactive Canvas Breadcrumbs (design_engine_logical_parameters.md Sec 24) -->
+        <div class="canvas-breadcrumb-bar" id="canvasBreadcrumbs" style="display: none;"></div>
+
+        <canvas id="canvas2d"></canvas>
+
+        <!-- Bottom Floating Tool Shelf with Grouped Flyouts (Part B) -->
+        <nav class="tool-shelf" id="floatingToolShelf">
+          <!-- 1. Move & Scale Group -->
+          <div class="tool-group-wrapper" data-group="move">
+            <button class="tool-btn active" data-tool="select" id="toolFace_move" title="Move (V)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+            </button>
+            <div class="tool-flyout-trigger" data-target="flyout_move" title="Move tools">▾</div>
+            <div class="tool-flyout-menu" id="flyout_move">
+              <button class="tool-flyout-item" data-tool="select"><span>Move</span> <span class="shortcut">V</span></button>
+              <button class="tool-flyout-item" data-tool="scale"><span>Scale</span> <span class="shortcut">K</span></button>
+            </div>
+          </div>
+
+          <!-- 2. Containers / Region Group: Frame, Section, Slice -->
+          <div class="tool-group-wrapper" data-group="region">
+            <button class="tool-btn" data-tool="frame" id="toolFace_region" title="Frame (F)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18M17 3v18M3 7h18M3 17h18"/></svg>
+            </button>
+            <div class="tool-flyout-trigger" data-target="flyout_region" title="Frame & Section tools">▾</div>
+            <div class="tool-flyout-menu" id="flyout_region">
+              <button class="tool-flyout-item" data-tool="frame"><span>Frame</span> <span class="shortcut">F</span></button>
+              <button class="tool-flyout-item" data-tool="section"><span>Section</span> <span class="shortcut">⇧S</span></button>
+              <button class="tool-flyout-item" data-tool="slice"><span>Slice</span> <span class="shortcut">S</span></button>
+            </div>
+          </div>
+
+          <div class="shelf-divider"></div>
+
+          <!-- 3. Shape Tools Group -->
+          <div class="tool-group-wrapper" data-group="shapes">
+            <button class="tool-btn" data-tool="rectangle" id="toolFace_shapes" title="Rectangle (R)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+            </button>
+            <div class="tool-flyout-trigger" data-target="flyout_shapes" title="Shape tools">▾</div>
+            <div class="tool-flyout-menu" id="flyout_shapes">
+              <button class="tool-flyout-item" data-tool="rectangle"><span>Rectangle</span> <span class="shortcut">R</span></button>
+              <button class="tool-flyout-item" data-tool="line"><span>Line</span> <span class="shortcut">L</span></button>
+              <button class="tool-flyout-item" data-tool="arrow"><span>Arrow</span> <span class="shortcut">⇧L</span></button>
+              <button class="tool-flyout-item" data-tool="ellipse"><span>Ellipse</span> <span class="shortcut">O</span></button>
+              <button class="tool-flyout-item" data-tool="polygon"><span>Polygon</span> <span class="shortcut">▲</span></button>
+              <button class="tool-flyout-item" data-tool="star"><span>Star</span> <span class="shortcut">★</span></button>
+              <button class="tool-flyout-item" data-tool="image"><span>Place Image...</span> <span class="shortcut">⇧⌘K</span></button>
+            </div>
+          </div>
+
+          <!-- 4. Pen / Pencil Group -->
+          <div class="tool-group-wrapper" data-group="vector">
+            <button class="tool-btn" data-tool="pen" id="toolFace_vector" title="Pen (P)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+            </button>
+            <div class="tool-flyout-trigger" data-target="flyout_vector" title="Drawing tools">▾</div>
+            <div class="tool-flyout-menu" id="flyout_vector">
+              <button class="tool-flyout-item" data-tool="pen"><span>Pen</span> <span class="shortcut">P</span></button>
+              <button class="tool-flyout-item" data-tool="pencil"><span>Pencil</span> <span class="shortcut">⇧P</span></button>
+            </div>
+          </div>
+
+          <!-- 5. Text Tool -->
+          <button class="tool-btn" data-tool="text" title="Text (T)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
+          </button>
+
+          <!-- 6. Resources / Assets Tool -->
+          <button class="tool-btn" id="btnToolResources" data-tool="resources" title="Resources / Assets (⇧I)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+          </button>
+
+          <!-- 7. Hand / Pan Canvas -->
+          <button class="tool-btn" data-tool="hand" title="Hand Tool (H or hold Space)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v7"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+          </button>
+
+          <!-- 8. Comment Tool -->
+          <button class="tool-btn" data-tool="comment" title="Add Review Comment (C)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </button>
+
+          <div class="shelf-divider"></div>
+
+          <!-- 9. AI Assistant Tool -->
+          <button class="tool-btn" data-tool="ai" title="AI Assistant (⌘⇧K)" style="color: #c084fc;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+          </button>
+        </nav>
+
+        <!-- Interactive Comment Pin Popup -->
+        <div class="comment-popup" id="commentPopupCard" style="display: none;">
+          <div class="comment-popup-header">
+            <span id="commentAuthorText">Review Comment</span>
+            <button class="btn-icon-xs" id="btnCloseCommentPopup">✕</button>
+          </div>
+          <p class="comment-popup-body" id="commentContentText"></p>
+          <div class="comment-popup-footer">
+            <button class="menu-dropdown-btn" id="btnResolveComment" style="color: #10b981; font-size: 11px;">✓ Mark Resolved</button>
+          </div>
+        </div>
+
+        <!-- Canvas Context Menu (Right-click) -->
+        <div class="context-menu" id="canvasContextMenu" style="display: none;">
+          <div class="context-menu-item" id="ctxDuplicate">Duplicate <span>⌘D</span></div>
+          <div class="context-menu-item" id="ctxDelete">Delete <span>⌫</span></div>
+          <div class="context-menu-divider"></div>
+          <div class="context-menu-item" id="ctxGroup">Group Selection <span>⌘G</span></div>
+          <div class="context-menu-item" id="ctxUngroup">Ungroup <span>⌘⇧G</span></div>
+          <div class="context-menu-divider"></div>
+          <div class="context-menu-item" id="ctxAddAutoLayout">Add Auto Layout <span>⇧A</span></div>
+          <div class="context-menu-item" id="ctxCreateComponent">Create Component <span>⌥⌘K</span></div>
+          <div class="context-menu-divider"></div>
+          <div class="context-menu-item" id="ctxBringToFront">Bring to Front</div>
+          <div class="context-menu-item" id="ctxSendToBack">Send to Back</div>
+          <div class="context-menu-divider"></div>
+          <div class="context-menu-item" id="ctxExportPng">Export PNG</div>
+          <div class="context-menu-item" id="ctxExportSvg">Export SVG</div>
+        </div>
+      </section>
+
+      <!-- Right Sidebar: Properties & AI Workspace (Section 4 & 5) -->
+      <aside class="right-inspector" id="rightSidebar">
+        <!-- Sidebar Resizer Handle -->
+        <div class="sidebar-resizer" id="rightSidebarResizer" title="Drag to resize inspector"></div>
+
+        <!-- Right Sidebar Persistent Mode Switcher: Design | Prototype | Inspect -->
+        <div class="right-sidebar-header">
+          <div class="right-segmented-tabs">
+            <button class="right-tab-btn active" id="btnTabDesign" data-mode="design" title="Design Properties (⌥1)">
+              <span>Design</span>
+            </button>
+            <button class="right-tab-btn" id="btnTabPrototype" data-mode="prototype" title="Prototyping & Flow (⌥3)">
+              <span>Prototype</span>
+            </button>
+            <button class="right-tab-btn" id="btnTabInspect" data-mode="inspect" title="Inspect / Dev Mode (⌥4)">
+              <span>Inspect</span>
+            </button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <button class="btn-ghost" id="btnTabAiAssistant" data-mode="ai" title="AI Design Assistant (⌥2)" style="font-size: 11px; padding: 2px 6px;">
+              <span style="color: #c084fc; font-weight: 600;">✨ AI</span>
+            </button>
+            <button class="btn-icon-sm" id="btnPinAiSideBySide" title="Pin AI side-by-side with properties">📌</button>
+          </div>
+        </div>
+
+        <!-- Panel 1: Contextual Properties Panel (Figma Design Tab) -->
+        <div class="inspector-panel" id="panelProperties">
+          <div class="inspector-subhead">
+            <span id="inspectorSelectionTitle">Design Properties</span>
+            <span class="selection-pill" id="selectionCountBadge">0 selected</span>
+          </div>
+          <div id="inspectorProperties"></div>
+        </div>
+
+        <!-- Panel 3: Interactive Prototype Panel (Section 4.2 & A2.4) -->
+        <div class="inspector-panel" id="panelPrototype" style="display: none; padding: 12px;">
+          <div class="inspector-subhead" style="margin-bottom: 8px;">
+            <span>Prototype</span>
+            <div class="proto-mode-switch" id="protoModeToggleGroup" style="display: flex; gap: 2px; background: rgba(0,0,0,0.25); border-radius: 4px; padding: 2px;">
+              <button class="proto-mode-btn active" data-mode="quick" id="btnProtoQuickMode" style="padding: 2px 7px; font-size: 10px; border: none; border-radius: 3px; background: var(--accent-blue); color: #fff; cursor: pointer;">Quick</button>
+              <button class="proto-mode-btn" data-mode="advanced" id="btnProtoAdvMode" style="padding: 2px 7px; font-size: 10px; border: none; border-radius: 3px; background: transparent; color: var(--text-dim); cursor: pointer;">Advanced</button>
+            </div>
+            <button class="btn-icon-xs" id="btnAddInteractionBtn" title="Add interaction" style="color: #38bdf8;">+ Add</button>
+          </div>
+          <div id="prototypeDiagnosticsSlot"></div>
+          <div id="prototypePanelContent">
+            <!-- Rendered dynamically by app.js based on selection -->
+          </div>
+        </div>
+
+        <!-- Panel 4: Inspect / Dev Mode Panel (Section 4.3 & A2.5) -->
+        <div class="inspector-panel" id="panelInspect" style="display: none; padding: 12px;">
+          <div class="inspector-subhead" style="margin-bottom: 8px;">
+            <span>Developer Handoff</span>
+            <button class="menu-dropdown-btn-sm" id="btnCopyInspectSnippet" style="color: #38bdf8;">📋 Copy</button>
+          </div>
+          <div class="inspect-mode-switcher">
+            <button class="inspect-tab-btn active" data-lang="css">CSS</button>
+            <button class="inspect-tab-btn" data-lang="tailwind">Tailwind</button>
+            <button class="inspect-tab-btn" data-lang="react">React TSX</button>
+            <button class="inspect-tab-btn" data-lang="swiftui">SwiftUI</button>
+            <button class="inspect-tab-btn" data-lang="compose">Compose</button>
+          </div>
+          <div id="inspectBoxModelWidget" style="margin-top: 10px;"></div>
+          <div id="inspectTokenUsageSection" style="margin-top: 10px;"></div>
+          <div class="inspect-code-container" style="margin-top: 10px;">
+            <pre id="inspectCodeOutput" style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #38bdf8; overflow-x: auto; margin: 0;"></pre>
+          </div>
+        </div>
+
+        <!-- Panel 5: Asset & Document Export Panel (Section 15 & A2.2 item 15) -->
+        <div class="inspector-panel" id="panelExportTab" style="display: none; padding: 12px;">
+          <div class="inspector-subhead" style="margin-bottom: 12px;">
+            <span>Export Settings</span>
+          </div>
+          <div id="exportPanelContent">
+            <!-- Rendered dynamically by app.js -->
+          </div>
+        </div>
+
+        <!-- Panel 2: Native AI Assistant Panel (Section 5 & 6) -->
+        <div class="inspector-panel" id="panelAiAssistant" style="display: none;">
+          <!-- AI Assistant Header with Model status -->
+          <div class="ai-assistant-header">
+            <div class="ai-status-indicator">
+              <span class="pulse-dot"></span>
+              <span id="aiModelStatusLabel">⚡ Local Synth Engine (Offline)</span>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn-icon-sm" id="btnAiSettingsToggle" title="Configure AI Provider & Privacy">⚙️</button>
+              <button class="btn-icon-sm" id="btnNewAiChat" title="Start New Conversation">＋</button>
+            </div>
+          </div>
+
+          <!-- Provider & Privacy Configuration Drawer (Collapsible) -->
+          <div id="aiSettingsPanel" style="display: none; padding: 12px; background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle); font-size: 11px;">
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
+              <div>
+                <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Inference Provider</label>
+                <select class="prop-select" id="aiProviderSelect" style="width: 100%;">
+                  <option value="local">Built-in Local Engine (Zero-Latency Offline)</option>
+                  <option value="openai">OpenAI (GPT-4o) / Custom Endpoint</option>
+                  <option value="gemini">Google Gemini (Gemini 1.5 / 2.0)</option>
+                </select>
+              </div>
+              <div>
+                <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Privacy Mode</label>
+                <select class="prop-select" id="aiPrivacySelect" style="width: 100%;">
+                  <option value="local_only">Local-Only Mode (Never Send Outside)</option>
+                  <option value="allow_hosted">Allow Hosted Inference</option>
+                  <option value="redact_text">Redact Sensitive Text Content</option>
+                </select>
+              </div>
+            </div>
+            <div id="aiKeyFields" style="display: none; flex-direction: column; gap: 8px;">
+              <input type="password" class="prop-input" id="aiApiKeyInput" placeholder="API Key (sk-...)" style="background: var(--bg-input); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); width: 100%;">
+              <input type="text" class="prop-input" id="aiEndpointInput" placeholder="Endpoint URL" style="background: var(--bg-input); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); width: 100%;">
+              <button class="btn-inspector-action" id="btnTestAiConnection" style="padding: 4px 8px;">Test Connection</button>
+            </div>
+            <div id="aiConnectionStatus" style="font-size: 11px; margin-top: 6px; color: var(--text-dim);"></div>
+          </div>
+
+          <!-- Active Selection Context Indicator (Section 8) -->
+          <div class="ai-context-indicator" id="aiContextIndicator">
+            <span class="context-icon">🎯</span>
+            <div class="context-details">
+              <div class="context-target" id="aiContextTarget">Context: Entire Document (72 layers)</div>
+              <div class="context-sub" id="aiContextSub">19 Design Tokens • Page 1</div>
+            </div>
+          </div>
+
+          <!-- Input Mode Switcher: Natural Prompt vs Markdown Spec -->
+          <div class="ai-input-mode-tabs">
+            <button class="ai-mode-btn active" id="btnModePrompt" data-input-mode="prompt">💬 Prompt</button>
+            <button class="ai-mode-btn" id="btnModeMarkdown" data-input-mode="markdown">📝 Markdown Spec</button>
+          </div>
+
+          <!-- Container A: Natural Language Prompt -->
+          <div id="aiPromptModeContainer" class="ai-input-subcontainer">
+            <textarea class="ai-textarea-input" id="aiPromptInput" placeholder="Ask AI to design, edit or modify... e.g. 'Add a modern SaaS pricing table with 3 tiers' or 'Make selected card a vertical stack with 16px gap'"></textarea>
+            
+            <div class="ai-quick-pills">
+              <span class="ai-pill">SaaS pricing table with 3 tiers</span>
+              <span class="ai-pill">Hero landing section with CTA</span>
+              <span class="ai-pill">Vertical stack with 16px gap</span>
+              <span class="ai-pill">Make layout minimal & modern</span>
+              <span class="ai-pill">Mobile screen (375px)</span>
+            </div>
+          </div>
+
+          <!-- Container B: Markdown Specification Input (Section 6) -->
+          <div id="aiMarkdownModeContainer" class="ai-input-subcontainer" style="display: none;">
+            <div class="md-tools-bar">
+              <button class="menu-dropdown-btn-sm" id="btnImportMdFile">📂 Import .md</button>
+              <button class="menu-dropdown-btn-sm" id="btnPasteMdSpec">📋 Paste</button>
+              <button class="menu-dropdown-btn-sm" id="btnLoadSampleSpec" style="color: #c084fc;">✨ Sample Spec</button>
+              <input type="file" id="mdFileInput" accept=".md,.markdown,.txt" style="display: none;">
+            </div>
+            <textarea class="ai-textarea-input md-mode" id="aiMarkdownInput" placeholder="# Dashboard Design&#10;&#10;## Objective&#10;Create a modern enterprise analytics dashboard.&#10;&#10;## Layout&#10;- Desktop frame: 1440 x 1024&#10;- Left navigation: 240px wide&#10;- Top header: 72px high&#10;&#10;## Components&#10;- Navigation sidebar&#10;- Search header&#10;- KPI cards&#10;- Analytics chart&#10;- Recent activity table&#10;&#10;## Design System&#10;- Font: Inter&#10;- Border radius: 8px&#10;- Primary color: #2563EB"></textarea>
+          </div>
+
+          <!-- In-flight progress indicator -->
+          <div id="aiProgressBar" style="display: none; padding: 8px 12px; background: rgba(139, 92, 246, 0.12); border-radius: 6px; margin: 8px 12px; font-size: 11px; color: #c084fc; display: flex; align-items: center; justify-content: space-between;">
+            <span id="aiProgressText">Synthesizing design operations...</span>
+            <button class="menu-dropdown-btn-sm" id="btnCancelAi" style="color: #ef4444; border: 1px solid rgba(239,68,68,0.4);">Cancel</button>
+          </div>
+
+          <!-- Diff / Plan Preview Container -->
+          <div class="ai-plan-preview" id="aiDiffBox" style="display: none;"></div>
+
+          <!-- Action Buttons Bar -->
+          <div class="ai-actions-bar">
+            <button class="btn-inspector-action" id="btnUndoAiChanges" style="flex: 1; font-size: 11px;">↺ Undo AI</button>
+            <button class="btn-primary" id="btnAiGenerate" style="flex: 2; background: #8b5cf6;">Generate Plan</button>
+            <button class="btn-primary" id="btnAiApply" style="display: none; flex: 2; background: #10b981;">Apply to Canvas</button>
+          </div>
+
+          <!-- Design Intelligence Audit Button -->
+          <div style="padding: 0 12px 12px;">
+            <button class="btn-inspector-action" id="btnAuditDesign" style="color: #38bdf8; border-color: rgba(56,189,248,0.3); font-size: 11px;">🔍 Audit Design (WCAG & Spacing)</button>
+          </div>
+
+          <!-- Conversation History Stream -->
+          <div class="ai-conversation-stream" id="aiConversationStream"></div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Modal: React Code Export & Live Preview (Section 12) -->
+    <div class="modal-backdrop" id="modalExport" style="display: none;">
+      <div class="modal-window" style="width: 1040px; height: 740px;">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span>⚡</span>
+            <span>Deterministic Design-to-React Compiler</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <select class="prop-select" id="exportTargetSelect" style="font-size: 11px; padding: 4px 8px;">
+              <option value="react-vite-ts">React + TypeScript (Vite)</option>
+              <option value="react-vite-js">React + JavaScript (Vite)</option>
+              <option value="react-cssmodules">React + CSS Modules</option>
+              <option value="react-tailwind">React + Tailwind CSS</option>
+            </select>
+            <button class="menu-dropdown-btn" id="btnCopyExportCode" title="Copy active file content" style="font-size: 11px;">📋 Copy Code</button>
+            <button class="menu-dropdown-btn" id="btnDownloadProjectPackage" title="Download standalone Vite project package" style="font-size: 11px; color: #38bdf8; border: 1px solid rgba(56,189,248,0.3);">📦 Download Project</button>
+            <button class="btn-icon" id="btnCloseExportModal">✕</button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div class="code-files-list" id="exportFileList"></div>
+          <div class="code-viewer-container">
+            <pre class="code-viewer-pre" id="exportCodeViewer"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Prototype Simulator (Section 11) -->
+    <div class="modal-backdrop" id="modalPrototype" style="display: none;">
+      <div class="modal-window" style="width: 1060px; height: 780px;">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span>▶</span>
+            <span>Interactive Experience Simulator</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="menu-dropdown-btn btn-device-switch active" data-device="desktop">MacBook (1440px)</button>
+            <button class="menu-dropdown-btn btn-device-switch" data-device="tablet">iPad (768px)</button>
+            <button class="menu-dropdown-btn btn-device-switch" data-device="mobile">iPhone 15 Pro (375px)</button>
+          </div>
+          <button class="btn-icon" id="btnCloseProtoModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="prototype-viewport-container">
+            <div class="device-bezel desktop" id="deviceBezel" style="width: 100%; height: 100%;">
+              <iframe class="preview-iframe" id="protoPreviewIframe"></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Keyboard Shortcuts Help -->
+    <div class="modal-backdrop" id="modalHelp" style="display: none;">
+      <div class="modal-window" style="width: 700px; height: 580px;">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span>⌨</span>
+            <span>Keyboard Shortcuts</span>
+          </div>
+          <button class="btn-icon" id="btnCloseHelpModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="shortcut-grid" id="shortcutGridContainer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden file input for .dforge upload -->
+    <input type="file" id="dforgeFileInput" accept=".dforge,.json" style="display: none;">
+
+    <!-- Modal: Command Palette (Cmd/Ctrl+K) [Section A2] -->
+    <div class="modal-backdrop" id="commandPaletteModal" style="display: none; align-items: flex-start; padding-top: 15vh;">
+      <div class="command-palette-window">
+        <div class="palette-input-row">
+          <span style="color: var(--accent-blue); font-size: 16px;">🔍</span>
+          <input type="text" class="palette-search-input" id="paletteSearchInput" placeholder="Type a command, layer name, page, or action..." autocomplete="off">
+          <span class="palette-esc-badge">ESC</span>
+        </div>
+        <div class="palette-results-list" id="paletteResultsList"></div>
+        <div class="palette-footer-tips">
+          <span><kbd>↑</kbd> <kbd>↓</kbd> to navigate</span>
+          <span><kbd>↵</kbd> to select</span>
+          <span><kbd>esc</kbd> to dismiss</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Continuous Design System Linter (Section 2.1 & 10) -->
+    <div class="modal-backdrop" id="modalLinter" style="display: none;">
+      <div class="modal-window" style="width: 820px; height: 600px;">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span>⚡</span>
+            <span>Continuous Design System Linter & Token Binder</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-primary" id="btnAutoBindAllTokens" style="font-size: 11px; background: #10b981;">✓ Auto-Bind All to Tokens</button>
+            <button class="btn-icon" id="btnCloseLinterModal">✕</button>
+          </div>
+        </div>
+        <div class="modal-body" style="padding: 16px; flex-direction: column; overflow-y: auto;">
+          <div id="linterSummaryBanner" style="padding: 12px 16px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; gap: 16px; font-size: 12px;">
+              <span>Total Drift Issues: <strong id="lintTotalCount" style="color: #f59e0b;">0</strong></span>
+              <span>Exact Matches: <strong id="lintExactCount" style="color: #10b981;">0</strong></span>
+              <span>Off-Scale Spacing: <strong id="lintSpacingCount" style="color: #38bdf8;">0</strong></span>
+            </div>
+            <button class="menu-dropdown-btn-sm" id="btnRecheckLinter">🔄 Re-scan</button>
+          </div>
+          <div id="linterIssuesList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: AI Spec-to-Design Ambiguity & Coverage Checklist (Section 2.1 & 6) -->
+    <div class="modal-backdrop" id="modalSpecCoverage" style="display: none;">
+      <div class="modal-window" style="width: 860px; height: 620px;">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span>📝</span>
+            <span>PRD Spec Coverage & Ambiguity Resolution Report</span>
+          </div>
+          <button class="btn-icon" id="btnCloseSpecCoverageModal">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 16px; flex-direction: column; overflow-y: auto;">
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+            Audits generated layers against requirements in the input Markdown specification and highlights resolutions for implicit constraints.
+          </div>
+          <div style="margin-bottom: 16px;">
+            <div class="section-title" style="color: #10b981; margin-bottom: 8px;">✓ Requirement Coverage Matrix</div>
+            <div id="specCoverageList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+          </div>
+          <div>
+            <div class="section-title" style="color: #f59e0b; margin-bottom: 8px;">⚠️ Ambiguity Resolutions & Assumptions</div>
+            <div id="specAmbiguityList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+          </div>
+        </div>
+      </div>
+    <!-- Modal: Learn & Tutorials Center (Section 15 & 16) -->
+    <div class="modal-backdrop" id="modalLearnCenter" style="display: none;">
+      <div class="modal-window" style="width: 880px; height: 650px;">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span>📚</span>
+            <span>Learn & Resources Center — Courses, Tutorials & Exercises</span>
+          </div>
+          <button class="btn-icon" id="btnCloseLearnCenterModal">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 16px; flex-direction: column; overflow-y: auto;">
+          <!-- Progress tracker summary -->
+          <div style="padding: 12px 16px; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 8px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 12px;">
+              <span>Overall Learning Progress: <strong id="learnProgressPercent" style="color: #c084fc;">0%</strong></span>
+              <div style="width: 240px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 6px; overflow: hidden;">
+                <div id="learnProgressBar" style="width: 0%; height: 100%; background: #a855f7; transition: width 0.3s ease;"></div>
+              </div>
+            </div>
+            <button class="btn-primary" id="btnStartTourFromLearn" style="font-size: 11px; background: #8b5cf6;">🚀 Start Guided Tour</button>
+          </div>
+
+          <!-- Tabs inside Learn Center -->
+          <div class="sidebar-tabs" style="margin-bottom: 16px; background: rgba(255,255,255,0.04); border-radius: 6px;">
+            <button class="sidebar-tab-btn active" id="learnTabBtnVideos">YouTube Video Courses</button>
+            <button class="sidebar-tab-btn" id="learnTabBtnExercises">Practice Exercises</button>
+            <button class="sidebar-tab-btn" id="learnTabBtnDocs">Official Documentation</button>
+          </div>
+
+          <!-- 1. Video Courses View -->
+          <div id="learnViewVideos" style="display: flex; flex-direction: column; gap: 12px;"></div>
+
+          <!-- 2. Practice Exercises View -->
+          <div id="learnViewExercises" style="display: none; flex-direction: column; gap: 12px;"></div>
+
+          <!-- 3. Official Documentation View -->
+          <div id="learnViewDocs" style="display: none; flex-direction: column; gap: 10px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Share & Multi-user Collaboration (Section 18) -->
+    <div class="modal-backdrop" id="modalShare" style="display: none;">
+      <div class="modal-window" style="width: 540px; height: 420px;">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span>👥</span>
+            <span>Share & Collaborate</span>
+          </div>
+          <button class="btn-icon" id="btnCloseShareModal">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 20px; flex-direction: column; gap: 16px;">
+          <div>
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Shareable Project Link</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="shareLinkInput" class="property-input" readonly value="http://127.0.0.1:3000/#project=fintech-experience" style="flex: 1;">
+              <button class="btn-primary" id="btnCopyShareLink" style="font-size: 11px;">Copy Link</button>
+            </div>
+          </div>
+
+          <div>
+            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Link Permissions</label>
+            <select id="sharePermissionSelect" class="property-select" style="width: 100%;">
+              <option value="editor">Anyone with link can edit (Editor)</option>
+              <option value="viewer">Anyone with link can view and comment (Viewer)</option>
+            </select>
+          </div>
+
+          <div>
+            <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">Active Collaborators (Presence)</div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></span>
+                  <span style="font-size: 12px; font-weight: 500;">You (Owner)</span>
+                </div>
+                <span style="font-size: 11px; color: var(--text-muted);">Editor</span>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #38bdf8;"></span>
+                  <span style="font-size: 12px; font-weight: 500;">Sarah Chen (UX Research)</span>
+                </div>
+                <span style="font-size: 11px; color: var(--text-muted);">Reviewer</span>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b;"></span>
+                  <span style="font-size: 12px; font-weight: 500;">Alex Rivera (Lead Engineer)</span>
+                </div>
+                <span style="font-size: 11px; color: var(--text-muted);">Dev Mode</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MCP Hub Modal Dialog (Section 3) -->
+    <div class="mcp-hub-modal" id="modalMcpHub">
+      <div class="mcp-hub-dialog">
+        <div class="mcp-hub-header">
+          <div class="mcp-hub-title">
+            <span style="color: #38bdf8;">⚡</span>
+            <span>Model Context Protocol (MCP) Ecosystem Hub</span>
+            <span class="mcp-badge badge-neutral">Protocol v2024-11-05</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="mcp-btn-primary" id="btnOpenAddServerModal">+ Add Server</button>
+            <button class="menu-dropdown-btn-sm" id="btnCloseMcpHub" style="font-size: 14px;">✕</button>
+          </div>
+        </div>
+
+        <nav class="mcp-hub-nav">
+          <button class="mcp-nav-btn active" data-section="overview">📊 Overview</button>
+          <button class="mcp-nav-btn" data-section="servers">🖥️ Servers</button>
+          <button class="mcp-nav-btn" data-section="tools">🛠️ Tool Catalog</button>
+          <button class="mcp-nav-btn" data-section="resources">📁 Resources</button>
+          <button class="mcp-nav-btn" data-section="prompts">💬 Prompts</button>
+          <button class="mcp-nav-btn" data-section="permissions">🛡️ Permissions</button>
+          <button class="mcp-nav-btn" data-section="logs">📋 Audit Logs</button>
+          <button class="mcp-nav-btn" data-section="workflows">⚡ Workflows</button>
+        </nav>
+
+        <div class="mcp-hub-body">
+          <!-- 3.1 Overview Pane -->
+          <div class="mcp-view-pane" id="mcpPane_overview">
+            <div id="mcpOverviewContent"></div>
+          </div>
+
+          <!-- 3.2 Servers Pane -->
+          <div class="mcp-view-pane" id="mcpPane_servers" style="display: none;">
+            <div id="mcpServersList"></div>
+          </div>
+
+          <!-- 3.3 Tool Catalog Pane -->
+          <div class="mcp-view-pane" id="mcpPane_tools" style="display: none;">
+            <div id="mcpToolsCatalogContent"></div>
+          </div>
+
+          <!-- 3.4 Resources Pane -->
+          <div class="mcp-view-pane" id="mcpPane_resources" style="display: none;">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+              <button class="mcp-btn-secondary" id="btnRefreshMcpResources">↻ Refresh Resources</button>
+            </div>
+            <div id="mcpResourcesList"></div>
+          </div>
+
+          <!-- 3.5 Prompts Pane -->
+          <div class="mcp-view-pane" id="mcpPane_prompts" style="display: none;">
+            <div id="mcpPromptsList"></div>
+          </div>
+
+          <!-- 3.6 Permissions Pane -->
+          <div class="mcp-view-pane" id="mcpPane_permissions" style="display: none;">
+            <div id="mcpPermissionsContent"></div>
+          </div>
+
+          <!-- 3.7 Activity Logs Pane -->
+          <div class="mcp-view-pane" id="mcpPane_logs" style="display: none;">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+              <button class="mcp-btn-secondary" id="btnClearMcpLogs" style="color: #f43f5e;">Clear Audit Logs</button>
+            </div>
+            <div id="mcpAuditLogsList"></div>
+          </div>
+
+          <!-- 3.8 Workflows Pane -->
+          <div class="mcp-view-pane" id="mcpPane_workflows" style="display: none;">
+            <div id="mcpWorkflowsContent"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add MCP Server Form Modal -->
+    <div class="mcp-hub-modal" id="modalAddMcpServer" style="z-index: 10001;">
+      <div class="mcp-hub-dialog" style="width: 520px; height: auto; max-height: 85vh;">
+        <div class="mcp-hub-header">
+          <span style="font-weight: 700; font-size: 14px;">Connect New MCP Server</span>
+          <button class="menu-dropdown-btn-sm" id="btnCloseAddServerModal">✕</button>
+        </div>
+        <form id="formAddMcpServer" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Server Display Name</label>
+            <input type="text" id="addServerName" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" placeholder="e.g. Remote AI Design Partner" required />
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Transport Protocol</label>
+            <select id="addServerTransportType" class="mcp-select" style="width: 100%; box-sizing: border-box;">
+              <option value="http-stream">Streamable HTTP (Remote / HTTPS)</option>
+              <option value="stdio">Stdio Process (Local executable)</option>
+            </select>
+          </div>
+          <div id="addServerHttpFields">
+            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Endpoint URL</label>
+            <input type="url" id="addServerEndpoint" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" placeholder="https://api.example.com/mcp" />
+          </div>
+          <div id="addServerStdioFields" style="display: none;">
+            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Executable Command / Binary</label>
+            <input type="text" id="addServerCommand" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" placeholder="node /path/to/server.js" />
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+            <button type="button" class="mcp-btn-secondary" onclick="document.getElementById('modalAddMcpServer').style.display='none'">Cancel</button>
+            <button type="submit" class="mcp-btn-primary">Connect & Discover →</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Floating Interactive Onboarding Tour Callout Card (Section 15.2) -->
+    <div id="tourCalloutCard" style="display: none; position: fixed; z-index: 10000; bottom: 80px; right: 380px; width: 340px; background: #1e293b; border: 1px solid #3b82f6; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); padding: 16px; color: #f8fafc;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <span id="tourStepTitle" style="font-size: 13px; font-weight: 700; color: #38bdf8;">1. Infinite Canvas</span>
+        <button id="btnCloseTour" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px;">✕</button>
+      </div>
+      <p id="tourStepContent" style="font-size: 12px; line-height: 1.5; color: #cbd5e1; margin-bottom: 14px;"></p>
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span id="tourStepCounter" style="font-size: 11px; color: #64748b;">Step 1 of 6</span>
+        <div style="display: flex; gap: 8px;">
+          <button class="menu-dropdown-btn-sm" id="btnTourPrev" style="font-size: 11px;">Back</button>
+          <button class="btn-primary" id="btnTourNext" style="font-size: 11px; padding: 4px 10px;">Next →</button>
+        </div>
+    <!-- Fixed 24px Status Bar (Part B Layout) -->
+    <footer class="app-status-bar" id="appStatusBar">
+      <div class="status-bar-left">
+        <span class="status-coord-readout" id="statusCoords">X: 0px  Y: 0px</span>
+        <button class="status-btn-toggle" id="btnStatusRulers" title="Toggle Rulers (⇧R)">📏 Rulers</button>
+        <button class="status-btn-toggle" id="btnStatusGrid" title="Toggle Pixel Grid (⌘')">⊞ Grid</button>
+        <button class="status-btn-toggle active" id="btnStatusSnap" title="Toggle Smart Snapping">🧲 Snap</button>
+      </div>
+      <div class="status-bar-right">
+        <span class="status-chip clickable" id="statusLinterBadge" title="Open Design Linter (⌥L)">⚡ <span id="statusLinterCount">0</span> issues</span>
+        <span class="status-chip clickable" id="statusMcpChip" title="MCP Hub Status (⌘⌥M)"><span class="status-dot-green"></span> MCP Ready</span>
+        <span class="status-chip" id="statusNetworkChip" title="Local-First Document Storage">● Local</span>
+        <button class="status-btn-toggle" id="btnStatusTheme" title="Toggle Light/Dark Theme">🌙</button>
+        <div class="status-item" id="statusZoomWrapper" style="position: relative;">
+          <span class="status-chip clickable" id="statusZoomValue" title="Zoom options (⌘0 for 100%, ⇧1 for fit)">85% ▾</span>
+          <div class="tool-flyout-menu" id="statusZoomMenu" style="bottom: 26px; right: 0; left: auto; min-width: 130px;">
+            <button class="tool-flyout-item" data-zoom="fit"><span>Zoom to Fit</span> <span class="shortcut">⇧1</span></button>
+            <button class="tool-flyout-item" data-zoom="selection"><span>Zoom to Selection</span> <span class="shortcut">⇧2</span></button>
+            <button class="tool-flyout-item" data-zoom="50"><span>50%</span></button>
+            <button class="tool-flyout-item" data-zoom="100"><span>100%</span> <span class="shortcut">⌘0</span></button>
+            <button class="tool-flyout-item" data-zoom="200"><span>200%</span></button>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Hexagon Design Token Popover -->
+    <div class="token-popover" id="tokenVariablePopover">
+      <div class="token-popover-header">
+        <span>Bind Design Token</span>
+        <button id="btnCloseTokenPopover" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px;">✕</button>
+      </div>
+      <input type="text" class="token-popover-search" id="tokenPopoverSearch" placeholder="Search variables...">
+      <div class="token-popover-list" id="tokenPopoverList"></div>
+    </div>
+  </div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
