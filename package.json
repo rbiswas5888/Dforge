@@ -7,9 +7,10 @@
     "start": "node serve.js",
     "test": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_figma_functional_map.js && node tests/test_design_system.js",
     "test:ds": "node tests/test_design_system.js",
+    "test:ollama": "node tests/test_ollama.js",
     "test:import": "node tests/test_import_engine.js",
     "test:figma": "node tests/test_figma_functional_map.js",
     "test:mcp": "node tests/test_mcp_ecosystem.js",
-    "test:all": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_figma_functional_map.js && node tests/test_master_implementation.js && node tests/test_mcp_ecosystem.js && node tests/test_design_system.js"
+    "test:all": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_figma_functional_map.js && node tests/test_master_implementation.js && node tests/test_mcp_ecosystem.js && node tests/test_design_system.js && node tests/test_ollama.js"
   }
 }
