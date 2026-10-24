@@ -380,6 +380,158 @@ export class ShortcutRegistry {
       match: (e) => (isMac ? (e.metaKey && e.altKey) : (e.ctrlKey && e.altKey)) && e.key.toLowerCase() === 'm',
       handler: () => this.app.openMcpHub()
     });
+
+    // --- Figma Functional Map Shortcuts (MD/figma-design-page-functional-map.md) ---
+
+    this.register({
+      id: 'devMode',
+      name: 'Toggle Dev Mode / Inspection',
+      category: 'Handoff',
+      macKey: '⇧D',
+      winKey: 'Shift+D',
+      match: (e) => !e.metaKey && !e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd',
+      handler: () => this.app.toggleDevMode()
+    });
+
+    this.register({
+      id: 'drillIn',
+      name: 'Drill In / Edit Mode',
+      category: 'Navigation',
+      macKey: '↵ (Enter)',
+      winKey: 'Enter',
+      match: (e) => !e.metaKey && !e.ctrlKey && !e.shiftKey && e.key === 'Enter',
+      handler: () => this.app.drillInSelection()
+    });
+
+    this.register({
+      id: 'drillOut',
+      name: 'Drill Out / Select Parent',
+      category: 'Navigation',
+      macKey: '⇧↵ (Shift+Enter)',
+      winKey: 'Shift+Enter',
+      match: (e) => !e.metaKey && !e.ctrlKey && e.shiftKey && e.key === 'Enter',
+      handler: () => this.app.drillOutSelection()
+    });
+
+    this.register({
+      id: 'toolScale',
+      name: 'Scale Tool',
+      category: 'Tools',
+      macKey: 'K',
+      winKey: 'K',
+      match: (e) => !e.metaKey && !e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'k',
+      handler: () => this.app.setTool('scale')
+    });
+
+    this.register({
+      id: 'toolPen',
+      name: 'Pen / Vector Tool',
+      category: 'Tools',
+      macKey: 'P',
+      winKey: 'P',
+      match: (e) => !e.metaKey && !e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'p',
+      handler: () => this.app.setTool('pen')
+    });
+
+    this.register({
+      id: 'toolSection',
+      name: 'Section Tool',
+      category: 'Tools',
+      macKey: '⇧S',
+      winKey: 'Shift+S',
+      match: (e) => !e.metaKey && !e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's',
+      handler: () => this.app.setTool('section')
+    });
+
+    this.register({
+      id: 'toolSlice',
+      name: 'Slice Tool',
+      category: 'Tools',
+      macKey: 'S',
+      winKey: 'S',
+      match: (e) => !e.metaKey && !e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 's',
+      handler: () => this.app.setTool('slice')
+    });
+
+    this.register({
+      id: 'bulkRename',
+      name: 'Rename Layers',
+      category: 'Layers',
+      macKey: '⌘R',
+      winKey: 'Ctrl+R',
+      match: (e) => (isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'r',
+      handler: () => this.app.openBulkRenameModal()
+    });
+
+    this.register({
+      id: 'outlineView',
+      name: 'Toggle Outline View',
+      category: 'View',
+      macKey: '⌘Y',
+      winKey: 'Ctrl+Y',
+      match: (e) => (isMac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === 'y',
+      handler: () => this.app.toggleOutlineView()
+    });
+
+    this.register({
+      id: 'pixelGrid',
+      name: 'Toggle Pixel Grid',
+      category: 'View',
+      macKey: '⇧\'',
+      winKey: 'Shift+\'',
+      match: (e) => !e.metaKey && !e.ctrlKey && e.shiftKey && (e.key === '\'' || e.key === '"'),
+      handler: () => this.app.togglePixelGrid()
+    });
+
+    this.register({
+      id: 'rulers',
+      name: 'Toggle Rulers',
+      category: 'View',
+      macKey: '⇧R',
+      winKey: 'Shift+R',
+      match: (e) => !e.metaKey && !e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'r',
+      handler: () => this.app.toggleRulers()
+    });
+
+    this.register({
+      id: 'toggleUI',
+      name: 'Hide / Show Panels',
+      category: 'View',
+      macKey: '⌘\\',
+      winKey: 'Ctrl+\\',
+      match: (e) => (isMac ? e.metaKey : e.ctrlKey) && e.key === '\\',
+      handler: () => this.app.toggleUI()
+    });
+
+    this.register({
+      id: 'flipH',
+      name: 'Flip Horizontal',
+      category: 'Arrange',
+      macKey: '⇧H',
+      winKey: 'Shift+H',
+      match: (e) => !e.metaKey && !e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'h',
+      handler: () => this.app.flipSelected('horizontal')
+    });
+
+    this.register({
+      id: 'flipV',
+      name: 'Flip Vertical',
+      category: 'Arrange',
+      macKey: '⇧V',
+      winKey: 'Shift+V',
+      match: (e) => !e.metaKey && !e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v',
+      handler: () => this.app.flipSelected('vertical')
+    });
+
+    this.register({
+      id: 'importDesign',
+      name: 'Import Design (Sketch/Figma/SVG)',
+      category: 'File',
+      macKey: '⌘⌥I',
+      winKey: 'Ctrl+Alt+I',
+      match: (e) => (isMac ? (e.metaKey && e.altKey) : (e.ctrlKey && e.altKey)) && e.key.toLowerCase() === 'i',
+      handler: () => this.app.openImportModal()
+    });
   }
 
 

@@ -23,6 +23,9 @@ export class CanvasRenderer {
     this.snapGuides = [];
     this.marquee = null; // { startX, startY, currentX, currentY }
     this.dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    this.outlineViewOnly = false; // Figma Cmd+Y wireframe mode
+    this.showPixelGrid = false;   // Figma Shift+' pixel grid mode
+    this.isVectorEditMode = false; // Figma Enter / P vector point editing mode
 
     if (typeof window !== 'undefined') {
       this.setupResizeListener();
@@ -243,21 +246,29 @@ export class CanvasRenderer {
       ctx.rect(bounds.x, bounds.y, bounds.width, bounds.height);
     }
 
-    // Fills (Solid & Linear Gradient)
-    if (node.style?.fills && node.style.fills.length > 0) {
-      for (const fill of node.style.fills) {
-        if (fill.visible === false) continue;
-        if (fill.type === 'linear-gradient' || fill.type === 'gradient') {
-          const grad = ctx.createLinearGradient(bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height);
-          const stops = fill.stops || [{ offset: 0, color: fill.color || '#3b82f6' }, { offset: 1, color: '#8b5cf6' }];
-          for (const s of stops) {
-            grad.addColorStop(s.offset, s.color);
+    // Outline View Mode (Figma Cmd+Y): skip fills and render wireframe stroke
+    if (this.outlineViewOnly) {
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = Math.max(0.75, 1 / (this.zoom || 1));
+      ctx.setLineDash([]);
+      ctx.stroke();
+    } else {
+      // Fills (Solid & Linear Gradient)
+      if (node.style?.fills && node.style.fills.length > 0) {
+        for (const fill of node.style.fills) {
+          if (fill.visible === false) continue;
+          if (fill.type === 'linear-gradient' || fill.type === 'gradient') {
+            const grad = ctx.createLinearGradient(bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height);
+            const stops = fill.stops || [{ offset: 0, color: fill.color || '#3b82f6' }, { offset: 1, color: '#8b5cf6' }];
+            for (const s of stops) {
+              grad.addColorStop(s.offset, s.color);
+            }
+            ctx.fillStyle = grad;
+            ctx.fill();
+          } else {
+            ctx.fillStyle = fill.color || '#334155';
+            ctx.fill();
           }
-          ctx.fillStyle = grad;
-          ctx.fill();
-        } else {
-          ctx.fillStyle = fill.color || '#334155';
-          ctx.fill();
         }
       }
     }
@@ -579,27 +590,48 @@ export class CanvasRenderer {
       // Dimension badge on hover/drag
       this.drawDimensionBadge(ctx, bounds, Math.round(bounds.width), Math.round(bounds.height));
 
-      // Draw 8 Resize Handles
-      const handleSize = 7 / this.zoom;
-      const halfSize = handleSize / 2;
-      ctx.fillStyle = '#ffffff';
-      ctx.strokeStyle = '#0d99ff';
-      ctx.lineWidth = 1.5 / this.zoom;
+      // Draw Handles (Circular anchor points in Vector Edit Mode, 8-point resize box in Object Mode)
+      if (this.isVectorEditMode) {
+        // Vector Edit Mode (Figma P / Enter on vector)
+        const pointRadius = 4 / this.zoom;
+        const vertices = [
+          { x: bounds.x, y: bounds.y },
+          { x: bounds.x + bounds.width, y: bounds.y },
+          { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+          { x: bounds.x, y: bounds.y + bounds.height }
+        ];
+        ctx.strokeStyle = '#06b6d4';
+        ctx.lineWidth = 1 / this.zoom;
+        ctx.fillStyle = '#ffffff';
+        for (const v of vertices) {
+          ctx.beginPath();
+          ctx.arc(v.x, v.y, pointRadius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+      } else {
+        // Standard Object Mode 8 Resize Handles
+        const handleSize = 7 / this.zoom;
+        const halfSize = handleSize / 2;
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#0d99ff';
+        ctx.lineWidth = 1.5 / this.zoom;
 
-      const corners = [
-        { x: bounds.x, y: bounds.y }, // nw
-        { x: bounds.x + bounds.width / 2, y: bounds.y }, // n
-        { x: bounds.x + bounds.width, y: bounds.y }, // ne
-        { x: bounds.x + bounds.width, y: bounds.y + bounds.height / 2 }, // e
-        { x: bounds.x + bounds.width, y: bounds.y + bounds.height }, // se
-        { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height }, // s
-        { x: bounds.x, y: bounds.y + bounds.height }, // sw
-        { x: bounds.x, y: bounds.y + bounds.height / 2 } // w
-      ];
+        const corners = [
+          { x: bounds.x, y: bounds.y }, // nw
+          { x: bounds.x + bounds.width / 2, y: bounds.y }, // n
+          { x: bounds.x + bounds.width, y: bounds.y }, // ne
+          { x: bounds.x + bounds.width, y: bounds.y + bounds.height / 2 }, // e
+          { x: bounds.x + bounds.width, y: bounds.y + bounds.height }, // se
+          { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height }, // s
+          { x: bounds.x, y: bounds.y + bounds.height }, // sw
+          { x: bounds.x, y: bounds.y + bounds.height / 2 } // w
+        ];
 
-      for (const c of corners) {
-        ctx.fillRect(c.x - halfSize, c.y - halfSize, handleSize, handleSize);
-        ctx.strokeRect(c.x - halfSize, c.y - halfSize, handleSize, handleSize);
+        for (const c of corners) {
+          ctx.fillRect(c.x - halfSize, c.y - halfSize, handleSize, handleSize);
+          ctx.strokeRect(c.x - halfSize, c.y - halfSize, handleSize, handleSize);
+        }
       }
 
       ctx.restore();
