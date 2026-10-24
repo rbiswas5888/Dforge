@@ -65,47 +65,45 @@ export class OllamaProvider extends BaseProvider {
     )).join('\n');
 
     const systemPrompt = `You are DesignForge AI, an expert AI product designer and layout architect.
-You operate on an active digital design canvas using the Llama 3.1 model.
-Your task is to convert the user's design instructions into high-quality, structured layout operations.
+You operate on an active digital design canvas powered by the Llama 3.1 model.
+Convert user design requests into high-quality, structured layout operations.
 
-ACTIVE CANVAS CONTEXT:
-${JSON.stringify(context, null, 2)}
-
-AVAILABLE DESIGN TOOL OPERATIONS:
-${toolsDescription}
-
-OUTPUT FORMAT RULES:
-You MUST respond with a valid JSON object matching this schema:
+OUTPUT RULES:
+Output a single valid JSON object strictly matching this schema:
 {
   "intent": "<short summary of design task>",
-  "explanation": "<explanation of design choices, layout structure, color harmony, and hierarchy>",
+  "explanation": "<explanation of layout, color harmony, and hierarchy>",
   "operations": [
     {
-      "type": "<OperationName, e.g. CreateNode, UpdateNode, ApplyLayout, CreateComponent>",
-      ...<operation properties>
+      "type": "CreateNode",
+      "node": {
+        "type": "frame",
+        "name": "<name>",
+        "transform": { "width": 360, "height": 180 },
+        "layout": { "mode": "stack-vertical", "gap": 12, "paddingTop": 16, "paddingRight": 16, "paddingBottom": 16, "paddingLeft": 16 },
+        "style": { "fills": [{ "type": "solid", "color": "#1e293b" }], "cornerRadius": 12 }
+      }
     }
   ]
 }
-
-DESIGN GUIDELINES:
-1. Always structure cards, pages, and components using Auto-Layout ('stack-horizontal' or 'stack-vertical') with clean padding (16-32) and gap (12-24).
-2. Use modern colors: dark slate surfaces (#0f172a, #1e293b, #334155), vivid accents (#0d99ff, #8b5cf6, #10b981), and legible text (#f8fafc, #94a3b8).
-3. Emit all necessary child layers (title text, subtitle, action buttons, metrics, containers) to create a complete, polished design.
-4. Output RAW JSON ONLY. No markdown wrappers, no backticks, no preamble.`;
+Return raw JSON only without markdown code blocks.`;
 
     try {
-      const targetUrl = `${this.rawEndpoint}/api/generate`;
+      const targetUrl = `${this.rawEndpoint}/api/chat`;
       const response = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: this.model,
-          prompt: `${systemPrompt}\n\nUSER REQUEST: ${prompt}\n\nJSON:`,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt }
+          ],
           format: 'json',
           stream: false,
           options: {
-            temperature: 0.2,
-            num_predict: 2048
+            temperature: 0.1,
+            num_predict: 512
           }
         }),
         signal
@@ -120,13 +118,12 @@ DESIGN GUIDELINES:
       if (onProgress) onProgress({ step: 2, total: 3, message: 'Parsing Llama 3.1 design plan...' });
 
       const data = await response.json();
-      const rawResponse = data.response;
+      const rawResponse = data.message?.content || data.response || '{}';
       let parsed;
 
       try {
         parsed = JSON.parse(rawResponse);
       } catch (parseErr) {
-        // Fallback: extract JSON with regex if model added wrapping text
         const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           parsed = JSON.parse(jsonMatch[0]);
@@ -137,7 +134,7 @@ DESIGN GUIDELINES:
 
       const operations = Array.isArray(parsed.operations) ? parsed.operations : [];
 
-      if (onProgress) onProgress({ step: 3, total: 3, message: `Constructed ${operations.length} canvas operations.` });
+      if (onProgress) onProgress({ step: 3, total: 3, message: `Constructed ${operations.length} canvas operations with Llama 3.1.` });
 
       return {
         intent: parsed.intent || prompt,
