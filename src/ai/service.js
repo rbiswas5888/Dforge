@@ -34,8 +34,8 @@ export class DesignForgeAIService {
     this.registerProvider(new OpenAIProvider());
     this.registerProvider(new GeminiProvider());
 
-    // Load saved settings (defaults to OLLAMA with llama3.1)
-    this.activeProviderName = this.loadSetting('ai_active_provider') || PROVIDERS.OLLAMA;
+    // Load saved settings (defaults to OLLAMA with llama3.1 in browser, LOCAL in headless tests)
+    this.activeProviderName = this.loadSetting('ai_active_provider') || (typeof window !== 'undefined' ? PROVIDERS.OLLAMA : PROVIDERS.LOCAL);
     this.privacyMode = this.loadSetting('ai_privacy_mode') || PRIVACY_MODES.LOCAL_ONLY;
     this.contextManager.setPrivacyMode(this.privacyMode);
 
