@@ -115,10 +115,11 @@ export class DesignForgeAIService {
     this.activeAbortController = new AbortController();
     const signal = this.activeAbortController.signal;
 
-    // Enforce privacy rule
-    if (this.privacyMode === PRIVACY_MODES.LOCAL_ONLY && this.activeProviderName !== PROVIDERS.LOCAL) {
+    // Enforce privacy rule: LOCAL_ONLY allows local built-in and local Ollama
+    const isLocalProvider = this.activeProviderName === PROVIDERS.LOCAL || this.activeProviderName === PROVIDERS.OLLAMA;
+    if (this.privacyMode === PRIVACY_MODES.LOCAL_ONLY && !isLocalProvider) {
       throw new ProviderError(
-        'Local-Only Privacy Mode is active. Switch privacy mode to Allow Hosted or select the Built-in Local Provider.',
+        'Local-Only Privacy Mode is active. Switch privacy mode to Allow Hosted or select a Local Provider (Ollama / Built-in).',
         this.activeProviderName
       );
     }
