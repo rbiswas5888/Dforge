@@ -95,6 +95,8 @@ export class DesignForgeApp {
     this.initRightSidebar();
     this.initCommandPalette();
     this.initLinterModal();
+    this.initImportModal();
+    this.initBulkRenameModal();
     this.initBreakpointBar();
     this.initAssetsAndPages();
     this.bindCanvasEvents();
@@ -2352,6 +2354,194 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       alert(`⚡ Successfully auto-bound ${fixed} properties to Design Tokens!`);
       this.renderLinterResults();
       this.renderAll();
+    });
+  }
+
+  initImportModal() {
+    const modal = document.getElementById('modalImportDesign');
+    const dropZone = document.getElementById('importDropZone');
+    const fileInput = document.getElementById('externalDesignFileInput');
+    const btnCommit = document.getElementById('btnCommitImport');
+    let pendingImportResult = null;
+
+    dropZone?.addEventListener('click', () => fileInput?.click());
+
+    dropZone?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = '#38bdf8';
+      dropZone.style.background = 'rgba(56, 189, 248, 0.1)';
+    });
+
+    dropZone?.addEventListener('dragleave', () => {
+      dropZone.style.borderColor = '#3b82f6';
+      dropZone.style.background = 'rgba(30, 41, 59, 0.4)';
+    });
+
+    dropZone?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = '#3b82f6';
+      dropZone.style.background = 'rgba(30, 41, 59, 0.4)';
+      const file = e.dataTransfer?.files?.[0];
+      if (file) handleFile(file);
+    });
+
+    fileInput?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) handleFile(file);
+    });
+
+    const handleFile = (file) => {
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        try {
+          const raw = evt.target.result;
+          const result = await this.importer.processImport(raw, { fileName: file.name });
+          pendingImportResult = result;
+          renderFidelityPreview(result);
+        } catch (err) {
+          alert(`Could not process ${file.name}: ${err.message}`);
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    const renderFidelityPreview = (result) => {
+      const card = document.getElementById('importFidelityCard');
+      const badge = document.getElementById('importFidelityBadge');
+      const tag = document.getElementById('importSourceTag');
+      const statPages = document.getElementById('statImportPages');
+      const statNodes = document.getElementById('statImportNodes');
+      const statComps = document.getElementById('statImportComponents');
+      const statInters = document.getElementById('statImportInteractions');
+      const list = document.getElementById('importPreservedList');
+
+      if (card) card.style.display = 'block';
+      if (btnCommit) btnCommit.style.display = 'inline-block';
+      if (tag) tag.textContent = result.format.toUpperCase();
+
+      const rep = result.fidelityReport;
+      if (badge) {
+        badge.textContent = `${rep.overallScore}% ${rep.fidelityTier}`;
+        badge.style.background = rep.overallScore >= 90 ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)';
+        badge.style.color = rep.overallScore >= 90 ? '#34d399' : '#fbbf24';
+      }
+
+      if (statPages) statPages.textContent = rep.metrics.pageCount;
+      if (statNodes) statNodes.textContent = rep.metrics.importedNodeCount;
+      if (statComps) statComps.textContent = rep.metrics.componentsCount;
+      if (statInters) statInters.textContent = rep.metrics.interactionsCount;
+
+      if (list) {
+        list.innerHTML = `
+          <div style="font-weight: 600; color: #f8fafc; margin-bottom: 4px;">Preserved Features:</div>
+          ${rep.preservedFeatures.map(f => `<div>✓ ${f}</div>`).join('')}
+          ${rep.warnings.length > 0 ? `
+            <div style="font-weight: 600; color: #fbbf24; margin-top: 8px; margin-bottom: 4px;">Diagnostics & Fallbacks:</div>
+            ${rep.warnings.map(w => `<div style="color: #cbd5e1;">⚠️ ${w}</div>`).join('')}
+          ` : ''}
+        `;
+      }
+    };
+
+    // Preset Sample buttons
+    document.getElementById('btnSampleSketch')?.addEventListener('click', async () => {
+      const sketchSample = {
+        _class: 'document',
+        pages: [{
+          _class: 'page',
+          name: 'Sketch Mobile Flow',
+          layers: [{
+            _class: 'artboard',
+            name: 'iOS Wallet Screen',
+            frame: { x: 0, y: 0, width: 393, height: 852 },
+            hasBackgroundColor: true,
+            backgroundColor: { red: 0.05, green: 0.08, blue: 0.15, alpha: 1 },
+            layers: [
+              { _class: 'rectangle', name: 'Balance Card', frame: { x: 20, y: 100, width: 353, height: 180 }, fixedRadius: 16, style: { fills: [{ fillType: 0, color: { red: 0.23, green: 0.51, blue: 0.96, alpha: 1 } }] } },
+              { _class: 'text', name: 'Balance Amount', frame: { x: 44, y: 130, width: 200, height: 36 }, attributedString: { string: '$48,250.00' } },
+              { _class: 'rectangle', name: 'Send Action', frame: { x: 20, y: 310, width: 168, height: 50 }, fixedRadius: 12, style: { fills: [{ fillType: 0, color: { red: 0.1, green: 0.72, blue: 0.5, alpha: 1 } }] } },
+              { _class: 'rectangle', name: 'Receive Action', frame: { x: 205, y: 310, width: 168, height: 50 }, fixedRadius: 12, style: { fills: [{ fillType: 0, color: { red: 0.54, green: 0.36, blue: 0.96, alpha: 1 } }] } }
+            ]
+          }]
+        }]
+      };
+      const result = await this.importer.processImport(sketchSample, { fileName: 'wallet_flow.sketch' });
+      pendingImportResult = result;
+      renderFidelityPreview(result);
+    });
+
+    document.getElementById('btnSampleFigma')?.addEventListener('click', async () => {
+      const figmaSample = {
+        name: 'SaaS Treasury Dashboard',
+        document: {
+          type: 'DOCUMENT',
+          children: [{
+            type: 'CANVAS',
+            name: 'Overview Canvas',
+            children: [{
+              type: 'FRAME',
+              name: 'Dashboard Frame',
+              absoluteBoundingBox: { x: 100, y: 100, width: 1440, height: 900 },
+              layoutMode: 'VERTICAL',
+              itemSpacing: 24,
+              paddingTop: 32, paddingRight: 32, paddingBottom: 32, paddingLeft: 32,
+              fills: [{ type: 'SOLID', color: { r: 0.06, g: 0.09, b: 0.16, a: 1 } }],
+              children: [
+                { type: 'TEXT', name: 'Header', characters: 'Enterprise Treasury & Multi-Cloud Liquidity', style: { fontFamily: 'Inter', fontSize: 28, fontWeight: 700 } },
+                { type: 'COMPONENT', name: 'Stats Card', absoluteBoundingBox: { x: 132, y: 180, width: 340, height: 140 }, cornerRadius: 12, fills: [{ type: 'SOLID', color: { r: 0.12, g: 0.16, b: 0.25, a: 1 } }] }
+              ]
+            }]
+          }]
+        }
+      };
+      const result = await this.importer.processImport(figmaSample, { fileName: 'treasury.figma.json' });
+      pendingImportResult = result;
+      renderFidelityPreview(result);
+    });
+
+    document.getElementById('btnSampleSvg')?.addEventListener('click', async () => {
+      const svgSample = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+        <rect x="20" y="20" width="160" height="90" rx="8" fill="#3b82f6" />
+        <circle cx="280" cy="80" r="50" fill="#10b981" />
+        <text x="20" y="180" font-family="Inter" font-size="20" fill="#ffffff">Vector Illustration</text>
+      </svg>`;
+      const result = await this.importer.processImport(svgSample, { fileName: 'illustration.svg' });
+      pendingImportResult = result;
+      renderFidelityPreview(result);
+    });
+
+    btnCommit?.addEventListener('click', () => {
+      if (pendingImportResult && pendingImportResult.document) {
+        this.doc = pendingImportResult.document;
+        this.engine = new CommandEngine(this.doc);
+        this.renderer.engine = this.engine;
+        this.inspectGen.doc = this.doc;
+        this.prototype.doc = this.doc;
+
+        this.updatePagesList();
+        this.updateLayersTree();
+        this.updateInspector();
+        this.renderer.zoomToFit();
+        this.renderer.render();
+
+        modal.style.display = 'none';
+        this.showToast(`Imported ${pendingImportResult.format.toUpperCase()} into workspace!`);
+      }
+    });
+  }
+
+  initBulkRenameModal() {
+    const modal = document.getElementById('modalBulkRename');
+    const form = document.getElementById('formBulkRename');
+
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const pattern = document.getElementById('bulkRenamePattern')?.value || 'Layer $n';
+      const findText = document.getElementById('bulkRenameFind')?.value || '';
+      const replaceText = document.getElementById('bulkRenameReplace')?.value || '';
+
+      this.applyBulkRename(pattern, findText, replaceText);
+      if (modal) modal.style.display = 'none';
     });
   }
 

@@ -31,6 +31,7 @@
             <div class="dropdown-menu">
               <button class="dropdown-item" id="menuNewProject">New Project</button>
               <button class="dropdown-item" id="menuOpenProject">Open Project (.dforge)...</button>
+              <button class="dropdown-item" id="menuImportDesign">Import Design (Sketch, Figma, SVG)... (⌘⌥I)</button>
               <button class="dropdown-item" id="menuSaveProject">Save Project (⌘S)</button>
               <div class="dropdown-divider"></div>
               <button class="dropdown-item" id="menuExportReact">Export to React & TypeScript (⌘⇧E)</button>
@@ -48,6 +49,7 @@
               <button class="dropdown-item" id="menuDuplicate">Duplicate (⌘D)</button>
               <button class="dropdown-item" id="menuDelete">Delete (⌫)</button>
               <button class="dropdown-item" id="menuSelectAll">Select All (⌘A)</button>
+              <button class="dropdown-item" id="menuBulkRename">Rename Layers... (⌘R)</button>
             </div>
           </div>
 
@@ -61,6 +63,8 @@
               <div class="dropdown-divider"></div>
               <button class="dropdown-item" id="menuToggleGrid">Toggle Grid (⌘')</button>
               <button class="dropdown-item" id="menuToggleRulers">Toggle Rulers (⇧R)</button>
+              <button class="dropdown-item" id="menuOutlineView">Toggle Outline View (⌘Y)</button>
+              <button class="dropdown-item" id="menuPixelGrid">Toggle Pixel Grid (⇧')</button>
             </div>
           </div>
 
@@ -174,6 +178,9 @@
         </div>
 
         <button class="btn-icon" id="btnToggleTheme" title="Toggle Light / Dark Mode" style="font-size: 13px;">🌙</button>
+        <button class="menu-dropdown-btn" id="btnImportDesignTop" title="Import Design from Sketch, Figma, SVG, XD (⌘⌥I)" style="color: #c084fc; border: 1px solid rgba(192,132,252,0.4); font-size: 11px; font-weight: 600;">📥 Import</button>
+        <button class="menu-dropdown-btn" id="btnDevModeToggle" title="Toggle Dev Mode (⇧D)" style="color: #10b981; border: 1px solid rgba(16,185,129,0.4); font-size: 11px; font-weight: 600;">🛠 Dev Mode</button>
+        <div id="devModeBadge" style="display: none; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; font-size: 10px; font-weight: 700;">DEV MODE</div>
         <button class="menu-dropdown-btn" id="btnOpenMcpHub" title="Model Context Protocol (MCP) Hub & Tool Gateway (⌘⌥M)" style="color: #38bdf8; border: 1px solid rgba(56,189,248,0.4); font-size: 11px; font-weight: 600;">⚡ MCP Hub</button>
         <button class="menu-dropdown-btn" id="btnOpenLearnCenter" title="Learn & Tutorials Center (Section 15 & 16)" style="color: #a855f7; border: 1px solid rgba(168,85,247,0.3); font-size: 11px;">📚 Learn</button>
         <button class="menu-dropdown-btn" id="btnOpenLinter" title="Design System Linter (⌥L)" style="color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); font-size: 11px;">⚡ Linter</button>
@@ -268,12 +275,21 @@
           <button class="tool-btn active" data-tool="select" title="Move / Select (V)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
           </button>
+          <button class="tool-btn" data-tool="scale" title="Scale Proportionally (K)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+          </button>
           <button class="tool-btn" data-tool="hand" title="Hand / Pan Canvas (H or hold Space)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v7"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
           </button>
           <div class="shelf-divider"></div>
           <button class="tool-btn" data-tool="frame" title="Frame (F)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18M17 3v18M3 7h18M3 17h18"/></svg>
+          </button>
+          <button class="tool-btn" data-tool="section" title="Section Tool (⇧S)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/><path d="M3 9h18"/></svg>
+          </button>
+          <button class="tool-btn" data-tool="slice" title="Slice / Export Region (S)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2v20M17 2v20M2 7h20M2 17h20"/></svg>
           </button>
           <button class="tool-btn" data-tool="rectangle" title="Rectangle (R)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
@@ -283,6 +299,9 @@
           </button>
           <button class="tool-btn" data-tool="line" title="Line (L)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+          </button>
+          <button class="tool-btn" data-tool="pen" title="Pen / Vector Path Tool (P)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><circle cx="11" cy="11" r="2"/></svg>
           </button>
           <button class="tool-btn" data-tool="star" title="Star Shape">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -859,9 +878,90 @@
             <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Executable Command / Binary</label>
             <input type="text" id="addServerCommand" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" placeholder="node /path/to/server.js" />
           </div>
+    <!-- External Design Import Engine Modal (MD/Design.md) -->
+    <div class="modal-overlay" id="modalImportDesign" style="display: none; position: fixed; inset: 0; background: rgba(5,7,15,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center;">
+      <div style="width: 680px; max-width: 95vw; background: #0f172a; border: 1px solid #334155; border-radius: 14px; box-shadow: 0 25px 60px rgba(0,0,0,0.7); overflow: hidden; display: flex; flex-direction: column;">
+        <div style="padding: 18px 24px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; background: #141e33;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(192,132,252,0.15); border: 1px solid #c084fc; display: flex; align-items: center; justify-content: center; font-size: 16px;">📥</div>
+            <div>
+              <div style="font-size: 15px; font-weight: 700; color: #f8fafc;">External Design Import Engine</div>
+              <div style="font-size: 11px; color: #94a3b8;">Conforms to MD/Design.md — Sketch, Figma, SVG, Adobe XD & .dforge</div>
+            </div>
+          </div>
+          <button class="menu-dropdown-btn-sm" id="btnCloseImportModal" onclick="document.getElementById('modalImportDesign').style.display='none'">✕</button>
+        </div>
+
+        <div style="padding: 24px; display: flex; flex-direction: column; gap: 18px; max-height: 75vh; overflow-y: auto;">
+          <!-- Dropzone -->
+          <div id="importDropZone" style="border: 2px dashed #3b82f6; border-radius: 12px; padding: 28px 20px; text-align: center; background: rgba(30, 41, 59, 0.4); cursor: pointer; transition: all 0.2s ease;">
+            <div style="font-size: 32px; margin-bottom: 8px;">📁</div>
+            <div style="font-size: 14px; font-weight: 600; color: #f8fafc; margin-bottom: 4px;">Drag & drop your design file here, or click to browse</div>
+            <div style="font-size: 11px; color: #94a3b8;">Supports .sketch, .sketch.json, .fig, .figma.json, .svg, .xd, and .dforge</div>
+            <input type="file" id="externalDesignFileInput" style="display: none;" accept=".sketch,.json,.svg,.xd,.dforge">
+          </div>
+
+          <!-- Quick Demo Presets -->
+          <div>
+            <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 8px;">Or Try Sample Design Files</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="menu-dropdown-btn" id="btnSampleSketch" style="font-size: 11px; border: 1px solid rgba(245,158,11,0.3); color: #fbbf24;">💎 Sketch Mobile App Flow</button>
+              <button class="menu-dropdown-btn" id="btnSampleFigma" style="font-size: 11px; border: 1px solid rgba(192,132,252,0.3); color: #c084fc;">🎨 Figma Cloud SaaS Dashboard</button>
+              <button class="menu-dropdown-btn" id="btnSampleSvg" style="font-size: 11px; border: 1px solid rgba(56,189,248,0.3); color: #38bdf8;">📐 Illustrator SVG Vector Art</button>
+            </div>
+          </div>
+
+          <!-- Live Fidelity Preview Report Card -->
+          <div id="importFidelityCard" style="display: none; background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 13px; font-weight: 700; color: #f8fafc;">Import Fidelity Diagnostics</span>
+                <span id="importFidelityBadge" style="font-size: 11px; padding: 2px 8px; border-radius: 9999px; background: rgba(16,185,129,0.15); color: #34d399; font-weight: 700;">100% High Fidelity</span>
+              </div>
+              <span id="importSourceTag" style="font-size: 11px; color: #94a3b8; font-family: monospace;">SKETCH</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; background: #0f172a; padding: 10px; border-radius: 8px;">
+              <div style="text-align: center;"><div style="font-size: 11px; color: #64748b;">Pages</div><div id="statImportPages" style="font-size: 14px; font-weight: 700; color: #f8fafc;">1</div></div>
+              <div style="text-align: center;"><div style="font-size: 11px; color: #64748b;">Layers</div><div id="statImportNodes" style="font-size: 14px; font-weight: 700; color: #f8fafc;">18</div></div>
+              <div style="text-align: center;"><div style="font-size: 11px; color: #64748b;">Components</div><div id="statImportComponents" style="font-size: 14px; font-weight: 700; color: #38bdf8;">3</div></div>
+              <div style="text-align: center;"><div style="font-size: 11px; color: #64748b;">Interactions</div><div id="statImportInteractions" style="font-size: 14px; font-weight: 700; color: #c084fc;">2</div></div>
+            </div>
+
+            <div id="importPreservedList" style="font-size: 11px; color: #94a3b8; line-height: 1.6;"></div>
+          </div>
+        </div>
+
+        <div style="padding: 16px 24px; border-top: 1px solid #1e293b; background: #141e33; display: flex; justify-content: flex-end; gap: 10px;">
+          <button class="mcp-btn-secondary" onclick="document.getElementById('modalImportDesign').style.display='none'">Cancel</button>
+          <button class="mcp-btn-primary" id="btnCommitImport" style="display: none; background: #3b82f6;">Commit Import →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Rename Modal (MD/figma-design-page-functional-map.md Cmd+R) -->
+    <div class="modal-overlay" id="modalBulkRename" style="display: none; position: fixed; inset: 0; background: rgba(5,7,15,0.8); backdrop-filter: blur(6px); z-index: 9999; align-items: center; justify-content: center;">
+      <div style="width: 440px; max-width: 90vw; background: #0f172a; border: 1px solid #334155; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); overflow: hidden;">
+        <div style="padding: 16px 20px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 14px; font-weight: 700; color: #f8fafc;">Rename Layers (⌘R)</span>
+          <button class="menu-dropdown-btn-sm" onclick="document.getElementById('modalBulkRename').style.display='none'">✕</button>
+        </div>
+        <form id="formBulkRename" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Name Pattern (use $n for sequential numbers)</label>
+            <input type="text" id="bulkRenamePattern" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" placeholder="e.g. Card / $n or Row #$N" value="Card / $n" required />
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Find in Name (Optional)</label>
+            <input type="text" id="bulkRenameFind" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" placeholder="e.g. Rectangle" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Replace with (Optional)</label>
+            <input type="text" id="bulkRenameReplace" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" placeholder="e.g. Card Background" />
+          </div>
           <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
-            <button type="button" class="mcp-btn-secondary" onclick="document.getElementById('modalAddMcpServer').style.display='none'">Cancel</button>
-            <button type="submit" class="mcp-btn-primary">Connect & Discover →</button>
+            <button type="button" class="mcp-btn-secondary" onclick="document.getElementById('modalBulkRename').style.display='none'">Cancel</button>
+            <button type="submit" class="mcp-btn-primary">Rename Layers</button>
           </div>
         </form>
       </div>
