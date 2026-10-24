@@ -267,10 +267,13 @@ export class DesignForgeApp {
       }
     });
     document.getElementById('menuOpenProject')?.addEventListener('click', () => this.openProjectPicker());
+    document.getElementById('menuImportDesign')?.addEventListener('click', () => this.openImportModal());
     document.getElementById('menuSaveProject')?.addEventListener('click', () => this.saveProject());
     document.getElementById('menuExportReact')?.addEventListener('click', () => this.openExportModal());
     document.getElementById('menuExportSvg')?.addEventListener('click', () => this.exportSelectedAsSvg());
     document.getElementById('menuExportPng')?.addEventListener('click', () => this.exportSelectedAsPng());
+    document.getElementById('btnImportDesignTop')?.addEventListener('click', () => this.openImportModal());
+    document.getElementById('btnDevModeToggle')?.addEventListener('click', () => this.toggleDevMode());
 
     // Edit Menu Actions
     document.getElementById('menuUndo')?.addEventListener('click', () => this.undo());
@@ -2689,6 +2692,195 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const sel = this.engine.getSelection();
     if (sel.length === 1) {
       this.engine.reorderNode(sel[0], direction);
+    }
+  }
+
+  // --- Figma Functional Map Modes & Interactions (MD/figma-design-page-functional-map.md) ---
+
+  toggleDevMode() {
+    this.isDevMode = !this.isDevMode;
+    const badge = document.getElementById('devModeBadge');
+    const devBtn = document.getElementById('btnDevModeToggle');
+
+    if (this.isDevMode) {
+      if (badge) badge.style.display = 'inline-flex';
+      if (devBtn) devBtn.classList.add('active');
+      this.switchRightTab('inspect');
+      this.showToast('Dev Mode Active (⇧D): Inspection, code generation, and export specs enabled.');
+    } else {
+      if (badge) badge.style.display = 'none';
+      if (devBtn) devBtn.classList.remove('active');
+      this.switchRightTab('design');
+      this.showToast('Returned to Design Canvas Mode');
+    }
+  }
+
+  drillInSelection() {
+    const sel = this.engine.getSelection();
+    if (sel.length === 0) return;
+    const page = this.engine.getActivePage();
+    const node = page.nodes[sel[0]];
+    if (!node) return;
+
+    if (node.childIds && node.childIds.length > 0) {
+      // Container node: select its first child
+      this.engine.setSelection([node.childIds[0]]);
+      this.showToast(`Drilled into: ${page.nodes[node.childIds[0]]?.name || 'Child layer'}`);
+    } else if (node.type === 'vector' || node.type === 'rectangle' || node.type === 'ellipse' || node.type === 'line') {
+      // Leaf geometry node: enter Vector Edit Mode (Figma vector point mode)
+      this.isVectorEditMode = true;
+      this.renderer.isVectorEditMode = true;
+      this.renderer.render();
+      this.showToast('Vector Edit Mode active: anchor points visible. Press Esc to exit.');
+    }
+  }
+
+  drillOutSelection() {
+    if (this.isVectorEditMode) {
+      this.isVectorEditMode = false;
+      this.renderer.isVectorEditMode = false;
+      this.renderer.render();
+      this.showToast('Exited Vector Edit Mode');
+      return;
+    }
+
+    const sel = this.engine.getSelection();
+    if (sel.length === 0) return;
+    const page = this.engine.getActivePage();
+    const node = page.nodes[sel[0]];
+    if (node && node.parentId) {
+      this.engine.setSelection([node.parentId]);
+      this.showToast(`Selected parent: ${page.nodes[node.parentId]?.name || 'Parent frame'}`);
+    }
+  }
+
+  toggleOutlineView() {
+    this.renderer.outlineViewOnly = !this.renderer.outlineViewOnly;
+    this.renderer.render();
+    this.showToast(this.renderer.outlineViewOnly ? 'Outline View Enabled (⌘Y)' : 'Render View Restored');
+  }
+
+  togglePixelGrid() {
+    this.renderer.showPixelGrid = !this.renderer.showPixelGrid;
+    this.renderer.render();
+    this.showToast(this.renderer.showPixelGrid ? 'Pixel Grid Enabled (⇧\')' : 'Pixel Grid Disabled');
+  }
+
+  toggleRulers() {
+    this.showRulers = !this.showRulers;
+    const r = document.getElementById('canvasRulers');
+    if (r) r.style.display = this.showRulers ? 'block' : 'none';
+    this.showToast(this.showRulers ? 'Rulers Enabled (⇧R)' : 'Rulers Hidden');
+  }
+
+  toggleUI() {
+    this.uiHidden = !this.uiHidden;
+    const left = document.querySelector('.left-sidebar');
+    const right = document.querySelector('.right-sidebar');
+    if (left) left.style.display = this.uiHidden ? 'none' : 'flex';
+    if (right) right.style.display = this.uiHidden ? 'none' : 'flex';
+    this.renderer.resize?.();
+    this.showToast(this.uiHidden ? 'Panels Hidden (⌘\\)' : 'Panels Restored');
+  }
+
+  flipSelected(direction) {
+    const sel = this.engine.getSelection();
+    if (sel.length === 0) return;
+    const page = this.engine.getActivePage();
+    for (const id of sel) {
+      const node = page.nodes[id];
+      if (!node) continue;
+      const currentScaleX = node.transform.scaleX !== undefined ? node.transform.scaleX : 1;
+      const currentScaleY = node.transform.scaleY !== undefined ? node.transform.scaleY : 1;
+      if (direction === 'horizontal') {
+        this.engine.updateNode(id, { transform: { scaleX: currentScaleX * -1 } }, 'Flip Horizontal');
+      } else {
+        this.engine.updateNode(id, { transform: { scaleY: currentScaleY * -1 } }, 'Flip Vertical');
+      }
+    }
+  }
+
+  openBulkRenameModal() {
+    const sel = this.engine.getSelection();
+    if (sel.length === 0) {
+      this.showToast('Please select one or more layers to rename (⌘R).');
+      return;
+    }
+    const modal = document.getElementById('modalBulkRename');
+    if (modal) {
+      modal.style.display = 'flex';
+      const input = document.getElementById('bulkRenamePattern');
+      if (input) {
+        input.value = `Layer $n`;
+        input.focus();
+        input.select();
+      }
+    } else {
+      // Fallback prompt
+      const pattern = prompt(`Rename ${sel.length} layer(s). Use '$n' for sequential numbers (e.g. Card / $n):`, `Card / $n`);
+      if (pattern) this.applyBulkRename(pattern);
+    }
+  }
+
+  applyBulkRename(pattern, findText = '', replaceText = '') {
+    const sel = this.engine.getSelection();
+    const page = this.engine.getActivePage();
+    sel.forEach((id, idx) => {
+      const node = page.nodes[id];
+      if (!node) return;
+      let newName = pattern;
+      if (findText) {
+        newName = node.name.replaceAll(findText, replaceText);
+      } else if (pattern.includes('$n')) {
+        newName = pattern.replace('$n', String(idx + 1));
+      } else if (pattern.includes('$N')) {
+        newName = pattern.replace('$N', String(idx + 1).padStart(2, '0'));
+      }
+      this.engine.updateNode(id, { name: newName }, 'Bulk Rename Layer');
+    });
+    this.updateLayersTree();
+    this.showToast(`Renamed ${sel.length} layers.`);
+  }
+
+  // --- External Design Import Engine (MD/Design.md) ---
+
+  openImportModal() {
+    const modal = document.getElementById('modalImportDesign');
+    if (modal) {
+      modal.style.display = 'flex';
+    } else {
+      document.getElementById('externalDesignFileInput')?.click();
+    }
+  }
+
+  async importDesignData(rawInput, fileName = 'imported_design') {
+    try {
+      this.showToast(`Analyzing and parsing ${fileName}...`);
+      const result = await this.importer.processImport(rawInput, { fileName });
+
+      if (result.success && result.document) {
+        // Load imported document into CommandEngine
+        this.doc = result.document;
+        this.engine = new CommandEngine(this.doc);
+        this.renderer.engine = this.engine;
+        this.inspectGen.doc = this.doc;
+        this.prototype.doc = this.doc;
+
+        this.updatePagesList();
+        this.updateLayersTree();
+        this.updateInspector();
+        this.renderer.zoomToFit();
+        this.renderer.render();
+
+        const score = result.fidelityReport?.overallScore || 95;
+        const tier = result.fidelityReport?.fidelityTier || 'High Fidelity';
+        this.showToast(`Imported ${result.format.toUpperCase()} successfully: ${score}% Fidelity (${tier})!`);
+        return result;
+      }
+    } catch (err) {
+      console.error('Import error:', err);
+      alert(`Import failed: ${err.message}`);
+      throw err;
     }
   }
 
