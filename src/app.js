@@ -43,6 +43,7 @@ import {
   globalSecurityManager,
   globalAuditLogger
 } from './mcp/index.js';
+import { ImportManager } from './engine/importer/index.js';
 
 export class DesignForgeApp {
   constructor() {
@@ -51,6 +52,7 @@ export class DesignForgeApp {
     this.doc = savedDoc || createInitialDocument('ForgePay AI — Treasury Platform');
 
     this.engine = new CommandEngine(this.doc);
+    this.importer = new ImportManager(this);
     this.mcpSecurity = globalSecurityManager;
     this.mcpAudit = globalAuditLogger;
     this.mcpClientManager = new McpClientManager({ security: this.mcpSecurity, audit: this.mcpAudit });
@@ -64,8 +66,11 @@ export class DesignForgeApp {
     this.mcpHub = new McpHubController(this, this.mcpClientManager, this.mcpOrchestrator, this.mcpSecurity, this.mcpAudit);
 
     // Active tool state
-    this.currentTool = 'select'; // 'select' | 'hand' | 'frame' | 'rectangle' | 'ellipse' | 'line' | 'text' | 'comment'
+    this.currentTool = 'select'; // 'select' | 'hand' | 'frame' | 'rectangle' | 'ellipse' | 'line' | 'text' | 'comment' | 'scale' | 'pen' | 'section' | 'slice'
     this.isHandMode = false;
+    this.isDevMode = false;
+    this.isVectorEditMode = false;
+    this.uiHidden = false;
 
     // Interaction states & Inspector modes
     this.rightTabMode = 'design'; // 'design' | 'prototype' | 'inspect' | 'export' | 'ai'

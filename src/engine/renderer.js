@@ -162,6 +162,23 @@ export class CanvasRenderer {
 
 
   drawGrid(ctx, w, h) {
+    // 1px Pixel Grid (Figma Shift+') when zoomed in
+    if (this.showPixelGrid && this.zoom >= 4) {
+      const pxSize = this.zoom;
+      const pxOffsetX = (this.panX % pxSize + pxSize) % pxSize;
+      const pxOffsetY = (this.panY % pxSize + pxSize) % pxSize;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      for (let x = pxOffsetX; x < w; x += pxSize) {
+        ctx.moveTo(x, 0); ctx.lineTo(x, h);
+      }
+      for (let y = pxOffsetY; y < h; y += pxSize) {
+        ctx.moveTo(0, y); ctx.lineTo(w, y);
+      }
+      ctx.stroke();
+    }
+
     const gridSize = 20 * this.zoom;
     if (gridSize < 8) return; // Don't draw if too dense
 
