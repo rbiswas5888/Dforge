@@ -9,6 +9,7 @@ import { OperationValidator } from './validator.js';
 import { OperationExecutor } from './operations.js';
 import { DesignIntelligenceAnalyzer } from './intelligence.js';
 import { LocalProvider } from './providers/local-provider.js';
+import { OllamaProvider } from './providers/ollama-provider.js';
 import { OpenAIProvider } from './providers/openai-provider.js';
 import { GeminiProvider } from './providers/gemini-provider.js';
 import { ReactCompiler } from '../engine/compiler.js';
@@ -28,12 +29,13 @@ export class DesignForgeAIService {
 
     // Providers registry
     this.providers = new Map();
+    this.registerProvider(new OllamaProvider({ model: 'llama3.1' }));
     this.registerProvider(new LocalProvider());
     this.registerProvider(new OpenAIProvider());
     this.registerProvider(new GeminiProvider());
 
-    // Load saved settings
-    this.activeProviderName = this.loadSetting('ai_active_provider') || PROVIDERS.LOCAL;
+    // Load saved settings (defaults to OLLAMA with llama3.1)
+    this.activeProviderName = this.loadSetting('ai_active_provider') || PROVIDERS.OLLAMA;
     this.privacyMode = this.loadSetting('ai_privacy_mode') || PRIVACY_MODES.LOCAL_ONLY;
     this.contextManager.setPrivacyMode(this.privacyMode);
 
