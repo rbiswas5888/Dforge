@@ -44,6 +44,14 @@ import {
   globalAuditLogger
 } from './mcp/index.js';
 import { ImportManager } from './engine/importer/index.js';
+import {
+  DesignSystemRegistry,
+  AITokenWizard,
+  ResponsiveTokenEngine,
+  ComponentVariableExtractor,
+  ReactDesignSystemImporter,
+  DesignSystemUIController
+} from './engine/design_system/index.js';
 
 export class DesignForgeApp {
   constructor() {
@@ -64,6 +72,17 @@ export class DesignForgeApp {
     this.palette = new CommandPaletteEngine(this);
     this.learning = new LearningManager();
     this.mcpHub = new McpHubController(this, this.mcpClientManager, this.mcpOrchestrator, this.mcpSecurity, this.mcpAudit);
+
+    // Unified Design System Subsystem (Master Prompt Section 2-18)
+    this.dsRegistry = new DesignSystemRegistry(this.doc, this.storage);
+    this.aiTokenWizard = new AITokenWizard(this.dsRegistry);
+    this.responsiveTokenEngine = new ResponsiveTokenEngine(this.dsRegistry);
+    this.compVarExtractor = new ComponentVariableExtractor(this.dsRegistry, this.engine);
+    this.reactDsImporter = new ReactDesignSystemImporter(this.dsRegistry);
+    this.dsUi = new DesignSystemUIController(this);
+    if (typeof window !== 'undefined') {
+      window.designForgeApp = this;
+    }
 
     // Active tool state
     this.currentTool = 'select'; // 'select' | 'hand' | 'frame' | 'rectangle' | 'ellipse' | 'line' | 'text' | 'comment' | 'scale' | 'pen' | 'section' | 'slice'
@@ -124,6 +143,9 @@ export class DesignForgeApp {
       });
     }
 
+    // Initialize Unified Design System UI Controller
+    this.dsUi.init();
+
     // Top Bar Mode Switcher
     const modeTabs = document.querySelectorAll('.mode-tab');
     modeTabs.forEach(tab => {
@@ -135,6 +157,10 @@ export class DesignForgeApp {
           this.openPrototypeModal();
         } else if (mode === 'code') {
           this.openExportModal();
+        } else if (mode === 'design-system') {
+          this.switchToDesignSystemMode();
+        } else if (mode === 'design') {
+          this.switchToDesignMode();
         }
       });
     });
@@ -1357,11 +1383,16 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         <button class="btn-align-tool" id="inspDistV" title="Distribute Vertical Spacing">⫾</button>
       </div>
 
-      <!-- 2. Transform Section (Position, Dimensions, Aspect Ratio Lock, Rotation, Corners) -->
+      <!-- 2. Transform Section & Explicit Variable Extraction (Section 11) -->
       <div class="section-group">
         <div class="section-title">
           <span>Transform</span>
           <span style="font-size: 10px; color: var(--accent-blue); text-transform: lowercase;">${node.type}</span>
+        </div>
+        <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+          <button class="btn-inspector-action" id="btnExtractCompVariables" style="font-size: 11px; color: #10b981; border: 1px solid rgba(16,185,129,0.4);" title="Extract Reusable Variables with AI (Section 11)">
+            <span>🔤 Extract Variables (AI)</span>
+          </button>
         </div>
         <div class="props-row">
           <div class="prop-field">
@@ -1687,6 +1718,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     document.getElementById('inspAlignBottom')?.addEventListener('click', () => this.alignSelected('bottom'));
     document.getElementById('inspDistH')?.addEventListener('click', () => this.distributeSelected('horizontal'));
     document.getElementById('inspDistV')?.addEventListener('click', () => this.distributeSelected('vertical'));
+    document.getElementById('btnExtractCompVariables')?.addEventListener('click', () => {
+      this.dsUi.openComponentVariablesModal(node);
+    });
 
     // 2. Transform Inputs & Scrubbing
     this.makeScrubbable(document.getElementById('lblX'), (delta) => {
@@ -3269,6 +3303,27 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         }
       });
     });
+  }
+
+  // --- Unified Design System Mode Transitions (Section 2 & 4) ---
+  switchToDesignSystemMode() {
+    const dsWorkspace = document.getElementById('designSystemWorkspace');
+    const canvasWrapper = document.getElementById('canvasWrapper');
+    const rightSidebar = document.getElementById('rightSidebar');
+    if (dsWorkspace) dsWorkspace.style.display = 'flex';
+    if (canvasWrapper) canvasWrapper.style.display = 'none';
+    if (rightSidebar) rightSidebar.style.display = 'none';
+    this.dsUi.renderView(this.dsUi.activeView || 'overview');
+  }
+
+  switchToDesignMode() {
+    const dsWorkspace = document.getElementById('designSystemWorkspace');
+    const canvasWrapper = document.getElementById('canvasWrapper');
+    const rightSidebar = document.getElementById('rightSidebar');
+    if (dsWorkspace) dsWorkspace.style.display = 'none';
+    if (canvasWrapper) canvasWrapper.style.display = 'block';
+    if (rightSidebar) rightSidebar.style.display = 'flex';
+    if (this.renderer) this.renderer.render();
   }
 
   // --- Modals (Export, Prototype & Shortcuts) ---
