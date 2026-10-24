@@ -1,0 +1,6 @@
+mutation consolidate($shareIdentifier: UUID4, $kind: VersionKind, $description: String) {
+  createCollaborativeVersion(shareIdentifier: $shareIdentifier, kind: $kind, description: $description) {
+    id
+    status
+  }
+}

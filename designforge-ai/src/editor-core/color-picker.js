@@ -216,6 +216,26 @@ export class ColorPickerPopover {
           `).join('')}
         </div>
 
+        <div class="cp-palette-title" style="margin-top: 8px;">Sketch Gemstones & Minerals</div>
+        <div class="cp-swatches-grid">
+          ${[
+            { name: 'Ruby', hex: '#e02020' },
+            { name: 'Amber', hex: '#fa6400' },
+            { name: 'Citrine', hex: '#f7b500' },
+            { name: 'Emerald', hex: '#6dd400' },
+            { name: 'Amazonite', hex: '#44d7b6' },
+            { name: 'Apatite', hex: '#32c5ff' },
+            { name: 'Sapphire', hex: '#0091ff' },
+            { name: 'Iolite', hex: '#6236ff' },
+            { name: 'Amethyst', hex: '#b620e0' },
+            { name: 'Graphite', hex: '#6d7278' },
+            { name: 'Calcite', hex: '#ffffff' },
+            { name: 'Obsidian', hex: '#111827' }
+          ].map(s => `
+            <div class="cp-palette-swatch" data-color="${s.hex}" style="background: ${s.hex};" title="Sketch ${s.name} (${s.hex})"></div>
+          `).join('')}
+        </div>
+
         <div class="cp-palette-title" style="margin-top: 8px;">Standard Palette</div>
         <div class="cp-swatches-grid">
           ${[

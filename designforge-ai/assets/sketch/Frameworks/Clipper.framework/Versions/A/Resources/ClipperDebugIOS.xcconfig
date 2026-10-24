@@ -1,0 +1,2 @@
+#include "ClipperReleaseIOS.xcconfig"
+#include "../../BCFoundation/Configs/BCIOSDebug.xcconfig"

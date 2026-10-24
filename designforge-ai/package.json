@@ -11,6 +11,9 @@
     "test:mcp": "node tests/test_mcp_ecosystem.js",
     "test:flagship": "node tests/test_flagship_suite.js",
     "test:motion": "node tests/test_prototyping_motion_suite.js",
-    "test:all": "node tests/test_frozen_zone_guard.js && node tests/test_engines.js && node tests/test_master_implementation.js && node tests/test_design_prototype_complete.js && node tests/test_mcp_ecosystem.js && node tests/test_flagship_suite.js && node tests/test_prototyping_motion_suite.js"
+    "test:v2-direct": "node tests/test_v2_direct_point_editing_and_state_machine.js",
+    "test:figma-map": "node tests/test_figma_functional_map.js",
+    "test:sketch": "node tests/test_sketch_resources_integration.js",
+    "test:all": "node tests/test_frozen_zone_guard.js && node tests/test_engines.js && node tests/test_master_implementation.js && node tests/test_design_prototype_complete.js && node tests/test_mcp_ecosystem.js && node tests/test_flagship_suite.js && node tests/test_prototyping_motion_suite.js && node tests/test_v2_direct_point_editing_and_state_machine.js && node tests/test_figma_functional_map.js && node tests/test_sketch_resources_integration.js"
   }
 }

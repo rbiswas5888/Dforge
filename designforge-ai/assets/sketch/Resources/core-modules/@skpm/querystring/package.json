@@ -1,0 +1,31 @@
+{
+  "name": "@skpm/querystring",
+  "version": "0.1.0",
+  "description": "A drop-in replacement for the querystring NodeJS package",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "internal.js"
+  ],
+  "scripts": {
+    "test": "skpm-test --app=latest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/skpm/querystring.git"
+  },
+  "keywords": [
+    "sketch",
+    "module",
+    "querystring"
+  ],
+  "author": "Mathieu Dutour <mathieu@dutour.me> (http://mathieu.dutour.me/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/skpm/querystring/issues"
+  },
+  "homepage": "https://github.com/skpm/querystring#readme",
+  "devDependencies": {
+    "@skpm/test-runner": "^0.3.10"
+  }
+}

@@ -1,0 +1,29 @@
+query (
+  $shareIdentifier: UUID4!
+  $versionIdentifier: UUID4
+  $patchIdentifier: UUID4
+  $coeditCompatibilityVersion: Int
+) {
+  collaborativeEditingSession(shareIdentifier: $shareIdentifier) {
+    catchUpStrategy(
+      versionIdentifier: $versionIdentifier
+      patchIdentifier: $patchIdentifier
+      coeditCompatibilityVersion: $coeditCompatibilityVersion
+    ) {
+      __typename
+      ... on OutOfDateBaseVersionCatchUp {
+        latestVersionIdentifier
+        compatibilityVersion
+      }
+      ... on DownloadLatestVersionCatchUp {
+        latestVersionIdentifier
+      }
+      ... on DownloadPatchesCatchUp {
+        startingPatchIdentifier
+      }
+      ... on RemoteMigrationCatchUp {
+        shareIdentifier
+      }
+    }
+  }
+}

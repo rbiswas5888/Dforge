@@ -1,0 +1,5 @@
+#include "ClipperRelease.xcconfig"
+#include "../../BCFoundation/Configs/BCCoreDebug.xcconfig"
+
+// AppKit is included for debug builds only, used for generating debug output
+OTHER_LDFLAGS = $(OTHER_LDFLAGS) -framework AppKit

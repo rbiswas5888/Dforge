@@ -1,0 +1,13 @@
+mutation create(
+  $shareIdentifier: UUID4!
+  $baseVersionIdentifier: UUID4!
+  $compatibilityVersion: Int!
+) {
+  collaborativeEditingSessionCreate(
+    shareIdentifier: $shareIdentifier
+    compatibilityVersion: $compatibilityVersion
+    baseVersionIdentifier: $baseVersionIdentifier
+  ) {
+    baseVersionIdentifier
+  }
+}

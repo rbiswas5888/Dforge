@@ -1,0 +1,24 @@
+subscription collaborativeEdits(
+  $shareIdentifier: UUID4!
+  $baseVersionIdentifier: UUID4
+  $latestPatchIdentifier: UUID4
+) {
+  collaborativeEdits(
+    shareIdentifier: $shareIdentifier
+    baseVersionIdentifier: $baseVersionIdentifier
+    latestPatchIdentifier: $latestPatchIdentifier
+  ) {
+    __typename
+    ... on LocalCollaborativePatch {
+      seq
+      payload
+      nextVersionIdentifier
+    }
+    ... on RemoteCollaborativePatch {
+      id
+      seq
+      payloadUrl
+      nextVersionIdentifier
+    }
+  }
+}

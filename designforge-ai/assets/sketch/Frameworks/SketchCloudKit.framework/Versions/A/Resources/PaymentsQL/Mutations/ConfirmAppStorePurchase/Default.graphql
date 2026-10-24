@@ -1,0 +1,9 @@
+mutation confirmAppStorePurchase($customerId: UUID!) {
+  confirmAppStorePurchase(customerId: $customerId) {
+    customer {
+      subscriptionInfo {
+        status
+      }
+    }
+  }
+}

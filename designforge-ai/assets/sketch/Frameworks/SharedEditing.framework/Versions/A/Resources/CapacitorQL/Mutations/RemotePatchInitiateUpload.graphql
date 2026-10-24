@@ -1,0 +1,6 @@
+mutation ($patchIdentifier: UUID4!, $shareIdentifier: UUID4!) {
+  remotePatchInitiateUpload(patchIdentifier: $patchIdentifier, shareIdentifier: $shareIdentifier) {
+    uploadIdentifier
+    uploadUrl
+  }
+}

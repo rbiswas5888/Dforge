@@ -1,0 +1,40 @@
+query (
+  $shareIdentifier: UUID4!
+  $baseVersionIdentifier: UUID4!
+  $after: UUID4
+) {
+  collaborativeEditingSession(shareIdentifier: $shareIdentifier) {
+    collaborativeEditsPaginated(
+      baseVersionIdentifier: $baseVersionIdentifier
+      after: $after
+    ) {
+      entries {
+        __typename
+        ... on LocalCollaborativePatch {
+          seq
+          payload
+          nextVersionIdentifier
+        }
+        ... on RemoteCollaborativePatch {
+          id
+          seq
+          payloadUrl
+          nextVersionIdentifier
+        }
+      }
+      current {
+        ... on LocalCollaborativePatch {
+          seq
+        }
+        ... on RemoteCollaborativePatch {
+          seq
+        }
+      }
+      metadata {
+        after
+        limit
+        totalCount
+      }
+    }
+  }
+}

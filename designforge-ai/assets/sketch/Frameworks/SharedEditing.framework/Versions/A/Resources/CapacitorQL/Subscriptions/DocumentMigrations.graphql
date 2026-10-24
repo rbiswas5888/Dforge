@@ -1,0 +1,17 @@
+subscription documentMigrations($shareIdentifier: UUID4!) {
+  documentMigrations(shareIdentifier: $shareIdentifier) {
+    __typename
+    ... on MigrationCompleted {
+      coeditCompatibilityVersion
+      versionIdentifier
+    }
+    ... on MigrationFailed {
+      error
+      versionIdentifier
+    }
+    ... on MigrationStarted {
+      coeditCompatibilityVersion
+      versionIdentifier
+    }
+  }
+}

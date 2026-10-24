@@ -1,0 +1,23 @@
+#include "../../BCFoundation/Configs/BCCore.xcconfig"
+#include "../../BCFoundation/Configs/BCFramework.xcconfig"
+
+PRODUCT_NAME=Clipper
+
+// Clipper2 requires C++17
+CLANG_CXX_LANGUAGE_STANDARD = gnu++17
+CLANG_CXX_LIBRARY = libc++
+
+// Enable Z-coordinate support in Clipper2
+// USINGZ adds a 'z' field to Point64, which we use to store a 1-based index
+// into a BCBezierSegmentReference array. This allows us to track the original
+// Bezier curve segments through the clipping operation and reconstruct smooth
+// curves in the output instead of polylines.
+// This must match the package definition so Point64 has the z field.
+GCC_PREPROCESSOR_DEFINITIONS = $(inherited) USINGZ=1
+
+CLANG_WARN_IMPLICIT_SIGN_CONVERSION = NO
+CLANG_WARN_BOOL_CONVERSION = NO
+CLANG_WARN_FLOAT_CONVERSION = NO
+
+GCC_WARN_ABOUT_MISSING_PROTOTYPES = NO
+GCC_WARN_UNUSED_PARAMETER = NO

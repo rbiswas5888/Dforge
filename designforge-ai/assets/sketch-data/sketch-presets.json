@@ -1,0 +1,214 @@
+{
+  "colors": [
+    {
+      "name": "Ruby",
+      "hex": "#e02020",
+      "r": 224,
+      "g": 32,
+      "b": 32,
+      "a": 1
+    },
+    {
+      "name": "Amber",
+      "hex": "#fa6400",
+      "r": 250,
+      "g": 100,
+      "b": 0,
+      "a": 1
+    },
+    {
+      "name": "Citrine",
+      "hex": "#f7b500",
+      "r": 247,
+      "g": 181,
+      "b": 0,
+      "a": 1
+    },
+    {
+      "name": "Emerald",
+      "hex": "#6dd400",
+      "r": 109,
+      "g": 212,
+      "b": 0,
+      "a": 1
+    },
+    {
+      "name": "Amazonite",
+      "hex": "#44d7b6",
+      "r": 68,
+      "g": 215,
+      "b": 182,
+      "a": 1
+    },
+    {
+      "name": "Apatite",
+      "hex": "#32c5ff",
+      "r": 50,
+      "g": 197,
+      "b": 255,
+      "a": 1
+    },
+    {
+      "name": "Sapphire",
+      "hex": "#0091ff",
+      "r": 0,
+      "g": 145,
+      "b": 255,
+      "a": 1
+    },
+    {
+      "name": "Iolite",
+      "hex": "#6236ff",
+      "r": 98,
+      "g": 54,
+      "b": 255,
+      "a": 1
+    },
+    {
+      "name": "Amethyst",
+      "hex": "#b620e0",
+      "r": 182,
+      "g": 32,
+      "b": 224,
+      "a": 1
+    },
+    {
+      "name": "Graphite",
+      "hex": "#6d7278",
+      "r": 109,
+      "g": 114,
+      "b": 120,
+      "a": 1
+    },
+    {
+      "name": "Quartz",
+      "hex": "#000000",
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0.1
+    },
+    {
+      "name": "Magnetite",
+      "hex": "#000000",
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0.25
+    },
+    {
+      "name": "Hematite",
+      "hex": "#000000",
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0.5
+    },
+    {
+      "name": "Basalt",
+      "hex": "#000000",
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0.85
+    },
+    {
+      "name": "Obsidian",
+      "hex": "#000000",
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 1
+    },
+    {
+      "name": "Calcite",
+      "hex": "#ffffff",
+      "r": 255,
+      "g": 255,
+      "b": 255,
+      "a": 1
+    }
+  ],
+  "gradients": [
+    {
+      "name": "Diorite",
+      "type": "linear",
+      "stops": [
+        {
+          "offset": 0,
+          "color": "rgba(0, 0, 0, 0)"
+        },
+        {
+          "offset": 1,
+          "color": "#000000"
+        }
+      ]
+    },
+    {
+      "name": "Autunite",
+      "type": "linear",
+      "stops": [
+        {
+          "offset": 0,
+          "color": "#6dd400"
+        },
+        {
+          "offset": 1,
+          "color": "#f7b500"
+        }
+      ]
+    },
+    {
+      "name": "Bornite",
+      "type": "linear",
+      "stops": [
+        {
+          "offset": 0,
+          "color": "#32c5ff"
+        },
+        {
+          "offset": 0.51258389261745,
+          "color": "#b620e0"
+        },
+        {
+          "offset": 1,
+          "color": "#f7b500"
+        }
+      ]
+    },
+    {
+      "name": "Bismuth",
+      "type": "linear",
+      "stops": [
+        {
+          "offset": 0,
+          "color": "#e02020"
+        },
+        {
+          "offset": 0.167194618451025,
+          "color": "#fa6400"
+        },
+        {
+          "offset": 0.333898731136105,
+          "color": "#f7b500"
+        },
+        {
+          "offset": 0.500513863183371,
+          "color": "#6dd400"
+        },
+        {
+          "offset": 0.665668600512529,
+          "color": "#0091ff"
+        },
+        {
+          "offset": 0.833200233129271,
+          "color": "#6236ff"
+        },
+        {
+          "offset": 1,
+          "color": "#b620e0"
+        }
+      ]
+    }
+  ]
+}

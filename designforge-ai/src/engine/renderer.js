@@ -4,6 +4,7 @@
  */
 
 import { computeWorldBounds, computeGroupBounds } from './layout.js';
+import { getRectangleCornerHandles } from '../editor-core/vector-engine.js';
 
 export class CanvasRenderer {
   constructor(canvasElement, commandEngine) {
@@ -103,6 +104,30 @@ export class CanvasRenderer {
     this.render();
   }
 
+  zoomToSelection() {
+    const selectedIds = this.engine.getSelection();
+    if (!selectedIds || selectedIds.length === 0) return;
+    const page = this.engine.getActivePage();
+    if (!page) return;
+
+    const bounds = computeGroupBounds(page, selectedIds);
+    if (!bounds || bounds.width === 0 || bounds.height === 0) return;
+
+    const rect = this.canvas.getBoundingClientRect();
+    const padding = 100;
+    const availW = Math.max(50, rect.width - padding * 2);
+    const availH = Math.max(50, rect.height - padding * 2);
+
+    const scaleX = availW / bounds.width;
+    const scaleY = availH / bounds.height;
+    const fitZoom = Math.min(Math.min(scaleX, scaleY), 4.0);
+
+    this.zoom = Math.max(0.1, Math.min(fitZoom, 8.0));
+    this.panX = (rect.width - bounds.width * this.zoom) / 2 - bounds.x * this.zoom;
+    this.panY = (rect.height - bounds.height * this.zoom) / 2 - bounds.y * this.zoom;
+    this.render();
+  }
+
   render() {
     const { ctx, canvas, zoom, panX, panY, dpr } = this;
     const page = this.engine.getActivePage();
@@ -142,6 +167,11 @@ export class CanvasRenderer {
 
     // 7. Render Selection Overlays, Bounding Boxes & Resize Handles
     this.drawSelection(ctx, page, boundsCache);
+
+    // 7.2 Render Vector Edit Mode Overlay (§11.6–§11.10)
+    if (this.vectorEdit) {
+      this.drawVectorEdit(ctx, page);
+    }
 
     // 7.5 Render Distance Measurements (Alt/Option measurement mode)
     this.drawDistanceMeasurement(ctx, page, boundsCache);
@@ -234,7 +264,10 @@ export class CanvasRenderer {
     // Draw Shape Geometry / Fill / Corner Radius
     const radius = node.style?.cornerRadius !== undefined ? node.style.cornerRadius : 0;
     ctx.beginPath();
-    if (node.type === 'ellipse') {
+    if (this.vectorEdit && this.vectorEdit.nodeId === nodeId && this.vectorEdit.anchors?.length > 0) {
+      // Live Vector Edit Mode: render deformed shape directly from active anchors
+      this.drawVectorPathFromAnchors(ctx, bounds, this.vectorEdit.anchors, node.type !== 'line' && node.type !== 'arrow');
+    } else if (node.type === 'ellipse') {
       const cx = bounds.x + bounds.width / 2;
       const cy = bounds.y + bounds.height / 2;
       const rx = bounds.width / 2;
@@ -276,11 +309,38 @@ export class CanvasRenderer {
       ctx.rect(bounds.x, bounds.y, bounds.width, bounds.height);
     }
 
-    // Fills (Solid & Linear Gradient)
-    if (node.style?.fills && node.style.fills.length > 0) {
+    // Fills (Solid & Linear Gradient) or Outline Mode (Cmd+Y)
+    if (this.outlineMode) {
+      ctx.strokeStyle = '#0d99ff';
+      ctx.lineWidth = 1 / this.zoom;
+      ctx.stroke();
+    } else if (node.style?.fills && node.style.fills.length > 0) {
       for (const fill of node.style.fills) {
         if (fill.visible === false) continue;
-        if (fill.type === 'linear-gradient' || fill.type === 'gradient') {
+        if (fill.type === 'image' && fill.url) {
+          if (!this.imageCache) this.imageCache = new Map();
+          let img = this.imageCache.get(fill.url);
+          if (!img && typeof Image !== 'undefined') {
+            img = new Image();
+            img.src = fill.url;
+            img.onload = () => { this.render(); };
+            this.imageCache.set(fill.url, img);
+          }
+          if (img && img.complete && img.naturalWidth > 0) {
+            ctx.save();
+            ctx.clip();
+            const scale = Math.max(bounds.width / img.naturalWidth, bounds.height / img.naturalHeight);
+            const w = img.naturalWidth * scale;
+            const h = img.naturalHeight * scale;
+            const x = bounds.x + (bounds.width - w) / 2;
+            const y = bounds.y + (bounds.height - h) / 2;
+            ctx.drawImage(img, x, y, w, h);
+            ctx.restore();
+          } else {
+            ctx.fillStyle = '#334155';
+            ctx.fill();
+          }
+        } else if (fill.type === 'linear-gradient' || fill.type === 'gradient') {
           const grad = ctx.createLinearGradient(bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height);
           const stops = fill.stops || [{ offset: 0, color: fill.color || '#3b82f6' }, { offset: 1, color: '#8b5cf6' }];
           for (const s of stops) {
@@ -379,11 +439,11 @@ export class CanvasRenderer {
     if (t.letterSpacing) {
       try {
         ctx.letterSpacing = `${t.letterSpacing}px`;
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const textX = t.textAlign === 'center' ? bounds.x + bounds.width / 2 :
-                  t.textAlign === 'right' ? bounds.x + bounds.width : bounds.x;
+      t.textAlign === 'right' ? bounds.x + bounds.width : bounds.x;
 
     let lines = String(t.content || '').split('\n');
     if (t.textCase === 'uppercase') {
@@ -721,7 +781,6 @@ export class CanvasRenderer {
 
   drawVectorPath(ctx, bounds, pathData) {
     if (!Array.isArray(pathData) || pathData.length === 0) return;
-    ctx.beginPath();
     for (const cmd of pathData) {
       if (cmd.type === 'M') {
         ctx.moveTo(bounds.x + cmd.x, bounds.y + cmd.y);
@@ -736,6 +795,40 @@ export class CanvasRenderer {
       } else if (cmd.type === 'Z') {
         ctx.closePath();
       }
+    }
+  }
+
+  drawVectorPathFromAnchors(ctx, bounds, anchors, closed = true) {
+    if (!Array.isArray(anchors) || anchors.length === 0) return;
+    ctx.moveTo(bounds.x + anchors[0].x, bounds.y + anchors[0].y);
+    for (let i = 1; i < anchors.length; i++) {
+      const prev = anchors[i - 1];
+      const curr = anchors[i];
+      const hasPrevOut = prev.handleOut && (prev.handleOut.x !== 0 || prev.handleOut.y !== 0);
+      const hasCurrIn = curr.handleIn && (curr.handleIn.x !== 0 || curr.handleIn.y !== 0);
+      if (hasPrevOut || hasCurrIn) {
+        ctx.bezierCurveTo(
+          bounds.x + prev.x + (prev.handleOut?.x || 0), bounds.y + prev.y + (prev.handleOut?.y || 0),
+          bounds.x + curr.x + (curr.handleIn?.x || 0), bounds.y + curr.y + (curr.handleIn?.y || 0),
+          bounds.x + curr.x, bounds.y + curr.y
+        );
+      } else {
+        ctx.lineTo(bounds.x + curr.x, bounds.y + curr.y);
+      }
+    }
+    if (closed && anchors.length > 2) {
+      const last = anchors[anchors.length - 1];
+      const first = anchors[0];
+      const hasLastOut = last.handleOut && (last.handleOut.x !== 0 || last.handleOut.y !== 0);
+      const hasFirstIn = first.handleIn && (first.handleIn.x !== 0 || first.handleIn.y !== 0);
+      if (hasLastOut || hasFirstIn) {
+        ctx.bezierCurveTo(
+          bounds.x + last.x + (last.handleOut?.x || 0), bounds.y + last.y + (last.handleOut?.y || 0),
+          bounds.x + first.x + (first.handleIn?.x || 0), bounds.y + first.y + (first.handleIn?.y || 0),
+          bounds.x + first.x, bounds.y + first.y
+        );
+      }
+      ctx.closePath();
     }
   }
 
@@ -916,6 +1009,10 @@ export class CanvasRenderer {
     if (selectedIds.length === 0) return;
 
     for (const id of selectedIds) {
+      // In Vector Edit Mode, suppress standard selection bounding box & 8 resize handles
+      if (this.vectorEdit && this.vectorEdit.nodeId === id) {
+        continue;
+      }
       const bounds = computeWorldBounds(page, id, boundsCache);
       const node = page.nodes[id];
       if (!bounds || !node) continue;
@@ -950,6 +1047,25 @@ export class CanvasRenderer {
       for (const c of corners) {
         ctx.fillRect(c.x - halfSize, c.y - halfSize, handleSize, handleSize);
         ctx.strokeRect(c.x - halfSize, c.y - halfSize, handleSize, handleSize);
+      }
+
+      // Draw 4 Corner Radius Circular Handles for Rectangles (§11.11)
+      if (node.type === 'rectangle' && !this.vectorEdit) {
+        const cornerRadius = node.style?.cornerRadius || 0;
+        const cornerRadii = node.style?.cornerRadii || null;
+        const radiusHandles = getRectangleCornerHandles(bounds, cornerRadius, cornerRadii);
+        const crHandleRadius = 3.5 / this.zoom;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#0d99ff';
+        ctx.lineWidth = 1.5 / this.zoom;
+
+        for (const rh of radiusHandles) {
+          ctx.beginPath();
+          ctx.arc(rh.x, rh.y, crHandleRadius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
       }
 
       ctx.restore();
@@ -1190,7 +1306,7 @@ export class CanvasRenderer {
 
     const bounds = computeWorldBounds(page, nodeId);
     const inside = cx >= bounds.x && cx <= bounds.x + bounds.width &&
-                   cy >= bounds.y && cy <= bounds.y + bounds.height;
+      cy >= bounds.y && cy <= bounds.y + bounds.height;
 
     // Check children first (topmost child takes precedence)
     if (node.childIds && node.childIds.length > 0) {
@@ -1227,6 +1343,225 @@ export class CanvasRenderer {
       }
     }
     return null;
+  }
+
+  /**
+   * Section 11.11: Hit test for corner radius handles on rectangles
+   */
+  hitTestCornerRadiusHandle(canvasX, canvasY, bounds, cornerRadius = 0, cornerRadii = null) {
+    if (!bounds) return null;
+    const handles = getRectangleCornerHandles(bounds, cornerRadius, cornerRadii);
+    const threshold = 10 / this.zoom;
+    for (const h of handles) {
+      if (Math.hypot(canvasX - h.x, canvasY - h.y) <= threshold) {
+        return h.key;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Section 11.6 & 11.8: Hit test for vector anchors
+   */
+  hitTestVectorAnchor(canvasX, canvasY, bounds, anchors) {
+    if (!bounds || !Array.isArray(anchors)) return -1;
+    const threshold = 12 / this.zoom;
+    for (let i = 0; i < anchors.length; i++) {
+      const ax = bounds.x + anchors[i].x;
+      const ay = bounds.y + anchors[i].y;
+      if (Math.hypot(canvasX - ax, canvasY - ay) <= threshold) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Section 11.9: Hit test for Bézier tangent handles of selected anchors
+   */
+  hitTestVectorHandle(canvasX, canvasY, bounds, anchors, selectedIndices) {
+    if (!bounds || !Array.isArray(anchors)) return null;
+    const indicesSet = selectedIndices instanceof Set ? selectedIndices : new Set(selectedIndices || []);
+    const threshold = 12 / this.zoom;
+
+    for (const idx of indicesSet) {
+      const a = anchors[idx];
+      if (!a) continue;
+      const ax = bounds.x + a.x;
+      const ay = bounds.y + a.y;
+
+      if (a.handleOut && (a.handleOut.x !== 0 || a.handleOut.y !== 0)) {
+        const hx = ax + a.handleOut.x;
+        const hy = ay + a.handleOut.y;
+        if (Math.hypot(canvasX - hx, canvasY - hy) <= threshold) {
+          return { anchorIndex: idx, which: 'out' };
+        }
+      }
+
+      if (a.handleIn && (a.handleIn.x !== 0 || a.handleIn.y !== 0)) {
+        const hx = ax + a.handleIn.x;
+        const hy = ay + a.handleIn.y;
+        if (Math.hypot(canvasX - hx, canvasY - hy) <= threshold) {
+          return { anchorIndex: idx, which: 'in' };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Hit test vector path segments to add an anchor point (Figma click-to-add vector behavior)
+   */
+  hitTestVectorSegment(canvasX, canvasY, bounds, anchors, closed = true) {
+    if (!bounds || !Array.isArray(anchors) || anchors.length < 2) return null;
+    const threshold = 8 / this.zoom;
+
+    function distToSegment(px, py, x1, y1, x2, y2) {
+      const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+      if (l2 === 0) return { dist: Math.hypot(px - x1, py - y1), t: 0, projX: x1, projY: y1 };
+      let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+      t = Math.max(0, Math.min(1, t));
+      const projX = x1 + t * (x2 - x1);
+      const projY = y1 + t * (y2 - y1);
+      return { dist: Math.hypot(px - projX, py - projY), t, projX, projY };
+    }
+
+    const totalSegs = closed ? anchors.length : anchors.length - 1;
+    for (let i = 0; i < totalSegs; i++) {
+      const a1 = anchors[i];
+      const a2 = anchors[(i + 1) % anchors.length];
+      const x1 = bounds.x + a1.x;
+      const y1 = bounds.y + a1.y;
+      const x2 = bounds.x + a2.x;
+      const y2 = bounds.y + a2.y;
+
+      const res = distToSegment(canvasX, canvasY, x1, y1, x2, y2);
+      if (res.dist <= threshold && res.t > 0.05 && res.t < 0.95) {
+        return {
+          insertIndex: i + 1,
+          x: res.projX - bounds.x,
+          y: res.projY - bounds.y
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Section 11.6–11.10: Render Vector Edit Mode overlay on active path
+   */
+  drawVectorEdit(ctx, page) {
+    if (!this.vectorEdit) return;
+    const { nodeId, anchors, selectedIndices, bounds } = this.vectorEdit;
+    if (!anchors || anchors.length === 0) return;
+
+    ctx.save();
+    const handleSize = 7 / this.zoom;
+    const halfSize = handleSize / 2;
+    const handleRadius = 3.5 / this.zoom;
+
+    // 1. Draw connecting path outline
+    ctx.strokeStyle = '#0d99ff';
+    ctx.lineWidth = 1.5 / this.zoom;
+    ctx.beginPath();
+    ctx.moveTo(bounds.x + anchors[0].x, bounds.y + anchors[0].y);
+    for (let i = 1; i < anchors.length; i++) {
+      const prev = anchors[i - 1];
+      const curr = anchors[i];
+      const hasPrevOut = prev.handleOut && (prev.handleOut.x !== 0 || prev.handleOut.y !== 0);
+      const hasCurrIn = curr.handleIn && (curr.handleIn.x !== 0 || curr.handleIn.y !== 0);
+      if (hasPrevOut || hasCurrIn) {
+        ctx.bezierCurveTo(
+          bounds.x + prev.x + (prev.handleOut?.x || 0), bounds.y + prev.y + (prev.handleOut?.y || 0),
+          bounds.x + curr.x + (curr.handleIn?.x || 0), bounds.y + curr.y + (curr.handleIn?.y || 0),
+          bounds.x + curr.x, bounds.y + curr.y
+        );
+      } else {
+        ctx.lineTo(bounds.x + curr.x, bounds.y + curr.y);
+      }
+    }
+    if (anchors.length > 2) {
+      const last = anchors[anchors.length - 1];
+      const first = anchors[0];
+      const hasLastOut = last.handleOut && (last.handleOut.x !== 0 || last.handleOut.y !== 0);
+      const hasFirstIn = first.handleIn && (first.handleIn.x !== 0 || first.handleIn.y !== 0);
+      if (hasLastOut || hasFirstIn) {
+        ctx.bezierCurveTo(
+          bounds.x + last.x + (last.handleOut?.x || 0), bounds.y + last.y + (last.handleOut?.y || 0),
+          bounds.x + first.x + (first.handleIn?.x || 0), bounds.y + first.y + (first.handleIn?.y || 0),
+          bounds.x + first.x, bounds.y + first.y
+        );
+      }
+      ctx.closePath();
+    }
+    ctx.stroke();
+
+    const indicesSet = selectedIndices instanceof Set ? selectedIndices : new Set(selectedIndices || []);
+
+    // 2. Draw Bézier tangent handle bars and circles for selected anchors
+    for (let i = 0; i < anchors.length; i++) {
+      if (!indicesSet.has(i)) continue;
+      const a = anchors[i];
+      const ax = bounds.x + a.x;
+      const ay = bounds.y + a.y;
+
+      // Handle Out
+      if (a.handleOut && (a.handleOut.x !== 0 || a.handleOut.y !== 0)) {
+        const hx = ax + a.handleOut.x;
+        const hy = ay + a.handleOut.y;
+        ctx.strokeStyle = '#0d99ff';
+        ctx.lineWidth = 1 / this.zoom;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(hx, hy);
+        ctx.stroke();
+
+        ctx.fillStyle = '#0d99ff';
+        ctx.beginPath();
+        ctx.arc(hx, hy, handleRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Handle In
+      if (a.handleIn && (a.handleIn.x !== 0 || a.handleIn.y !== 0)) {
+        const hx = ax + a.handleIn.x;
+        const hy = ay + a.handleIn.y;
+        ctx.strokeStyle = '#0d99ff';
+        ctx.lineWidth = 1 / this.zoom;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(hx, hy);
+        ctx.stroke();
+
+        ctx.fillStyle = '#0d99ff';
+        ctx.beginPath();
+        ctx.arc(hx, hy, handleRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 3. Draw All Anchor Points (Section 11.6: All visible on entry; distinct style for selected vs unselected)
+    for (let i = 0; i < anchors.length; i++) {
+      const a = anchors[i];
+      const ax = bounds.x + a.x;
+      const ay = bounds.y + a.y;
+      const isSelected = indicesSet.has(i);
+
+      if (isSelected) {
+        ctx.fillStyle = '#0d99ff';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2 / this.zoom;
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#0d99ff';
+        ctx.lineWidth = 1.5 / this.zoom;
+      }
+
+      ctx.fillRect(ax - halfSize, ay - halfSize, handleSize, handleSize);
+      ctx.strokeRect(ax - halfSize, ay - halfSize, handleSize, handleSize);
+    }
+
+    ctx.restore();
   }
 
   drawComments(ctx) {

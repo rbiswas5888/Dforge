@@ -343,7 +343,7 @@ const learningMgr = new LearningManager();
 assert.ok(ONBOARDING_TOUR_STEPS.length === 6, 'Tour must have 6 steps');
 assert.ok(PRACTICE_EXERCISES.length === 9, 'Must have 9 practice exercises');
 assert.ok(YOUTUBE_TUTORIALS.length === 4, 'Must have 4 YouTube courses');
-assert.ok(OFFICIAL_DOCS.length === 6, 'Must have 6 official documentation references');
+assert.ok(OFFICIAL_DOCS.length >= 6, 'Must have at least 6 official documentation references');
 
 learningMgr.toggleTutorial('yt-1');
 assert.strictEqual(learningMgr.isTutorialWatched('yt-1'), true);

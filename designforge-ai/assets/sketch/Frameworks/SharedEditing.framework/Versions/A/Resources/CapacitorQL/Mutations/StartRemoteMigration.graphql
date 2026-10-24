@@ -1,0 +1,6 @@
+mutation serverSideMigrate($shareIdentifier: UUID4!, $targetCoeditCompatibilityVersion: Int!) {
+    serverSideMigrate(shareIdentifier: $shareIdentifier, targetCoeditCompatibilityVersion: $targetCoeditCompatibilityVersion) {
+        coeditCompatibilityVersion
+        versionIdentifier
+    }
+}

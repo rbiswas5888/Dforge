@@ -1,0 +1,19 @@
+mutation (
+  $patchIdentifier: UUID4!
+  $shareIdentifier: UUID4!
+  $baseVersionIdentifier: UUID4!
+  $latestPatchIdentifier: UUID4
+  $uploadIdentifier: UUID4!
+  $compatibilityVersion: Int!
+) {
+  remotePatchCompleteUpload(
+    patchIdentifier: $patchIdentifier
+    shareIdentifier: $shareIdentifier
+    baseVersionIdentifier: $baseVersionIdentifier
+    latestPatchIdentifier: $latestPatchIdentifier
+    uploadIdentifier: $uploadIdentifier
+    compatibilityVersion: $compatibilityVersion
+  ) {
+    __typename
+  }
+}

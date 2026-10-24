@@ -1,0 +1,15 @@
+{
+  "name": "@skpm/stream",
+  "version": "0.1.4",
+  "description": "A drop-in replacement for the stream NodeJS package",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "./build.sh"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "readable-stream": "^3.1.1"
+  }
+}

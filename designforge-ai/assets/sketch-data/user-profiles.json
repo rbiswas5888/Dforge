@@ -1,0 +1,72 @@
+[
+  {
+    "name": "Abbie Wilson",
+    "avatar": "assets/sketch-data/Faces/006.jpg",
+    "location": "Bangkok",
+    "handle": "@abbiew93",
+    "bio": "Dog lover \ud83d\udc15, mahjong champion \ud83c\udc04\ufe0f,and traveller \ud83d\uddfa currently in Bangkok."
+  },
+  {
+    "name": "Anje Keizer",
+    "avatar": "assets/sketch-data/Faces/014.jpg",
+    "location": "Dallas",
+    "handle": "@akeizer01",
+    "bio": "Loving life and living in Dallas, go Mavs!"
+  },
+  {
+    "name": "Sang Young-Il",
+    "avatar": "assets/sketch-data/Faces/031.jpg",
+    "location": "Dubai",
+    "handle": "@yisang_dubai",
+    "bio": "Entrepreneur in Dubai, often found dune buggy racing."
+  },
+  {
+    "name": "Leo Knight",
+    "avatar": "assets/sketch-data/Faces/095.jpg",
+    "location": "Geneva",
+    "handle": "@knighty19",
+    "bio": "Sci-fi fan, jazz pianist and snooker enthusiast living in Geneva."
+  },
+  {
+    "name": "Lucas Pacheco \ud83e\uddf2",
+    "avatar": "assets/sketch-data/Faces/026.jpg",
+    "location": "Indianapolis",
+    "handle": "@colts_fan_12",
+    "bio": "Colts superfan \ud83d\udc0e loves all things football \ud83c\udfc8 and fast food \ud83c\udf54\ud83c\udf5f\ud83c\udf2e"
+  },
+  {
+    "name": "Obasey Chidy",
+    "avatar": "assets/sketch-data/Faces/107.jpg",
+    "location": "Springfield",
+    "handle": "@chidy789",
+    "bio": "Living in Springfield, MO but definitely not a Simpson."
+  },
+  {
+    "name": "Stina Gunnarsdottir",
+    "avatar": "assets/sketch-data/Faces/049.jpg",
+    "location": "Sacramento",
+    "handle": "@stinagsac",
+    "bio": "Sacramento based ultimate frisbee player heading for the finals."
+  },
+  {
+    "name": "Alexa Richardson",
+    "avatar": "assets/sketch-data/Faces/040.jpg",
+    "location": "Shanghai",
+    "handle": "@heyalexa",
+    "bio": "Broker in Shanghai. Enjoying immersing myself in culture and food."
+  },
+  {
+    "name": "Ogasawara Katsumi",
+    "avatar": "assets/sketch-data/Faces/082.jpg",
+    "location": "Tokyo",
+    "handle": "@okatsumi_",
+    "bio": "Tokyo\u2019s number one foosball fan, will beat you at any game \ud83d\uddfc\u26bd\ufe0f\ud83d\udd74"
+  },
+  {
+    "name": "Wulf Kindler",
+    "avatar": "assets/sketch-data/Faces/117.jpg",
+    "location": "Trondheim",
+    "handle": "@wulfkindler1",
+    "bio": "Doctor in Trondheim, enjoys ice skating and ice cream, not at the same time."
+  }
+]

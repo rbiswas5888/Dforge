@@ -1,0 +1,13 @@
+mutation migrate(
+  $shareIdentifier: UUID4!
+  $documentVersionIdentifier: UUID4!
+  $documentCompatibilityVersion: Int!
+) {
+  collaborativeEditingSessionMigrateDocument(
+    shareIdentifier: $shareIdentifier
+    migratedDocumentCompatibilityVersion: $documentCompatibilityVersion
+    migratedDocumentVersionIdentifier: $documentVersionIdentifier
+  ) {
+    baseVersionIdentifier
+  }
+}

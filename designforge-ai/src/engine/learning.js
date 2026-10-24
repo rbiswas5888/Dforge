@@ -245,6 +245,54 @@ export const OFFICIAL_DOCS = [
     title: 'Guide to Dev Mode in Figma',
     section: 'Dev Mode',
     url: 'https://help.figma.com/hc/en-us/articles/15023124644247-Guide-to-Dev-Mode-in-Figma'
+  },
+  {
+    title: 'Sketch MCP Architecture & Protocol Guide',
+    section: 'Sketch MCP',
+    localFile: 'docs/sketch-mcp-guides/mcp.md',
+    url: 'docs/sketch-mcp-guides/mcp.md'
+  },
+  {
+    title: 'Sketch Stacks, Layout & Responsive Composition',
+    section: 'Sketch Layout',
+    localFile: 'docs/sketch-mcp-guides/layout.md',
+    url: 'docs/sketch-mcp-guides/layout.md'
+  },
+  {
+    title: 'Sketch Symbols, Masters & Nested Overrides',
+    section: 'Sketch Symbols',
+    localFile: 'docs/sketch-mcp-guides/symbols.md',
+    url: 'docs/sketch-mcp-guides/symbols.md'
+  },
+  {
+    title: 'Sketch Swatches, Color Variables & Shared Styles',
+    section: 'Sketch Styling',
+    localFile: 'docs/sketch-mcp-guides/styling.md',
+    url: 'docs/sketch-mcp-guides/styling.md'
+  },
+  {
+    title: 'Sketch Interactive Flow Connections & Hotspots',
+    section: 'Sketch Prototype',
+    localFile: 'docs/sketch-mcp-guides/prototyping.md',
+    url: 'docs/sketch-mcp-guides/prototyping.md'
+  },
+  {
+    title: 'Sketch File Exports, SVG Import & Image Layers',
+    section: 'Sketch Assets',
+    localFile: 'docs/sketch-mcp-guides/assets.md',
+    url: 'docs/sketch-mcp-guides/assets.md'
+  },
+  {
+    title: 'Sketch Document Mutation Playbook',
+    section: 'Sketch Use',
+    localFile: 'docs/sketch-mcp-guides/use.md',
+    url: 'docs/sketch-mcp-guides/use.md'
+  },
+  {
+    title: 'Sketch MCP Troubleshooting & Failure Diagnosis',
+    section: 'Sketch Diagnosis',
+    localFile: 'docs/sketch-mcp-guides/troubleshooting.md',
+    url: 'docs/sketch-mcp-guides/troubleshooting.md'
   }
 ];
 

@@ -55,7 +55,23 @@ import {
   ColorPickerPopover,
   queryDevicePresets,
   DEVICE_PRESET_CATALOG,
-  CustomFrameEngine
+  CustomFrameEngine,
+  EDITING_STATES,
+  HANDLE_MODES,
+  ENTRY_SELECTION_POLICIES,
+  routeDoubleClick,
+  extractNodeAnchors,
+  anchorsToVectorPath,
+  applyEntrySelectionPolicy,
+  deleteSelectedAnchors,
+  nudgeAnchors,
+  convertAnchorHandleMode,
+  updateBezierHandle,
+  getRectangleCornerHandles,
+  calculateCornerRadiusFromDrag,
+  applySketchDataSupplier,
+  insertSketchUserProfileCard,
+  initializeSketchData
 } from './editor-core/index.js';
 
 export class DesignForgeApp {
@@ -77,10 +93,16 @@ export class DesignForgeApp {
     this.palette = new CommandPaletteEngine(this);
     this.learning = new LearningManager();
     this.mcpHub = new McpHubController(this, this.mcpClientManager, this.mcpOrchestrator, this.mcpSecurity, this.mcpAudit);
+    initializeSketchData();
 
     // Active tool state
     this.currentTool = 'select'; // 'select' | 'hand' | 'frame' | 'rectangle' | 'ellipse' | 'line' | 'text' | 'comment'
     this.isHandMode = false;
+
+    // Revision v2 Interaction State Machine & Vector Direct Editing (§11.6, §11.7)
+    this.editingState = EDITING_STATES.OBJECT_SELECT;
+    this.vectorEditEntrySelectionPolicy = ENTRY_SELECTION_POLICIES.UNDER_POINTER;
+    this.activeVectorEdit = null;
 
     // Interaction states & Inspector modes
     this.rightTabMode = 'design'; // 'design' | 'prototype' | 'inspect' | 'export' | 'ai'
@@ -269,6 +291,11 @@ export class DesignForgeApp {
     document.addEventListener('click', () => {
       document.querySelectorAll('.tool-flyout-menu').forEach(m => m.classList.remove('open'));
       document.getElementById('statusZoomMenu')?.classList.remove('open');
+    });
+
+    // Vector Edit Done Button listener
+    document.getElementById('btnExitVectorEdit')?.addEventListener('click', () => {
+      this.exitVectorEdit(true);
     });
 
     // Live cursor coordinate readout on canvas mousemove
@@ -506,6 +533,40 @@ export class DesignForgeApp {
     document.getElementById('menuMcpWorkflow')?.addEventListener('click', () => {
       this.openMcpHub();
       this.mcpHub.renderSection('workflows');
+    });
+    document.getElementById('menuSketchGuides')?.addEventListener('click', () => {
+      this.openSketchDocsTab();
+    });
+
+    // Data Menu Actions (Official Sketch Builtin Resources)
+    document.getElementById('menuDataFaces')?.addEventListener('click', () => {
+      applySketchDataSupplier(this.engine, 'faces');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('menuDataNames')?.addEventListener('click', () => {
+      applySketchDataSupplier(this.engine, 'names');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('menuDataCities')?.addEventListener('click', () => {
+      applySketchDataSupplier(this.engine, 'cities');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('menuDataTiles')?.addEventListener('click', () => {
+      applySketchDataSupplier(this.engine, 'tiles');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('menuDataProfileCard')?.addEventListener('click', () => {
+      const vp = this.renderer?.viewport || { panX: 0, panY: 0, zoom: 1 };
+      const centerX = (-vp.panX + 500) / (vp.zoom || 1);
+      const centerY = (-vp.panY + 300) / (vp.zoom || 1);
+      insertSketchUserProfileCard(this.engine, centerX, centerY);
+      this.renderer.render();
+      this.updateInspector();
+      this.updateLayersTree();
     });
 
     // Help & Learn Menu Actions
@@ -1171,6 +1232,123 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         }
       }
 
+      // 2.7. Vector Edit Mode Interaction Priority (§11.6, §11.8, §11.9)
+      if (this.editingState === EDITING_STATES.VECTOR_EDIT && this.activeVectorEdit) {
+        const { bounds, anchors, selectedIndices } = this.activeVectorEdit;
+
+        // 1. Hit-test Bézier handles of selected anchors
+        const hitHandle = renderer.hitTestVectorHandle(canvasCoords.x, canvasCoords.y, bounds, anchors, selectedIndices);
+        if (hitHandle) {
+          this.dragState = {
+            type: 'drag-bezier-handle',
+            anchorIndex: hitHandle.anchorIndex,
+            which: hitHandle.which,
+            startX: canvasCoords.x,
+            startY: canvasCoords.y
+          };
+          return;
+        }
+
+        // 2. Hit-test Vector Anchors
+        const hitAnchorIdx = renderer.hitTestVectorAnchor(canvasCoords.x, canvasCoords.y, bounds, anchors);
+        if (hitAnchorIdx !== -1) {
+          if (e.shiftKey) {
+            if (selectedIndices.has(hitAnchorIdx)) {
+              selectedIndices.delete(hitAnchorIdx);
+              anchors[hitAnchorIdx].selected = false;
+            } else {
+              selectedIndices.add(hitAnchorIdx);
+              anchors[hitAnchorIdx].selected = true;
+            }
+          } else if (!selectedIndices.has(hitAnchorIdx)) {
+            selectedIndices.clear();
+            anchors.forEach(a => a.selected = false);
+            selectedIndices.add(hitAnchorIdx);
+            anchors[hitAnchorIdx].selected = true;
+          }
+
+          this.dragState = {
+            type: 'move-anchors',
+            startX: canvasCoords.x,
+            startY: canvasCoords.y,
+            lastX: canvasCoords.x,
+            lastY: canvasCoords.y,
+            initialAnchorPositions: Array.from(selectedIndices).map(idx => ({
+              idx,
+              x: anchors[idx].x,
+              y: anchors[idx].y
+            }))
+          };
+          renderer.render();
+          return;
+        }
+
+        // 2.5. Hit-test Vector Segments to add anchor points (Figma click-to-add vector behavior)
+        const node = engine.getNode(this.activeVectorEdit.nodeId);
+        const closed = node?.type !== 'line' && node?.type !== 'arrow';
+        const hitSegment = renderer.hitTestVectorSegment(canvasCoords.x, canvasCoords.y, bounds, anchors, closed);
+        if (hitSegment) {
+          const newAnchor = {
+            x: Math.round(hitSegment.x),
+            y: Math.round(hitSegment.y),
+            handleIn: { x: 0, y: 0 },
+            handleOut: { x: 0, y: 0 },
+            type: HANDLE_MODES.CORNER,
+            selected: true
+          };
+          anchors.splice(hitSegment.insertIndex, 0, newAnchor);
+          selectedIndices.clear();
+          anchors.forEach(a => a.selected = false);
+          newAnchor.selected = true;
+          selectedIndices.add(hitSegment.insertIndex);
+
+          this.dragState = {
+            type: 'move-anchors',
+            startX: canvasCoords.x,
+            startY: canvasCoords.y,
+            lastX: canvasCoords.x,
+            lastY: canvasCoords.y,
+            initialAnchorPositions: [{ idx: hitSegment.insertIndex, x: newAnchor.x, y: newAnchor.y }]
+          };
+          renderer.render();
+          return;
+        }
+
+        // 3. Clicked empty canvas inside vector edit -> Anchor Marquee Selection
+        if (!e.shiftKey) {
+          selectedIndices.clear();
+          anchors.forEach(a => a.selected = false);
+        }
+        this.dragState = { type: 'anchor-marquee', startX: canvasCoords.x, startY: canvasCoords.y };
+        renderer.marquee = { startX: canvasCoords.x, startY: canvasCoords.y, currentX: canvasCoords.x, currentY: canvasCoords.y };
+        renderer.render();
+        return;
+      }
+
+      // 2.8. Corner Radius Handle Hit-test for Rectangles (§11.11)
+      const curSelIds = engine.getSelection();
+      const pageRef = engine.getActivePage();
+      if (curSelIds.length === 1) {
+        const n = engine.getNode(curSelIds[0]);
+        if (n && n.type === 'rectangle' && !n.locked) {
+          const b = computeWorldBounds(pageRef, curSelIds[0]);
+          const cornerRadius = n.style?.cornerRadius || 0;
+          const cornerRadii = n.style?.cornerRadii || null;
+          const hitCorner = renderer.hitTestCornerRadiusHandle(canvasCoords.x, canvasCoords.y, b, cornerRadius, cornerRadii);
+          if (hitCorner) {
+            this.dragState = {
+              type: 'drag-corner-radius',
+              nodeId: curSelIds[0],
+              cornerKey: hitCorner,
+              bounds: { ...b },
+              startRadius: cornerRadius,
+              altKey: e.altKey
+            };
+            return;
+          }
+        }
+      }
+
       // 3. Resize Handle Hit-test
       const selectedIds = engine.getSelection();
       const page = engine.getActivePage();
@@ -1341,6 +1519,64 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         renderer.marquee.currentX = canvasCoords.x;
         renderer.marquee.currentY = canvasCoords.y;
         renderer.render();
+      } else if (this.dragState.type === 'move-anchors') {
+        const dx = canvasCoords.x - this.dragState.lastX;
+        const dy = canvasCoords.y - this.dragState.lastY;
+        if (this.activeVectorEdit && this.activeVectorEdit.anchors) {
+          const { anchors, selectedIndices } = this.activeVectorEdit;
+          for (const idx of selectedIndices) {
+            if (anchors[idx]) {
+              anchors[idx].x += dx;
+              anchors[idx].y += dy;
+            }
+          }
+        }
+        this.dragState.lastX = canvasCoords.x;
+        this.dragState.lastY = canvasCoords.y;
+        renderer.render();
+      } else if (this.dragState.type === 'drag-bezier-handle') {
+        if (this.activeVectorEdit && this.activeVectorEdit.anchors) {
+          const { anchors, bounds } = this.activeVectorEdit;
+          const anchor = anchors[this.dragState.anchorIndex];
+          if (anchor) {
+            const hx = canvasCoords.x - (bounds.x + anchor.x);
+            const hy = canvasCoords.y - (bounds.y + anchor.y);
+            updateBezierHandle(anchor, this.dragState.which, hx, hy, anchor.type || HANDLE_MODES.SMOOTH);
+            renderer.render();
+          }
+        }
+      } else if (this.dragState.type === 'anchor-marquee') {
+        renderer.marquee.currentX = canvasCoords.x;
+        renderer.marquee.currentY = canvasCoords.y;
+        if (this.activeVectorEdit && this.activeVectorEdit.anchors) {
+          const { anchors, selectedIndices, bounds } = this.activeVectorEdit;
+          const minX = Math.min(renderer.marquee.startX, renderer.marquee.currentX);
+          const maxX = Math.max(renderer.marquee.startX, renderer.marquee.currentX);
+          const minY = Math.min(renderer.marquee.startY, renderer.marquee.currentY);
+          const maxY = Math.max(renderer.marquee.startY, renderer.marquee.currentY);
+
+          selectedIndices.clear();
+          anchors.forEach((a, idx) => {
+            const ax = bounds.x + a.x;
+            const ay = bounds.y + a.y;
+            if (ax >= minX && ax <= maxX && ay >= minY && ay <= maxY) {
+              a.selected = true;
+              selectedIndices.add(idx);
+            } else {
+              a.selected = false;
+            }
+          });
+        }
+        renderer.render();
+      } else if (this.dragState.type === 'drag-corner-radius') {
+        const { nodeId, cornerKey, bounds } = this.dragState;
+        const newRadius = calculateCornerRadiusFromDrag(cornerKey, canvasCoords, bounds);
+        const node = engine.getNode(nodeId);
+        if (node && node.style) {
+          node.style.cornerRadius = newRadius;
+          renderer.render();
+          this.updateInspector();
+        }
       }
     });
 
@@ -1467,6 +1703,23 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           }
         }
         renderer.render();
+      } else if (this.dragState.type === 'drag-corner-radius') {
+        const { nodeId, startRadius } = this.dragState;
+        const node = engine.getNode(nodeId);
+        if (node && node.style && node.style.cornerRadius !== startRadius) {
+          engine.updateNode(nodeId, { style: { cornerRadius: node.style.cornerRadius } }, 'Adjust Corner Radius');
+        }
+        this.dragState = null;
+        renderer.render();
+      } else if (this.dragState.type === 'move-anchors' || this.dragState.type === 'drag-bezier-handle') {
+        this.dragState = null;
+        renderer.render();
+        this.updateInspector();
+      } else if (this.dragState.type === 'anchor-marquee') {
+        renderer.marquee = null;
+        this.dragState = null;
+        renderer.render();
+        this.updateInspector();
       }
 
       this.dragState = null;
@@ -1480,25 +1733,209 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       }
     });
 
-    // Double click to inline edit text or finalize pen path
+    // Section 11.6 & 11.7: Double Click Routing State Machine
     canvas.addEventListener('dblclick', (e) => {
       if (this.currentTool === 'pen' && this.penAnchors && this.penAnchors.length >= 2) {
         this.finishPenPath(false);
         return;
       }
       const coords = renderer.screenToCanvas(e.clientX, e.clientY);
+
+      // If already in Vector Edit Mode, double-clicking an anchor point toggles between CORNER and SMOOTH (§11.9)
+      if (this.editingState === EDITING_STATES.VECTOR_EDIT && this.activeVectorEdit) {
+        const { bounds, anchors } = this.activeVectorEdit;
+        const hitAnchorIdx = renderer.hitTestVectorAnchor(coords.x, coords.y, bounds, anchors);
+        if (hitAnchorIdx !== -1) {
+          const a = anchors[hitAnchorIdx];
+          const nextMode = a.type === HANDLE_MODES.CORNER ? HANDLE_MODES.SMOOTH : HANDLE_MODES.CORNER;
+          convertAnchorHandleMode(a, nextMode);
+          renderer.render();
+          return;
+        }
+      }
+
       const hitId = renderer.hitTest(coords.x, coords.y);
       if (hitId) {
         const node = engine.getNode(hitId);
-        if (node && node.type === 'text') {
+        const routed = routeDoubleClick(node, null, coords);
+
+        if (routed.state === 'LOCKED') {
+          alert(routed.message);
+          return;
+        }
+
+        if (routed.state === EDITING_STATES.TEXT_EDIT) {
           const currentText = node.text?.content || '';
           const newText = prompt('Edit text content:', currentText);
           if (newText !== null && newText !== currentText) {
             engine.updateNode(hitId, { text: { content: newText } }, 'Edit text');
           }
+          return;
+        }
+
+        if (routed.state === EDITING_STATES.VECTOR_EDIT) {
+          this.enterVectorEdit(hitId, coords);
+          return;
+        }
+
+        if (routed.state === EDITING_STATES.GROUP_DEEP_SELECT) {
+          if (node.childIds && node.childIds.length > 0) {
+            engine.setSelection([node.childIds[0]]);
+            renderer.render();
+          }
+          return;
+        }
+      } else {
+        // Double clicking empty canvas exits Vector Edit Mode if active
+        if (this.editingState === EDITING_STATES.VECTOR_EDIT) {
+          this.exitVectorEdit(true);
         }
       }
     });
+  }
+
+  /**
+   * Section 11.6: Enter Vector Edit Mode on an editable shape or vector
+   */
+  enterVectorEdit(nodeId, clickCoords = null) {
+    const node = this.engine.getNode(nodeId);
+    if (!node) return;
+    if (node.locked) {
+      alert(`Layer "${node.name}" is locked.`);
+      return;
+    }
+
+    const bounds = computeWorldBounds(this.engine.getActivePage(), nodeId);
+    const anchors = extractNodeAnchors(node);
+    applyEntrySelectionPolicy(anchors, this.vectorEditEntrySelectionPolicy, clickCoords, bounds);
+
+    const selectedIndices = new Set();
+    anchors.forEach((a, idx) => {
+      if (a.selected) selectedIndices.add(idx);
+    });
+
+    this.editingState = EDITING_STATES.VECTOR_EDIT;
+    this.activeVectorEdit = {
+      nodeId,
+      anchors,
+      selectedIndices,
+      bounds: { ...bounds },
+      initialPath: anchorsToVectorPath(anchors, node.type !== 'line' && node.type !== 'arrow')
+    };
+
+    this.renderer.vectorEdit = this.activeVectorEdit;
+    this.engine.setSelection([nodeId]);
+
+    const banner = document.getElementById('vectorEditBanner');
+    if (banner) banner.style.display = 'flex';
+
+    this.renderer.render();
+    this.updateInspector();
+  }
+
+  /**
+   * Section 11.6: Exit Vector Edit Mode and commit or discard changes
+   */
+  exitVectorEdit(commit = true) {
+    const banner = document.getElementById('vectorEditBanner');
+    if (banner) banner.style.display = 'none';
+
+    if (!this.activeVectorEdit) {
+      this.editingState = EDITING_STATES.OBJECT_SELECT;
+      return;
+    }
+
+    const { nodeId, anchors } = this.activeVectorEdit;
+    const node = this.engine.getNode(nodeId);
+
+    if (commit && node && anchors && anchors.length > 0) {
+      const newPath = anchorsToVectorPath(anchors, node.type !== 'line' && node.type !== 'arrow');
+      this.engine.updateNode(nodeId, {
+        type: 'vector',
+        vectorPath: newPath
+      }, 'Edit Vector Anchors');
+    }
+
+    this.activeVectorEdit = null;
+    this.renderer.vectorEdit = null;
+    this.editingState = EDITING_STATES.OBJECT_SELECT;
+    this.renderer.render();
+    this.updateInspector();
+  }
+
+  /**
+   * Section 11.6 item 3: Scoped Cmd/Ctrl+A selects all points in active path(s)
+   */
+  selectAllAnchors() {
+    if (!this.activeVectorEdit || !this.activeVectorEdit.anchors) return;
+    const { anchors, selectedIndices } = this.activeVectorEdit;
+    selectedIndices.clear();
+    anchors.forEach((a, idx) => {
+      a.selected = true;
+      selectedIndices.add(idx);
+    });
+    this.renderer.render();
+    this.updateInspector();
+  }
+
+  /**
+   * Section 11.10: Delete selected anchor points while preserving path topology
+   */
+  deleteSelectedAnchors() {
+    if (!this.activeVectorEdit || !this.activeVectorEdit.anchors) return;
+    const { nodeId, anchors, selectedIndices } = this.activeVectorEdit;
+    if (selectedIndices.size === 0) return;
+
+    const node = this.engine.getNode(nodeId);
+    const closed = node?.type !== 'line' && node?.type !== 'arrow';
+    const result = deleteSelectedAnchors(anchors, selectedIndices, closed);
+
+    if (result.success) {
+      this.activeVectorEdit.anchors = result.remaining;
+      selectedIndices.clear();
+      this.activeVectorEdit.anchors.forEach(a => a.selected = false);
+      this.renderer.render();
+      this.updateInspector();
+    } else {
+      console.warn(result.message);
+    }
+  }
+
+  /**
+   * Section 11.8: Nudge selected anchors by delta using arrow keys
+   */
+  nudgeSelectedAnchors(dx, dy) {
+    if (!this.activeVectorEdit || !this.activeVectorEdit.anchors) return;
+    const { anchors, selectedIndices } = this.activeVectorEdit;
+    if (selectedIndices.size === 0) return;
+
+    nudgeAnchors(anchors, selectedIndices, dx, dy);
+    this.renderer.render();
+    this.updateInspector();
+  }
+
+  /**
+   * Section 11.9: Convert selected anchors to target handle mode
+   */
+  setAnchorHandleMode(mode) {
+    if (!this.activeVectorEdit || !this.activeVectorEdit.anchors) return;
+    const { anchors, selectedIndices } = this.activeVectorEdit;
+    for (const idx of selectedIndices) {
+      if (anchors[idx]) {
+        convertAnchorHandleMode(anchors[idx], mode);
+      }
+    }
+    this.renderer.render();
+    this.updateInspector();
+  }
+
+  /**
+   * Section 11.6: User preference for vectorEditEntrySelectionPolicy
+   */
+  setVectorEditEntrySelectionPolicy(policy) {
+    if (Object.values(ENTRY_SELECTION_POLICIES).includes(policy)) {
+      this.vectorEditEntrySelectionPolicy = policy;
+    }
   }
 
   createShapeFromDrag(tool, startX, startY, currentX, currentY) {
@@ -3604,6 +4041,21 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         </div>
       </div>` : ''}
 
+      <!-- 10. Data Suppliers (Official Sketch Resources) -->
+      <div class="section-group">
+        <div class="section-title">
+          <span>⚡ Data Suppliers</span>
+          <span style="font-size: 10px; color: var(--accent-blue);">Sketch Data</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px;">
+          <button class="btn-inspector-action" id="btnInspDataFaces" title="Apply avatar portrait fill from 125 Sketch real faces">👤 Avatar Photo</button>
+          <button class="btn-inspector-action" id="btnInspDataTiles" title="Apply texture pattern tile from 18 Sketch 1024x1024 tiles">🧱 Tile Texture</button>
+          <button class="btn-inspector-action" id="btnInspDataNames" title="Fill with human name from 605 Sketch names">📝 Human Name</button>
+          <button class="btn-inspector-action" id="btnInspDataCities" title="Fill with world city from 251 Sketch cities">🌍 World City</button>
+        </div>
+        <button class="btn-inspector-action" id="btnInspDataProfile" style="width: 100%; font-size: 11px;" title="Insert complete Sketch User Profile Auto-Layout Card">💳 Insert User Profile Card</button>
+      </div>
+
       <!-- 11. Export Settings in Design Tab -->
       <div class="section-group">
         <div class="section-title">Export</div>
@@ -4384,6 +4836,35 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     // 10. Instant Export Buttons
     document.getElementById('btnExportSelectionPng')?.addEventListener('click', () => this.exportSelectedAsPng());
     document.getElementById('btnExportSelectionSvg')?.addEventListener('click', () => this.exportSelectedAsSvg());
+
+    // 11. Data Supplier Buttons (Sketch Builtin Resources)
+    document.getElementById('btnInspDataFaces')?.addEventListener('click', () => {
+      applySketchDataSupplier(this.engine, 'faces');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnInspDataTiles')?.addEventListener('click', () => {
+      applySketchDataSupplier(this.engine, 'tiles');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnInspDataNames')?.addEventListener('click', () => {
+      applySketchDataSupplier(this.engine, 'names');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnInspDataCities')?.addEventListener('click', () => {
+      applySketchDataSupplier(this.engine, 'cities');
+      this.renderer.render();
+      this.updateInspector();
+    });
+    document.getElementById('btnInspDataProfile')?.addEventListener('click', () => {
+      const curT = node.transform || { x: 0, y: 0 };
+      insertSketchUserProfileCard(this.engine, curT.x + 40, curT.y + 40);
+      this.renderer.render();
+      this.updateInspector();
+      this.updateLayersTree();
+    });
   }
 
   // --- Prototype Panel Synchronizer (Section 4.2 & Appendix A2.4 & design_engine_logical_parameters.md Sec 28, 30, 37) ---
@@ -5772,6 +6253,156 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   zoomOut() { this.renderer.setZoom(this.renderer.zoom * 0.8); this.updateRulers(); this.updateZoomDisplay(); }
   zoomToFit() { this.renderer.zoomToFit(); this.updateRulers(); this.updateZoomDisplay(); }
   zoom100() { this.renderer.setZoom(1.0); this.updateRulers(); this.updateZoomDisplay(); }
+  zoomToSelection() { this.renderer.zoomToSelection(); this.updateRulers(); this.updateZoomDisplay(); }
+
+  toggleDevMode() {
+    const nextMode = this.rightTabMode === 'inspect' ? 'design' : 'inspect';
+    if (this.setSidebarMode) {
+      this.setSidebarMode(nextMode);
+    }
+  }
+
+  selectParent() {
+    const sel = this.engine.getSelection();
+    if (sel.length === 0) return;
+    const node = this.engine.getNode(sel[0]);
+    if (node && node.parentId) {
+      this.engine.setSelection([node.parentId]);
+      this.renderer.render();
+      this.updateInspector();
+      this.updateLayersTree();
+    }
+  }
+
+  selectChildren() {
+    const sel = this.engine.getSelection();
+    if (sel.length === 0) return;
+    const node = this.engine.getNode(sel[0]);
+    if (node && node.childIds && node.childIds.length > 0) {
+      this.engine.setSelection([node.childIds[0]]);
+      this.renderer.render();
+      this.updateInspector();
+      this.updateLayersTree();
+    }
+  }
+
+  selectNextSibling() {
+    const sel = this.engine.getSelection();
+    if (sel.length === 0) return;
+    const page = this.engine.getActivePage();
+    const node = this.engine.getNode(sel[0]);
+    if (!node || !page) return;
+
+    const siblings = node.parentId ? (page.nodes[node.parentId]?.childIds || []) : (page.rootIds || []);
+    if (siblings.length <= 1) return;
+    const curIdx = siblings.indexOf(node.id);
+    const nextIdx = (curIdx + 1) % siblings.length;
+    this.engine.setSelection([siblings[nextIdx]]);
+    this.renderer.render();
+    this.updateInspector();
+    this.updateLayersTree();
+  }
+
+  selectPrevSibling() {
+    const sel = this.engine.getSelection();
+    if (sel.length === 0) return;
+    const page = this.engine.getActivePage();
+    const node = this.engine.getNode(sel[0]);
+    if (!node || !page) return;
+
+    const siblings = node.parentId ? (page.nodes[node.parentId]?.childIds || []) : (page.rootIds || []);
+    if (siblings.length <= 1) return;
+    const curIdx = siblings.indexOf(node.id);
+    const prevIdx = (curIdx - 1 + siblings.length) % siblings.length;
+    this.engine.setSelection([siblings[prevIdx]]);
+    this.renderer.render();
+    this.updateInspector();
+    this.updateLayersTree();
+  }
+
+  flipHorizontal() {
+    const sel = this.engine.getSelection();
+    for (const id of sel) {
+      const node = this.engine.getNode(id);
+      if (node && node.transform) {
+        const curScale = node.transform.scaleX !== undefined ? node.transform.scaleX : 1;
+        this.engine.updateNode(id, { transform: { scaleX: curScale * -1 } }, 'Flip Horizontal');
+      }
+    }
+    this.renderer.render();
+    this.updateInspector();
+  }
+
+  flipVertical() {
+    const sel = this.engine.getSelection();
+    for (const id of sel) {
+      const node = this.engine.getNode(id);
+      if (node && node.transform) {
+        const curScale = node.transform.scaleY !== undefined ? node.transform.scaleY : 1;
+        this.engine.updateNode(id, { transform: { scaleY: curScale * -1 } }, 'Flip Vertical');
+      }
+    }
+    this.renderer.render();
+    this.updateInspector();
+  }
+
+  copyProperties() {
+    const sel = this.engine.getSelection();
+    if (sel.length === 0) return;
+    const node = this.engine.getNode(sel[0]);
+    if (node && node.style) {
+      this.clipboardProperties = JSON.parse(JSON.stringify(node.style));
+    }
+  }
+
+  pasteProperties() {
+    if (!this.clipboardProperties) return;
+    const sel = this.engine.getSelection();
+    for (const id of sel) {
+      const node = this.engine.getNode(id);
+      if (node && !node.locked) {
+        this.engine.updateNode(id, { style: JSON.parse(JSON.stringify(this.clipboardProperties)) }, 'Paste Properties');
+      }
+    }
+    this.renderer.render();
+    this.updateInspector();
+  }
+
+  toggleOutlineMode() {
+    this.renderer.outlineMode = !this.renderer.outlineMode;
+    this.renderer.render();
+  }
+
+  triggerPlaceImage() {
+    if (typeof document === 'undefined') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,video/*';
+    input.onchange = (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (loadEvent) => {
+        const dataUrl = loadEvent.target?.result;
+        if (!dataUrl) return;
+        const page = this.engine.getActivePage();
+        const rect = this.renderer.canvas.getBoundingClientRect();
+        const center = this.renderer.screenToCanvas(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        const node = createNode('image', {
+          name: file.name.replace(/\.[^/.]+$/, ''),
+          transform: { x: Math.round(center.x - 120), y: Math.round(center.y - 80), width: 240, height: 160 },
+          imageUrl: dataUrl
+        });
+        this.engine.addNode(node, page.id);
+        this.engine.setSelection([node.id]);
+        this.renderer.render();
+        this.updateInspector();
+        this.updateLayersTree();
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  }
 
   reorderSelected(direction) {
     const sel = this.engine.getSelection();
@@ -6234,6 +6865,12 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         }
       }
     });
+  }
+
+  openSketchDocsTab() {
+    this.openLearnCenter();
+    const tabDocs = document.getElementById('learnTabBtnDocs');
+    if (tabDocs) tabDocs.click();
   }
 
   openLearnCenter() {

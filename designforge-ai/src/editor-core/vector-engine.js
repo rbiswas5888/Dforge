@@ -310,3 +310,459 @@ export function outlineVariableWidthStroke(spinePoints, widthProfile = [{ s: 0, 
   // Assemble single closed polygon: start left contour, reverse right contour
   return [...leftContour, ...rightContour.reverse()];
 }
+
+/**
+ * ======================================================================
+ * Revision v2 Specification Additions:
+ * Direct Point Editing, Double-Click State Machine, Corner Handles,
+ * Multi-Point Selection & Gesture-Safety Operations
+ * ======================================================================
+ */
+
+export const EDITING_STATES = {
+  OBJECT_SELECT: 'OBJECT_SELECT',
+  VECTOR_EDIT: 'VECTOR_EDIT',
+  TEXT_EDIT: 'TEXT_EDIT',
+  IMAGE_CROP: 'IMAGE_CROP',
+  PARAMETRIC_SHAPE_EDIT: 'PARAMETRIC_SHAPE_EDIT',
+  GROUP_DEEP_SELECT: 'GROUP_DEEP_SELECT',
+  COMPONENT_INSTANCE_EDIT: 'COMPONENT_INSTANCE_EDIT',
+  PEN_DRAW: 'PEN_DRAW'
+};
+
+export const HANDLE_MODES = {
+  CORNER: 'corner',
+  SMOOTH: 'smooth',
+  SYMMETRIC: 'symmetric',
+  ALIGNED: 'aligned',
+  INDEPENDENT: 'independent'
+};
+
+export const ENTRY_SELECTION_POLICIES = {
+  UNDER_POINTER: 'underPointer',
+  NONE: 'none',
+  ALL: 'all'
+};
+
+/**
+ * Section 11.7: Double-Click Routing Table
+ * Maps target node type, lock status, and hit context to interaction state
+ */
+export function routeDoubleClick(node, hitTarget = null, coords = null) {
+  if (!node) return { state: EDITING_STATES.OBJECT_SELECT, targetId: null };
+
+  if (node.locked) {
+    return {
+      state: 'LOCKED',
+      targetId: node.id,
+      message: `Layer "${node.name}" is locked. Unlock it in the Layers panel or context menu to edit.`
+    };
+  }
+
+  switch (node.type) {
+    case 'text':
+      return {
+        state: EDITING_STATES.TEXT_EDIT,
+        targetId: node.id,
+        caretPosition: coords
+      };
+
+    case 'image':
+      return {
+        state: EDITING_STATES.IMAGE_CROP,
+        targetId: node.id
+      };
+
+    case 'group':
+    case 'frame':
+    case 'section':
+      return {
+        state: EDITING_STATES.GROUP_DEEP_SELECT,
+        targetId: node.id
+      };
+
+    case 'instance':
+      return {
+        state: EDITING_STATES.COMPONENT_INSTANCE_EDIT,
+        targetId: node.id
+      };
+
+    case 'rectangle':
+    case 'polygon':
+    case 'star':
+    case 'line':
+    case 'arrow':
+    case 'vector':
+    default:
+      return {
+        state: EDITING_STATES.VECTOR_EDIT,
+        targetId: node.id,
+        isParametric: node.type !== 'vector'
+      };
+  }
+}
+
+/**
+ * Section 11.6: Extract editable anchor points from any node geometry
+ */
+export function extractNodeAnchors(node) {
+  if (!node) return [];
+
+  const w = node.transform?.width || 100;
+  const h = node.transform?.height || 100;
+
+  // Custom vector path
+  if (node.vectorPath && Array.isArray(node.vectorPath) && node.vectorPath.length > 0) {
+    const anchors = [];
+    for (let i = 0; i < node.vectorPath.length; i++) {
+      const cmd = node.vectorPath[i];
+      if (cmd.type === 'M' || cmd.type === 'L') {
+        anchors.push({
+          x: cmd.x,
+          y: cmd.y,
+          handleIn: { x: 0, y: 0 },
+          handleOut: { x: 0, y: 0 },
+          type: HANDLE_MODES.CORNER,
+          selected: false
+        });
+      } else if (cmd.type === 'C') {
+        // The preceding anchor gets handleOut towards (cp1x, cp1y)
+        if (anchors.length > 0) {
+          const prev = anchors[anchors.length - 1];
+          prev.handleOut = { x: cmd.cp1x - prev.x, y: cmd.cp1y - prev.y };
+          if (prev.type === HANDLE_MODES.CORNER) prev.type = HANDLE_MODES.SMOOTH;
+        }
+        // Current anchor gets handleIn from (cp2x, cp2y)
+        anchors.push({
+          x: cmd.x,
+          y: cmd.y,
+          handleIn: { x: cmd.cp2x - cmd.x, y: cmd.cp2y - cmd.y },
+          handleOut: { x: 0, y: 0 },
+          type: HANDLE_MODES.SMOOTH,
+          selected: false
+        });
+      }
+    }
+    return anchors;
+  }
+
+  // Rectangle: 4 corners
+  if (node.type === 'rectangle' || node.type === 'frame' || !node.type) {
+    return [
+      { x: 0, y: 0, handleIn: { x: 0, y: 0 }, handleOut: { x: 0, y: 0 }, type: HANDLE_MODES.CORNER, selected: false },
+      { x: w, y: 0, handleIn: { x: 0, y: 0 }, handleOut: { x: 0, y: 0 }, type: HANDLE_MODES.CORNER, selected: false },
+      { x: w, y: h, handleIn: { x: 0, y: 0 }, handleOut: { x: 0, y: 0 }, type: HANDLE_MODES.CORNER, selected: false },
+      { x: 0, y: h, handleIn: { x: 0, y: 0 }, handleOut: { x: 0, y: 0 }, type: HANDLE_MODES.CORNER, selected: false }
+    ];
+  }
+
+  // Polygon: N sides
+  if (node.type === 'polygon') {
+    const sides = Math.max(3, node.polygonSides || 3);
+    const cx = w / 2;
+    const cy = h / 2;
+    const r = Math.min(w, h) / 2;
+    const anchors = [];
+    for (let i = 0; i < sides; i++) {
+      const angle = (i * 2 * Math.PI) / sides - Math.PI / 2;
+      anchors.push({
+        x: Math.round(cx + r * Math.cos(angle)),
+        y: Math.round(cy + r * Math.sin(angle)),
+        handleIn: { x: 0, y: 0 },
+        handleOut: { x: 0, y: 0 },
+        type: HANDLE_MODES.CORNER,
+        selected: false
+      });
+    }
+    return anchors;
+  }
+
+  // Star: 2 * points
+  if (node.type === 'star') {
+    const points = Math.max(3, node.starPoints || 5);
+    const starRatio = node.starRatio !== undefined ? node.starRatio : 0.45;
+    const cx = w / 2;
+    const cy = h / 2;
+    const outerR = Math.min(w, h) / 2;
+    const innerR = outerR * starRatio;
+    const total = points * 2;
+    const anchors = [];
+    for (let i = 0; i < total; i++) {
+      const r = i % 2 === 0 ? outerR : innerR;
+      const angle = (i * Math.PI) / points - Math.PI / 2;
+      anchors.push({
+        x: Math.round(cx + r * Math.cos(angle)),
+        y: Math.round(cy + r * Math.sin(angle)),
+        handleIn: { x: 0, y: 0 },
+        handleOut: { x: 0, y: 0 },
+        type: HANDLE_MODES.CORNER,
+        selected: false
+      });
+    }
+    return anchors;
+  }
+
+  // Line / Arrow: 2 endpoints
+  if (node.type === 'line' || node.type === 'arrow') {
+    return [
+      { x: 0, y: h / 2, handleIn: { x: 0, y: 0 }, handleOut: { x: 0, y: 0 }, type: HANDLE_MODES.CORNER, selected: false },
+      { x: w, y: h / 2, handleIn: { x: 0, y: 0 }, handleOut: { x: 0, y: 0 }, type: HANDLE_MODES.CORNER, selected: false }
+    ];
+  }
+
+  return [];
+}
+
+/**
+ * Convert anchor list back into canonical vectorPath command array
+ */
+export function anchorsToVectorPath(anchors, closed = true) {
+  if (!Array.isArray(anchors) || anchors.length === 0) return [];
+
+  const path = [];
+  path.push({ type: 'M', x: Math.round(anchors[0].x), y: Math.round(anchors[0].y) });
+
+  for (let i = 1; i < anchors.length; i++) {
+    const prev = anchors[i - 1];
+    const curr = anchors[i];
+
+    const hasPrevOut = prev.handleOut && (prev.handleOut.x !== 0 || prev.handleOut.y !== 0);
+    const hasCurrIn = curr.handleIn && (curr.handleIn.x !== 0 || curr.handleIn.y !== 0);
+
+    if (hasPrevOut || hasCurrIn) {
+      path.push({
+        type: 'C',
+        cp1x: Math.round(prev.x + (prev.handleOut?.x || 0)),
+        cp1y: Math.round(prev.y + (prev.handleOut?.y || 0)),
+        cp2x: Math.round(curr.x + (curr.handleIn?.x || 0)),
+        cp2y: Math.round(curr.y + (curr.handleIn?.y || 0)),
+        x: Math.round(curr.x),
+        y: Math.round(curr.y)
+      });
+    } else {
+      path.push({ type: 'L', x: Math.round(curr.x), y: Math.round(curr.y) });
+    }
+  }
+
+  if (closed && anchors.length > 2) {
+    const last = anchors[anchors.length - 1];
+    const first = anchors[0];
+    const hasLastOut = last.handleOut && (last.handleOut.x !== 0 || last.handleOut.y !== 0);
+    const hasFirstIn = first.handleIn && (first.handleIn.x !== 0 || first.handleIn.y !== 0);
+
+    if (hasLastOut || hasFirstIn) {
+      path.push({
+        type: 'C',
+        cp1x: Math.round(last.x + (last.handleOut?.x || 0)),
+        cp1y: Math.round(last.y + (last.handleOut?.y || 0)),
+        cp2x: Math.round(first.x + (first.handleIn?.x || 0)),
+        cp2y: Math.round(first.y + (first.handleIn?.y || 0)),
+        x: Math.round(first.x),
+        y: Math.round(first.y)
+      });
+    }
+    path.push({ type: 'Z' });
+  }
+
+  return path;
+}
+
+/**
+ * Section 11.6: Apply entry selection policy on entering Vector Edit Mode
+ */
+export function applyEntrySelectionPolicy(anchors, policy = ENTRY_SELECTION_POLICIES.UNDER_POINTER, clickCoords = null, bounds = null, hitThreshold = 14) {
+  if (!Array.isArray(anchors)) return anchors;
+
+  if (policy === ENTRY_SELECTION_POLICIES.ALL) {
+    anchors.forEach(a => a.selected = true);
+    return anchors;
+  }
+
+  if (policy === ENTRY_SELECTION_POLICIES.NONE) {
+    anchors.forEach(a => a.selected = false);
+    return anchors;
+  }
+
+  // Safe default: 'underPointer'
+  anchors.forEach(a => a.selected = false);
+  if (clickCoords && bounds) {
+    let closestIdx = -1;
+    let minDist = hitThreshold;
+
+    for (let i = 0; i < anchors.length; i++) {
+      const a = anchors[i];
+      const worldX = bounds.x + a.x;
+      const worldY = bounds.y + a.y;
+      const dist = Math.hypot(clickCoords.x - worldX, clickCoords.y - worldY);
+      if (dist < minDist) {
+        minDist = dist;
+        closestIdx = i;
+      }
+    }
+
+    if (closestIdx !== -1) {
+      anchors[closestIdx].selected = true;
+    }
+  }
+
+  return anchors;
+}
+
+/**
+ * Section 11.8: Nudge selected anchors by delta
+ */
+export function nudgeAnchors(anchors, selectedIndices, dx, dy) {
+  if (!Array.isArray(anchors) || !selectedIndices) return anchors;
+  const indicesSet = selectedIndices instanceof Set ? selectedIndices : new Set(selectedIndices);
+
+  for (let i = 0; i < anchors.length; i++) {
+    if (indicesSet.has(i)) {
+      anchors[i].x += dx;
+      anchors[i].y += dy;
+    }
+  }
+  return anchors;
+}
+
+/**
+ * Section 11.10: Delete selected anchor points while preserving path topology
+ */
+export function deleteSelectedAnchors(anchors, selectedIndices, closed = true) {
+  if (!Array.isArray(anchors)) return [];
+  const indicesSet = selectedIndices instanceof Set ? selectedIndices : new Set(selectedIndices);
+
+  const minPoints = closed ? 3 : 2;
+  const remaining = anchors.filter((_, idx) => !indicesSet.has(idx));
+
+  if (remaining.length < minPoints) {
+    return { success: false, remaining, message: `Cannot delete points: path requires at least ${minPoints} points to preserve valid contour topology.` };
+  }
+
+  return { success: true, remaining };
+}
+
+/**
+ * Section 11.9: Convert anchor handle mode
+ */
+export function convertAnchorHandleMode(anchor, targetMode) {
+  if (!anchor) return anchor;
+
+  anchor.type = targetMode;
+
+  if (targetMode === HANDLE_MODES.CORNER) {
+    anchor.handleIn = { x: 0, y: 0 };
+    anchor.handleOut = { x: 0, y: 0 };
+  } else if (targetMode === HANDLE_MODES.SYMMETRIC) {
+    // Make handleIn mirror handleOut collinear & equal
+    if (anchor.handleOut.x !== 0 || anchor.handleOut.y !== 0) {
+      anchor.handleIn = { x: -anchor.handleOut.x, y: -anchor.handleOut.y };
+    } else if (anchor.handleIn.x !== 0 || anchor.handleIn.y !== 0) {
+      anchor.handleOut = { x: -anchor.handleIn.x, y: -anchor.handleIn.y };
+    } else {
+      // Create default horizontal symmetric handles
+      anchor.handleOut = { x: 20, y: 0 };
+      anchor.handleIn = { x: -20, y: 0 };
+    }
+  } else if (targetMode === HANDLE_MODES.ALIGNED || targetMode === HANDLE_MODES.SMOOTH) {
+    // Collinear, potentially different lengths
+    if (anchor.handleOut.x !== 0 || anchor.handleOut.y !== 0) {
+      const lenIn = Math.hypot(anchor.handleIn.x, anchor.handleIn.y) || 20;
+      const lenOut = Math.hypot(anchor.handleOut.x, anchor.handleOut.y) || 1;
+      anchor.handleIn = {
+        x: (-anchor.handleOut.x / lenOut) * lenIn,
+        y: (-anchor.handleOut.y / lenOut) * lenIn
+      };
+    }
+  }
+
+  return anchor;
+}
+
+/**
+ * Section 11.9: Update Bézier handle according to handle mode
+ */
+export function updateBezierHandle(anchor, which, hx, hy, mode = HANDLE_MODES.SMOOTH) {
+  if (!anchor) return anchor;
+
+  if (which === 'out') {
+    anchor.handleOut = { x: hx, y: hy };
+    if (mode === HANDLE_MODES.SYMMETRIC) {
+      anchor.handleIn = { x: -hx, y: -hy };
+    } else if (mode === HANDLE_MODES.ALIGNED || mode === HANDLE_MODES.SMOOTH) {
+      const lenIn = Math.hypot(anchor.handleIn?.x || 0, anchor.handleIn?.y || 0) || Math.hypot(hx, hy);
+      const lenOut = Math.hypot(hx, hy) || 1;
+      anchor.handleIn = {
+        x: (-hx / lenOut) * lenIn,
+        y: (-hy / lenOut) * lenIn
+      };
+    }
+  } else if (which === 'in') {
+    anchor.handleIn = { x: hx, y: hy };
+    if (mode === HANDLE_MODES.SYMMETRIC) {
+      anchor.handleOut = { x: -hx, y: -hy };
+    } else if (mode === HANDLE_MODES.ALIGNED || mode === HANDLE_MODES.SMOOTH) {
+      const lenOut = Math.hypot(anchor.handleOut?.x || 0, anchor.handleOut?.y || 0) || Math.hypot(hx, hy);
+      const lenIn = Math.hypot(hx, hy) || 1;
+      anchor.handleOut = {
+        x: (-hx / lenIn) * lenOut,
+        y: (-hy / lenIn) * lenOut
+      };
+    }
+  }
+
+  return anchor;
+}
+
+/**
+ * Section 11.11: Parametric Shape Corner Handles for Rectangles
+ * Calculates the 4 on-canvas circular corner radius handles inside rectangle bounds
+ */
+export function getRectangleCornerHandles(bounds, cornerRadius = 0, cornerRadii = null) {
+  if (!bounds) return [];
+
+  const w = bounds.width;
+  const h = bounds.height;
+  const maxR = Math.min(w, h) / 2;
+
+  // Handle individual or uniform radii
+  const r0 = Math.min(maxR, Math.max(12, cornerRadii ? cornerRadii[0] : cornerRadius));
+  const r1 = Math.min(maxR, Math.max(12, cornerRadii ? cornerRadii[1] : cornerRadius));
+  const r2 = Math.min(maxR, Math.max(12, cornerRadii ? cornerRadii[2] : cornerRadius));
+  const r3 = Math.min(maxR, Math.max(12, cornerRadii ? cornerRadii[3] : cornerRadius));
+
+  return [
+    { key: 'nw', x: bounds.x + r0, y: bounds.y + r0, radius: cornerRadii ? cornerRadii[0] : cornerRadius },
+    { key: 'ne', x: bounds.x + w - r1, y: bounds.y + r1, radius: cornerRadii ? cornerRadii[1] : cornerRadius },
+    { key: 'se', x: bounds.x + w - r2, y: bounds.y + h - r2, radius: cornerRadii ? cornerRadii[2] : cornerRadius },
+    { key: 'sw', x: bounds.x + r3, y: bounds.y + h - r3, radius: cornerRadii ? cornerRadii[3] : cornerRadius }
+  ];
+}
+
+/**
+ * Section 11.11: Calculate new corner radius from direct drag of a corner handle
+ */
+export function calculateCornerRadiusFromDrag(handleKey, dragCoords, bounds) {
+  if (!bounds || !dragCoords) return 0;
+
+  const maxR = Math.min(bounds.width, bounds.height) / 2;
+  let dist = 0;
+
+  switch (handleKey) {
+    case 'nw':
+      dist = Math.max(dragCoords.x - bounds.x, dragCoords.y - bounds.y);
+      break;
+    case 'ne':
+      dist = Math.max(bounds.x + bounds.width - dragCoords.x, dragCoords.y - bounds.y);
+      break;
+    case 'se':
+      dist = Math.max(bounds.x + bounds.width - dragCoords.x, bounds.y + bounds.height - dragCoords.y);
+      break;
+    case 'sw':
+      dist = Math.max(dragCoords.x - bounds.x, bounds.y + bounds.height - dragCoords.y);
+      break;
+    default:
+      dist = 0;
+  }
+
+  return Math.round(Math.min(maxR, Math.max(0, dist)));
+}

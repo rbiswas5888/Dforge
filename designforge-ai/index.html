@@ -109,12 +109,26 @@
             </div>
           </div>
 
+          <div class="menu-item" data-menu="data">
+            <button class="menu-btn">Data</button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" id="menuDataFaces">Insert Avatars (Faces)</button>
+              <button class="dropdown-item" id="menuDataNames">Insert Human Names</button>
+              <button class="dropdown-item" id="menuDataCities">Insert World Cities</button>
+              <button class="dropdown-item" id="menuDataTiles">Insert Pattern Tiles</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" id="menuDataProfileCard">Insert User Profile Card</button>
+            </div>
+          </div>
+
           <div class="menu-item" data-menu="mcp">
             <button class="menu-btn">MCP</button>
             <div class="dropdown-menu">
               <button class="dropdown-item" id="menuOpenMcpHub">MCP Hub & Registry (⌘⌥M)</button>
               <button class="dropdown-item" id="menuMcpTools">Browse Discovered Tools</button>
               <button class="dropdown-item" id="menuMcpPermissions">Review Approvals & Scopes</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" id="menuSketchGuides">Browse Sketch MCP Architecture Guides</button>
               <div class="dropdown-divider"></div>
               <button class="dropdown-item" id="menuMcpWorkflow">Run Markdown → React Workflow</button>
             </div>
@@ -268,6 +282,12 @@
         <div class="canvas-breadcrumb-bar" id="canvasBreadcrumbs" style="display: none;"></div>
 
         <canvas id="canvas2d"></canvas>
+        
+        <!-- Floating Vector Edit Banner Pill (Figma-style top banner with Done button) -->
+        <div class="vector-edit-banner" id="vectorEditBanner" style="display: none; position: absolute; top: 32px; left: 50%; transform: translateX(-50%); background: #1e293b; border: 1px solid #0d99ff; border-radius: 20px; padding: 6px 14px; gap: 10px; align-items: center; z-index: 100; box-shadow: 0 4px 16px rgba(0,0,0,0.4); color: #fff; font-size: 13px; font-weight: 500;">
+          <span>✏️ Vector Edit Mode</span>
+          <button id="btnExitVectorEdit" style="background: #0d99ff; border: none; color: #fff; border-radius: 12px; padding: 4px 12px; font-weight: 600; cursor: pointer; transition: background 0.15s ease;">Done</button>
+        </div>
 
         <!-- Bottom Floating Tool Shelf with Grouped Flyouts (Part B) -->
         <nav class="tool-shelf" id="floatingToolShelf">

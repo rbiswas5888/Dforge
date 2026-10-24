@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Sketch.MSAddAnnotationAction</key>
+	<string>nرтνמ</string>
+	<key>Sketch.MSPreviewAtActualSizeAction</key>
+	<string>§~`</string>
+	<key>Sketch.MSCanvasZoomAction</key>
+	<string>zζяזظ</string>
+	<key>Sketch.MSInsertVectorAction</key>
+	<string>vωмהد</string>
+	<key>Sketch.MSPencilAction</key>
+	<string>pπзפح</string>
+	<key>Sketch.MSInsertTextLayerAction</key>
+	<string>tτеאف</string>
+	<key>Sketch.MSOvalShapeAction</key>
+	<string>oοщםخ</string>
+	<key>Sketch.MSRectangleShapeAction</key>
+	<string>rρкרق</string>
+	<key>Sketch.MSInsertFrameAction</key>
+	<string>faαфשشφכب</string>
+	<key>Sketch.MSInsertGraphicAction</key>
+	<string>gلпγע</string>
+	<key>Sketch.MSInsertSliceAction</key>
+	<string>eثуεק</string>
+	<key>Sketch.MSInsertLineAction</key>
+	<string>lλдךم</string>
+	<key>Sketch.MSInsertHotspotAction</key>
+	<string>ihwрיا׳ص</string>
+	<key>Sketch.MSScaleAction</key>
+	<string>kκлלن</string>
+	<key>Sketch.MSComponentsPickerAction</key>
+	<string>cψсבذ</string>
+	<key>Sketch.MSToggleMarqueeToolAction</key>
+	<string>xطχΧчЧ</string>
+	<key>MSCommandBarAction</key>
+	<string>sσыדس</string>
+	<key>Sketch.MSSymbolsPickerAction</key>
+	<string>yغυטн</string>
+</dict>
+</plist>

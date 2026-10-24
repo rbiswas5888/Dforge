@@ -1,0 +1,13 @@
+mutation collaborativeEditingSessionResetDocument(
+  $shareIdentifier: UUID4!
+  $documentVersionIdentifier: UUID4!
+  $documentCompatibilityVersion: Int!
+) {
+  collaborativeEditingSessionResetDocument(
+    shareIdentifier: $shareIdentifier
+    documentCompatibilityVersion: $documentCompatibilityVersion
+    documentVersionIdentifier: $documentVersionIdentifier
+  ) {
+    baseVersionIdentifier
+  }
+}

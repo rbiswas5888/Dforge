@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Scripting</key>
+	<dict>
+		<key>title</key>
+		<string>Scripting</string>
+		<key>suboptions</key>
+		<dict>
+			<key>AlwaysReloadScript</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Always Reload Scripts</string>
+			</dict>
+			<key>actionWildcardsAllowed</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Allow Wildcard Events</string>
+			</dict>
+		</dict>
+	</dict>
+	<key>Other</key>
+	<dict>
+		<key>title</key>
+		<string>Other</string>
+		<key>suboptions</key>
+		<dict>
+			<key>DontExitWhenValidationFails</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Don&apos;t Exit When Validation Fails (Pretend to be hacked)</string>
+			</dict>
+			<key>recordAllocations</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Record Model Object Allocations</string>
+			</dict>
+			<key>SketchPlayDebug</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Sketch Mirror Debugging Enabled</string>
+			</dict>
+			<key>SmartLayoutDebug</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Smart Layout Debugging Enabled</string>
+			</dict>
+			<key>RevealConvertedEPSFile</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Show PDF For Converted EPS </string>
+			</dict>
+			<key>UseStagingVersionOfSparkleKey</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Use Staging For Sparkle Feed</string>
+			</dict>
+		</dict>
+	</dict>
+	<key>Internationalization</key>
+	<dict>
+		<key>title</key>
+		<string>Internationalization</string>
+		<key>suboptions</key>
+		<dict>
+			<key>NSShowNonLocalizedStrings</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Capitalize Non-Localized Strings</string>
+			</dict>
+			<key>NSAccentuateLocalizedStrings</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Use Accented Pseudo Language Localizations</string>
+			</dict>
+			<key>AppleLanguages</key>
+			<dict>
+				<key>title</key>
+				<string>Use Localizations</string>
+				<key>values</key>
+				<dict>
+					<key>English</key>
+					<dict>
+						<key>value</key>
+						<array>
+							<string>en</string>
+						</array>
+						<key>title</key>
+						<string>English</string>
+					</dict>
+					<key>Chinese</key>
+					<dict>
+						<key>value</key>
+						<array>
+							<string>zh-hans</string>
+						</array>
+						<key>title</key>
+						<string>Chinese</string>
+					</dict>
+					<key>Spanish</key>
+					<dict>
+						<key>value</key>
+						<array>
+							<string>es</string>
+						</array>
+						<key>title</key>
+						<string>Spanish</string>
+					</dict>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+	<key>Views</key>
+	<dict>
+		<key>title</key>
+		<string>Views</string>
+		<key>suboptions</key>
+		<dict>
+			<key>NSShowAlignmentRects</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Show Alignment Rects</string>
+			</dict>
+			<key>NSShowAllViews</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Show All Views</string>
+			</dict>
+		</dict>
+	</dict>
+	<key>Rendering</key>
+	<dict>
+		<key>title</key>
+		<string>Rendering</string>
+		<key>suboptions</key>
+		<dict>
+			<key>MSLayerOptions</key>
+			<dict>
+				<key>title</key>
+				<string>Layers</string>
+				<key>suboptions</key>
+				<dict>
+					<key>ExportRenderingOptionsDebugCoreText</key>
+					<dict>
+						<key>default</key>
+						<false/>
+						<key>title</key>
+						<string>Show CoreText debugging</string>
+					</dict>
+					<key>MSLayerGroupShowActualBounds</key>
+					<dict>
+						<key>default</key>
+						<false/>
+						<key>title</key>
+						<string>Show actual group bounds</string>
+					</dict>
+					<key>ExportRenderingOptionsHighlightSurfaces</key>
+					<dict>
+						<key>default</key>
+						<false/>
+						<key>title</key>
+						<string>Show Surfaces</string>
+					</dict>
+					<key>ExportRenderingOptionsHighlightCachedExtents</key>
+					<dict>
+						<key>default</key>
+						<false/>
+						<key>title</key>
+						<string>Show Cached Extents</string>
+					</dict>
+				</dict>
+			</dict>
+			<key>MSOverlayOptions</key>
+			<dict>
+				<key>title</key>
+				<string>Overlay</string>
+				<key>suboptions</key>
+				<dict>
+					<key>MSOverlayShowSnapNodes</key>
+					<dict>
+						<key>default</key>
+						<false/>
+						<key>title</key>
+						<string>Show Snap Nodes</string>
+					</dict>
+					<key>MSOverlayShowRasterisedArea</key>
+					<dict>
+						<key>default</key>
+						<false/>
+						<key>title</key>
+						<string>Show Tiles</string>
+					</dict>
+					<key>MSOverlayColorRasterizationTime</key>
+					<dict>
+						<key>default</key>
+						<false/>
+						<key>title</key>
+						<string>Color Tiles by Rasterization Time</string>
+					</dict>
+					<key>MSOverlayDisplayRasterizationTime</key>
+					<dict>
+						<key>default</key>
+						<false/>
+						<key>title</key>
+						<string>Show Rasterization Statistics</string>
+					</dict>
+					<key>MSOverlayShowInvisibleOverlayElements</key>
+					<dict>
+						<key>default</key>
+						<false/>
+						<key>title</key>
+						<string>Show Invisible Overlay Elements</string>
+					</dict>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+	<key>Inspector</key>
+	<dict>
+		<key>title</key>
+		<string>Inspector</string>
+		<key>suboptions</key>
+		<dict>
+			<key>MSDebugInspectorFrequentUpdates</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Highlight Sections with Frequent Updates</string>
+			</dict>
+		</dict>
+	</dict>
+	<key>Stacks</key>
+	<dict>
+		<key>title</key>
+		<string>Stack Visual Layout</string>
+		<key>suboptions</key>
+		<dict>
+			<key>MSDebugStackVisualLayoutShowGaps</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Show Gaps</string>
+			</dict>
+			<key>MSDebugStackVisualLayoutShowLayers</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Show Layers</string>
+			</dict>
+			<key>MSDebugStackVisualLayoutShowCrossAxisGaps</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Show Cross Axis Gaps</string>
+			</dict>
+			<key>MSDebugStackVisualLayoutShowLines</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Show Wrapped Lines</string>
+			</dict>
+			<key>MSDebugStackVisualLayoutShowContentBounds</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>title</key>
+				<string>Show Content Bounds</string>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>

@@ -1,0 +1,84 @@
+{
+  "name" : "SketchQL",
+  "url" : "https://graphql-dev.sketch.cloud/api",
+  "generateDeprecationWarnings": true,
+  "globalSelections" : [
+    "identifier"
+  ],
+  "autoSelections" : {
+    "Document": ["uuid"],
+    "Page": ["uuid"],
+    "Artboard": ["uuid"],
+    "Frame": ["uuid"],
+    "FrameGroup": ["uuid"],
+    "Component": ["uuid"],
+    "ColorVariable": ["uuid"],
+    "LayerStyle": ["uuid"],
+    "Symbol": ["uuid"],
+    "TextStyle": ["uuid"],
+    "UnprocessedSubject": ["uuid"],
+    "UnprocessedPage": ["uuid"],
+    "Comment": ["isEdited", "isRead", "userCanDelete", "userIsCreator"],
+    "User": ["hasPersonalIdentity", "hasAcceptedAgreement", "isVerified"]
+  },
+  "propertyTypeMappings": {
+    "Avatar": {
+      "small": "URL",
+      "large": "URL"
+    }
+  },
+  "globalTypeMappings" : {
+    "DateTime": "Date",
+    "Boolean": "Bool",
+    "Upload": "Data",
+    "Email": "String",
+    "ShortId": "String",
+    "NaiveDateTime": "Date",
+    "CreditAmount": "Float",
+    "ID": "String",
+    "Json": "String",
+    "UUID": "String"
+  },
+  "argumentTypeMappings": {
+    "RootMutationType": {
+    }
+  },
+  "aliases" : {
+    "Share": {
+      "version": [
+        {
+          "alias": "latestVersion",
+          "description": "The latest version of the share in any state"
+        }, {
+          "alias": "currentVersion",
+          "description": "The latest processed version of the share"
+        }, {
+          "alias": "publishedVersion",
+          "description": "The most recent published version. When the share contains one or more published (starred) versions, this is the most recent one of those. If there are no published versions, this is the most recent processed version. Used to compare library updates."
+        }, {
+          "alias": "downloadableVersion",
+          "description": "The most recent downloadable version. Versions are downloadable once they're fully uploaded or consolidated. In technical terms, their status is at least \"UPLOADED\"."
+        }, {
+          "alias": "arbitraryVersion",
+          "description": "Used to query an arbitrary version of the share."
+        }
+      ]
+    }
+  },
+  "ignoredProperties": {
+    "Share": ["currentVersion", "version"]
+  },
+
+  "protocolsPatterns": {
+    "SKQLEntity": {
+      "properties": [{ "name": "identifier", "type": "String" }]
+    },
+    "SKQLUUIDEntity": {
+      "properties": [{ "name": "identifier", "type": "String" }, { "name": "uuid", "type": "String" }]
+    },
+    "SKQLOptionalUUIDEntity": {
+      "properties": [{ "name": "identifier", "type": "String" }, { "name": "uuid", "type": "String?" }]
+    },
+  },
+  "wantsConstructor": [ "Share" ]
+}
