@@ -13,6 +13,7 @@
   
   <link rel="stylesheet" href="src/styles/designforge.css">
   <link rel="stylesheet" href="src/styles/mcp.css">
+  <link rel="stylesheet" href="src/styles/design_system.css">
 </head>
 <body>
   <div class="app-container">
@@ -142,6 +143,7 @@
       <div class="top-bar-center">
         <div class="mode-switcher">
           <button class="mode-tab active" data-mode="design" id="tabModeDesign">Design</button>
+          <button class="mode-tab" data-mode="design-system" id="tabModeDesignSystem">Design System</button>
           <button class="mode-tab" data-mode="prototype" id="tabModePrototype">Prototype</button>
           <button class="mode-tab" data-mode="code" id="tabModeCode">Code</button>
         </div>
@@ -349,6 +351,102 @@
           <div class="context-menu-divider"></div>
           <div class="context-menu-item" id="ctxExportPng">Export PNG</div>
           <div class="context-menu-item" id="ctxExportSvg">Export SVG</div>
+        </div>
+      </section>
+
+      <!-- First-Class Design System Workspace (Section 2, 4-18) -->
+      <section class="design-system-workspace" id="designSystemWorkspace" style="display: none;">
+        <!-- Left Sub-navigation -->
+        <aside class="ds-subnav">
+          <div class="ds-subnav-header">
+            <div class="ds-system-title">
+              <span>❖</span>
+              <span id="dsActiveSystemName">DesignForge DS</span>
+            </div>
+            <span class="ds-version-pill" id="dsActiveVersionBadge">v1.0.0 (Published)</span>
+          </div>
+          <nav class="ds-nav-list" id="dsNavList">
+            <button class="ds-nav-item active" data-view="overview">
+              <span class="ds-nav-icon">📊</span>
+              <span>Overview</span>
+            </button>
+            <button class="ds-nav-item" data-view="tokens">
+              <span class="ds-nav-icon">🎨</span>
+              <span>Tokens</span>
+              <span class="ds-nav-badge" id="dsNavBadgeTokens">0</span>
+            </button>
+            <button class="ds-nav-item" data-view="variables">
+              <span class="ds-nav-icon">🔤</span>
+              <span>Variables</span>
+              <span class="ds-nav-badge" id="dsNavBadgeVars">0</span>
+            </button>
+            <button class="ds-nav-item" data-view="components">
+              <span class="ds-nav-icon">❖</span>
+              <span>Components</span>
+              <span class="ds-nav-badge" id="dsNavBadgeComps">0</span>
+            </button>
+            <button class="ds-nav-item" data-view="styles">
+              <span class="ds-nav-icon">✨</span>
+              <span>Styles</span>
+              <span class="ds-nav-badge" id="dsNavBadgeStyles">0</span>
+            </button>
+            <button class="ds-nav-item" data-view="assets">
+              <span class="ds-nav-icon">📦</span>
+              <span>Assets</span>
+              <span class="ds-nav-badge" id="dsNavBadgeAssets">0</span>
+            </button>
+            <button class="ds-nav-item" data-view="libraries">
+              <span class="ds-nav-icon">📚</span>
+              <span>Libraries</span>
+            </button>
+            <button class="ds-nav-item" data-view="imports">
+              <span class="ds-nav-icon">🔄</span>
+              <span>Imports & Sync</span>
+            </button>
+            <button class="ds-nav-item" data-view="docs">
+              <span class="ds-nav-icon">📖</span>
+              <span>Documentation</span>
+            </button>
+            <button class="ds-nav-item" data-view="versions">
+              <span class="ds-nav-icon">⏱</span>
+              <span>Version History</span>
+            </button>
+          </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="ds-content-area">
+          <header class="ds-toolbar">
+            <div class="ds-toolbar-left">
+              <h2 class="ds-view-heading" id="dsViewTitle">Design System Overview</h2>
+              <div class="ds-theme-switcher" id="dsThemeSwitcher">
+                <button class="ds-theme-btn active" data-theme="dark">Dark</button>
+                <button class="ds-theme-btn" data-theme="light">Light</button>
+                <button class="ds-theme-btn" data-theme="high-contrast">Contrast</button>
+              </div>
+            </div>
+            <div class="ds-toolbar-right">
+              <button class="ds-action-btn ai" id="btnDsAiGenerateTokens" title="AI Generate Tokens Wizard (Section 9)">
+                <span>✨ AI Generate Tokens</span>
+              </button>
+              <button class="ds-action-btn" id="btnDsResponsiveTokens" title="Responsive Token Adaptations (Section 10)">
+                <span>📱 Responsive Tokens</span>
+              </button>
+              <button class="ds-action-btn" id="btnDsImportReact" title="Import React / DTCG System (Section 13)">
+                <span>📥 Import System</span>
+              </button>
+              <button class="ds-action-btn" id="btnDsCreateScratch" title="Create Design System from Scratch (Section 12)">
+                <span>➕ New System</span>
+              </button>
+              <button class="ds-action-btn primary" id="btnDsPublish" title="Publish Version Release (Section 17)">
+                <span>🚀 Publish Release</span>
+              </button>
+            </div>
+          </header>
+
+          <div class="ds-viewport" id="dsViewport">
+            <!-- Dynamic view injected by app.js: Overview, Tokens, Variables, Components, Styles, Assets, etc. -->
+          </div>
         </div>
       </section>
 
@@ -979,6 +1077,309 @@
         <div style="display: flex; gap: 8px;">
           <button class="menu-dropdown-btn-sm" id="btnTourPrev" style="font-size: 11px;">Back</button>
           <button class="btn-primary" id="btnTourNext" style="font-size: 11px; padding: 4px 10px;">Next →</button>
+        </div>
+      </div>
+    </div>
+    <!-- Modals for Unified Design System (Sections 9, 10, 11, 12, 13, 17) -->
+
+    <!-- 1. AI Generate Tokens Guided Wizard (Section 9) -->
+    <div class="ds-modal-backdrop" id="modalAiGenerateTokens" style="display: none;">
+      <div class="ds-modal-box" style="max-width: 860px;">
+        <div class="ds-modal-header">
+          <div class="ds-modal-title">
+            <span style="color: #8b5cf6;">✨</span>
+            <span>AI Generate Tokens Guided Wizard</span>
+          </div>
+          <button class="menu-dropdown-btn-sm" id="btnCloseModalAiTokens">✕</button>
+        </div>
+        <div class="ds-modal-body">
+          <div id="aiTokensStep1">
+            <div style="font-size: 13px; font-weight: 700; color: #f8fafc; margin-bottom: 12px;">Step 1: System Context & Brand Parameters</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+              <div>
+                <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">System Name</label>
+                <input type="text" id="aiTokensSystemName" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" value="Fintech Experience Design System">
+              </div>
+              <div>
+                <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Brand Name (Optional)</label>
+                <input type="text" id="aiTokensBrandName" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" value="NovaBank">
+              </div>
+              <div>
+                <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Industry / Use Case</label>
+                <select id="aiTokensIndustry" class="mcp-search-input" style="width: 100%; box-sizing: border-box;">
+                  <option value="fintech" selected>Fintech & Banking</option>
+                  <option value="saas">B2B SaaS</option>
+                  <option value="ecommerce">E-Commerce & Retail</option>
+                  <option value="enterprise">Enterprise Systems</option>
+                  <option value="healthcare">Healthcare</option>
+                  <option value="technical">Developer & Technical Tools</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Design Direction</label>
+                <select id="aiTokensDirection" class="mcp-search-input" style="width: 100%; box-sizing: border-box;">
+                  <option value="minimal" selected>Minimal & Modern</option>
+                  <option value="corporate">Corporate & Structured</option>
+                  <option value="expressive">Expressive & High-Impact</option>
+                  <option value="playful">Playful & Friendly</option>
+                  <option value="luxury">Luxury & Editorial</option>
+                  <option value="technical">Technical & Dense</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Primary Brand Color</label>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="color" id="aiTokensBrandColorPicker" value="#2563eb" style="width: 36px; height: 36px; border-radius: 6px; border: 1px solid #334155; cursor: pointer; background: transparent;">
+                <input type="text" id="aiTokensBrandColorHex" class="mcp-search-input" style="width: 120px;" value="#2563eb">
+                <span style="font-size: 11px; color: #64748b;">Seed for primary, secondary, and neutral scales</span>
+              </div>
+            </div>
+
+            <div style="font-size: 13px; font-weight: 700; color: #f8fafc; margin-bottom: 8px;">Step 2: Token Categories to Generate</div>
+            <div class="ds-category-grid" id="aiTokensCategoryGrid">
+              <label class="ds-category-card selected"><input type="checkbox" value="color" checked> 🎨 Color & Palettes</label>
+              <label class="ds-category-card selected"><input type="checkbox" value="typography" checked> 🔤 Typography & Scales</label>
+              <label class="ds-category-card selected"><input type="checkbox" value="spacing" checked> 📏 Spacing & Density</label>
+              <label class="ds-category-card selected"><input type="checkbox" value="sizing" checked> 📐 Sizing & Containers</label>
+              <label class="ds-category-card selected"><input type="checkbox" value="borders" checked> 🔲 Borders & Radii</label>
+              <label class="ds-category-card selected"><input type="checkbox" value="shadows" checked> 🌓 Shadows & Elevation</label>
+              <label class="ds-category-card selected"><input type="checkbox" value="motion" checked> ⚡ Motion & Easing</label>
+              <label class="ds-category-card selected"><input type="checkbox" value="opacity" checked> 👁 Opacity & Effects</label>
+              <label class="ds-category-card selected"><input type="checkbox" value="zindex" checked> 📚 Z-Index Layering</label>
+              <label class="ds-category-card selected"><input type="checkbox" value="dataviz" checked> 📊 Data Visualization</label>
+              <label class="ds-category-card selected"><input type="checkbox" value="accessibility" checked> ♿ Accessibility & Focus</label>
+            </div>
+          </div>
+
+          <!-- Proposal Review Step -->
+          <div id="aiTokensStep2" style="display: none;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <div>
+                <span style="font-size: 13px; font-weight: 700; color: #f8fafc;">Step 3: Review Structured Proposals</span>
+                <p style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Review, edit, or reject tokens before committing. Published tokens will not be silently overwritten.</p>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="menu-dropdown-btn-sm" id="btnAiTokensSelectAll">Select All</button>
+                <button class="menu-dropdown-btn-sm" id="btnAiTokensDeselectAll">Deselect All</button>
+              </div>
+            </div>
+            <div style="max-height: 380px; overflow-y: auto; border: 1px solid #334155; border-radius: 8px;">
+              <table class="ds-proposal-table" id="aiTokensProposalsTable">
+                <thead>
+                  <tr>
+                    <th style="width: 32px;"><input type="checkbox" id="aiTokensCheckAll" checked></th>
+                    <th>Token Name</th>
+                    <th>Category</th>
+                    <th>Type</th>
+                    <th>Value / Mapping</th>
+                    <th>Action</th>
+                    <th>Reason</th>
+                  </tr>
+                </thead>
+                <tbody id="aiTokensProposalsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="ds-modal-footer">
+          <button class="ds-action-btn" id="btnAiTokensBack" style="display: none;">← Back</button>
+          <button class="ds-action-btn" id="btnAiTokensCancel">Cancel</button>
+          <button class="ds-action-btn ai" id="btnAiTokensGenerate">⚡ Generate Proposals</button>
+          <button class="ds-action-btn primary" id="btnAiTokensCommit" style="display: none;">✓ Commit Approved Tokens</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Responsive Token Adaptations Modal (Section 10) -->
+    <div class="ds-modal-backdrop" id="modalResponsiveTokens" style="display: none;">
+      <div class="ds-modal-box" style="max-width: 800px;">
+        <div class="ds-modal-header">
+          <div class="ds-modal-title">
+            <span style="color: #38bdf8;">📱</span>
+            <span>Responsive Token Adaptation Engine</span>
+          </div>
+          <button class="menu-dropdown-btn-sm" id="btnCloseModalResponsive">✕</button>
+        </div>
+        <div class="ds-modal-body">
+          <p style="font-size: 12px; color: #94a3b8; margin-bottom: 16px;">
+            Derive tablet (max-width: 1024px) and mobile (max-width: 767px) token overrides from the desktop source collection. Preserves base desktop values while generating standard responsive CSS media queries.
+          </p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+            <div>
+              <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Target Viewport Adaptations</label>
+              <select id="responsiveTargetsSelect" class="mcp-search-input" style="width: 100%; box-sizing: border-box;">
+                <option value="both" selected>Both Tablet & Mobile</option>
+                <option value="tablet">Tablet Only (768px - 1024px)</option>
+                <option value="mobile">Mobile Only (≤767px)</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Categories to Adapt</label>
+              <div style="display: flex; gap: 10px; margin-top: 6px;">
+                <label style="font-size: 11px; color: #cbd5e1;"><input type="checkbox" id="respCatSpacing" checked> Spacing</label>
+                <label style="font-size: 11px; color: #cbd5e1;"><input type="checkbox" id="respCatTypography" checked> Typography</label>
+                <label style="font-size: 11px; color: #cbd5e1;"><input type="checkbox" id="respCatSizing" checked> Sizing</label>
+              </div>
+            </div>
+          </div>
+
+          <div id="responsivePreviewContainer" style="display: none; margin-top: 16px;">
+            <div style="font-size: 12px; font-weight: 700; color: #f8fafc; margin-bottom: 8px;">Generated Responsive CSS Media Queries</div>
+            <pre id="responsiveCssOutput" style="background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #38bdf8; max-height: 200px; overflow-y: auto;"></pre>
+          </div>
+        </div>
+        <div class="ds-modal-footer">
+          <button class="ds-action-btn" id="btnCancelResponsive">Cancel</button>
+          <button class="ds-action-btn" id="btnGenerateResponsive">Generate Adaptations</button>
+          <button class="ds-action-btn primary" id="btnCommitResponsive" style="display: none;">Commit Responsive Overrides</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Component Variable Extraction Modal (Section 11) -->
+    <div class="ds-modal-backdrop" id="modalComponentVariables" style="display: none;">
+      <div class="ds-modal-box" style="max-width: 760px;">
+        <div class="ds-modal-header">
+          <div class="ds-modal-title">
+            <span style="color: #10b981;">🔤</span>
+            <span>Explicit AI Variable Extraction (Component-Level)</span>
+          </div>
+          <button class="menu-dropdown-btn-sm" id="btnCloseModalCompVars">✕</button>
+        </div>
+        <div class="ds-modal-body">
+          <p style="font-size: 12px; color: #94a3b8; margin-bottom: 14px;">
+            Inspects the selected component or layer properties, identifying reusable values, and maps them to existing design tokens or proposes new variables. Appearance is strictly preserved.
+          </p>
+          <div id="compVarsSelectionInfo" style="font-size: 12px; font-weight: 600; color: #38bdf8; margin-bottom: 12px;"></div>
+          <div style="max-height: 320px; overflow-y: auto; border: 1px solid #334155; border-radius: 8px;">
+            <table class="ds-proposal-table" id="compVarsTable">
+              <thead>
+                <tr>
+                  <th style="width: 32px;"><input type="checkbox" id="compVarsCheckAll" checked></th>
+                  <th>Property</th>
+                  <th>Raw Value</th>
+                  <th>Proposed Variable / Token</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="compVarsBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="ds-modal-footer">
+          <button class="ds-action-btn" id="btnCancelCompVars">Cancel</button>
+          <button class="ds-action-btn primary" id="btnCommitCompVars">Bind Approved Variables</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Import React / DTCG System Modal (Section 13) -->
+    <div class="ds-modal-backdrop" id="modalImportReactSystem" style="display: none;">
+      <div class="ds-modal-box" style="max-width: 800px;">
+        <div class="ds-modal-header">
+          <div class="ds-modal-title">
+            <span style="color: #c084fc;">📥</span>
+            <span>Import React & DTCG Design System</span>
+          </div>
+          <button class="menu-dropdown-btn-sm" id="btnCloseModalImportReact">✕</button>
+        </div>
+        <div class="ds-modal-body">
+          <p style="font-size: 12px; color: #94a3b8; margin-bottom: 14px;">
+            Parse W3C DTCG Token JSON, Tailwind configurations, or React component sources via static analysis in a safe sandboxed environment.
+          </p>
+          <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Paste Token JSON / Tailwind Config / React Component Code</label>
+            <textarea id="importReactSourceInput" class="mcp-search-input" style="width: 100%; height: 160px; font-family: 'JetBrains Mono', monospace; font-size: 11px; box-sizing: border-box; resize: vertical;" placeholder='e.g. DTCG JSON:
+{
+  "color": {
+    "brand": {
+      "primary": { "$value": "#2563eb", "$type": "color" }
+    }
+  }
+}'></textarea>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px;">
+            <button class="ds-action-btn" id="btnAnalyzeImportSource">🔍 Analyze & Inspect Structure</button>
+            <span id="importAnalysisStatus" style="font-size: 11px; color: #64748b;">Waiting for input...</span>
+          </div>
+
+          <div id="importReportBox" style="display: none; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 14px;">
+            <div style="font-size: 12px; font-weight: 700; color: #f8fafc; margin-bottom: 6px;">Import Compatibility Report</div>
+            <div id="importReportSummary" style="font-size: 11px; color: #cbd5e1; line-height: 1.5;"></div>
+          </div>
+        </div>
+        <div class="ds-modal-footer">
+          <button class="ds-action-btn" id="btnCancelImportReact">Cancel</button>
+          <button class="ds-action-btn primary" id="btnCommitImportReact" style="display: none;">Commit Import to Registry</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Create Design System From Scratch (Section 12) -->
+    <div class="ds-modal-backdrop" id="modalCreateDesignSystem" style="display: none;">
+      <div class="ds-modal-box" style="max-width: 640px;">
+        <div class="ds-modal-header">
+          <div class="ds-modal-title">
+            <span style="color: #0d99ff;">➕</span>
+            <span>Create Design System from Scratch</span>
+          </div>
+          <button class="menu-dropdown-btn-sm" id="btnCloseModalCreateDs">✕</button>
+        </div>
+        <div class="ds-modal-body">
+          <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">System Name</label>
+            <input type="text" id="createDsName" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" value="Enterprise Cloud Design System">
+          </div>
+          <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Description</label>
+            <input type="text" id="createDsDesc" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" value="Comprehensive token system and component library for cloud services">
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Choose Foundation Starter</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <label class="ds-category-card selected"><input type="radio" name="dsStarterRadio" value="minimal" checked> Minimal Modern</label>
+              <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="enterprise"> Enterprise SaaS</label>
+              <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="fintech"> Fintech High-Trust</label>
+              <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="ecommerce"> E-Commerce Vibrant</label>
+              <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="blank"> Blank System</label>
+            </div>
+          </div>
+        </div>
+        <div class="ds-modal-footer">
+          <button class="ds-action-btn" id="btnCancelCreateDs">Cancel</button>
+          <button class="ds-action-btn primary" id="btnConfirmCreateDs">Create Design System</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Publish Library Release Modal (Section 17) -->
+    <div class="ds-modal-backdrop" id="modalPublishLibrary" style="display: none;">
+      <div class="ds-modal-box" style="max-width: 580px;">
+        <div class="ds-modal-header">
+          <div class="ds-modal-title">
+            <span style="color: #0d99ff;">🚀</span>
+            <span>Publish Design System Release</span>
+          </div>
+          <button class="menu-dropdown-btn-sm" id="btnCloseModalPublish">✕</button>
+        </div>
+        <div class="ds-modal-body">
+          <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Release Version</label>
+            <input type="text" id="publishDsVersion" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" value="1.1.0">
+          </div>
+          <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Release Notes / Changelog</label>
+            <textarea id="publishDsChangelog" class="mcp-search-input" style="width: 100%; height: 80px; box-sizing: border-box; font-size: 12px; resize: vertical;">Added responsive token adaptations and component-level variable bindings.</textarea>
+          </div>
+          <div id="publishValidationStatus" style="font-size: 11px; padding: 10px; border-radius: 6px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #34d399;">
+            ✓ All tokens and variable references validated. Zero dangling dependencies.
+          </div>
+        </div>
+        <div class="ds-modal-footer">
+          <button class="ds-action-btn" id="btnCancelPublish">Cancel</button>
+          <button class="ds-action-btn primary" id="btnConfirmPublish">Publish Release</button>
         </div>
       </div>
     </div>
