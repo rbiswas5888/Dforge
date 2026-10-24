@@ -532,7 +532,7 @@
           <div class="ai-assistant-header">
             <div class="ai-status-indicator">
               <span class="pulse-dot"></span>
-              <span id="aiModelStatusLabel">⚡ Local Synth Engine (Offline)</span>
+              <span id="aiModelStatusLabel">🦙 Ollama Llama 3.1 (Local AI)</span>
             </div>
             <div style="display: flex; gap: 6px;">
               <button class="btn-icon-sm" id="btnAiSettingsToggle" title="Configure AI Provider & Privacy">⚙️</button>
@@ -546,9 +546,10 @@
               <div>
                 <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Inference Provider</label>
                 <select class="prop-select" id="aiProviderSelect" style="width: 100%;">
-                  <option value="local">Built-in Local Engine (Zero-Latency Offline)</option>
-                  <option value="openai">OpenAI (GPT-4o) / Custom Endpoint</option>
-                  <option value="gemini">Google Gemini (Gemini 1.5 / 2.0)</option>
+                  <option value="ollama" selected>🦙 Ollama Local (Llama 3.1) — Recommended</option>
+                  <option value="local">⚡ Built-in Synth Engine (Zero-Latency Offline)</option>
+                  <option value="openai">🌐 OpenAI (GPT-4o) / Custom Endpoint</option>
+                  <option value="gemini">✨ Google Gemini (Gemini 1.5 / 2.0)</option>
                 </select>
               </div>
               <div>
@@ -563,7 +564,10 @@
             <div id="aiKeyFields" style="display: none; flex-direction: column; gap: 8px;">
               <input type="password" class="prop-input" id="aiApiKeyInput" placeholder="API Key (sk-...)" style="background: var(--bg-input); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); width: 100%;">
               <input type="text" class="prop-input" id="aiEndpointInput" placeholder="Endpoint URL" style="background: var(--bg-input); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); width: 100%;">
-              <button class="btn-inspector-action" id="btnTestAiConnection" style="padding: 4px 8px;">Test Connection</button>
+            </div>
+            <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between;">
+              <button class="btn-inspector-action" id="btnTestAiConnection" style="padding: 4px 10px; font-size: 11px;">🦙 Test Llama 3.1 Connection</button>
+              <span id="aiModelBadge" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.15); color: #38bdf8;">llama3.1:latest</span>
             </div>
             <div id="aiConnectionStatus" style="font-size: 11px; margin-top: 6px; color: var(--text-dim);"></div>
           </div>

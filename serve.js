@@ -29,6 +29,50 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
+  // CORS Preflight
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE'
+    });
+    res.end();
+    return;
+  }
+
+  // Reverse proxy for Ollama local AI API (Llama 3.1)
+  if (req.url.startsWith('/api/ollama')) {
+    const targetPath = req.url.replace(/^\/api\/ollama/, '');
+    const proxyReq = http.request(
+      `http://127.0.0.1:11434${targetPath}`,
+      {
+        method: req.method,
+        headers: {
+          ...req.headers,
+          host: '127.0.0.1:11434'
+        }
+      },
+      (proxyRes) => {
+        res.writeHead(proxyRes.statusCode, {
+          ...proxyRes.headers,
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE'
+        });
+        proxyRes.pipe(res);
+      }
+    );
+    proxyReq.on('error', (err) => {
+      res.writeHead(502, {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      });
+      res.end(JSON.stringify({ error: 'Ollama is unreachable on http://127.0.0.1:11434', details: err.message }));
+    });
+    req.pipe(proxyReq);
+    return;
+  }
+
   // Normalize URL path
   let reqPath = decodeURIComponent(req.url.split('?')[0]);
   if (reqPath === '/' || reqPath === '') {

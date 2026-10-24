@@ -602,16 +602,61 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     const providerSelect = document.getElementById('aiProviderSelect');
     const keyFields = document.getElementById('aiKeyFields');
+    const statusLabel = document.getElementById('aiModelStatusLabel');
+    const modelBadge = document.getElementById('aiModelBadge');
+
+    const updateAiStatusDisplay = (p) => {
+      if (statusLabel) {
+        if (p === 'ollama') {
+          statusLabel.textContent = '🦙 Ollama Llama 3.1 (Local AI)';
+        } else if (p === 'local') {
+          statusLabel.textContent = '⚡ Built-in Synth Engine (Offline)';
+        } else if (p === 'openai') {
+          statusLabel.textContent = '🌐 OpenAI GPT-4o';
+        } else if (p === 'gemini') {
+          statusLabel.textContent = '✨ Google Gemini 1.5/2.0';
+        }
+      }
+      if (modelBadge) {
+        modelBadge.textContent = p === 'ollama' ? 'llama3.1:latest' : p;
+      }
+      if (keyFields) {
+        keyFields.style.display = (p === 'local' || p === 'ollama') ? 'none' : 'flex';
+      }
+    };
+
     if (providerSelect) {
       providerSelect.value = this.ai.service.activeProviderName;
-      if (keyFields) keyFields.style.display = providerSelect.value === 'local' ? 'none' : 'flex';
+      updateAiStatusDisplay(providerSelect.value);
+
       providerSelect.addEventListener('change', (e) => {
         const p = e.target.value;
         this.ai.setProvider(p);
-        document.getElementById('aiModelStatusLabel').textContent =
-          p === 'local' ? '⚡ Local Synth Engine (Offline)' :
-          p === 'openai' ? 'OpenAI GPT-4o' : 'Google Gemini 1.5/2.0';
-        if (keyFields) keyFields.style.display = p === 'local' ? 'none' : 'flex';
+        updateAiStatusDisplay(p);
+      });
+    }
+
+    const btnTestAi = document.getElementById('btnTestAiConnection');
+    const aiConnStatus = document.getElementById('aiConnectionStatus');
+    if (btnTestAi) {
+      btnTestAi.addEventListener('click', async () => {
+        if (aiConnStatus) {
+          aiConnStatus.textContent = 'Testing connection to Ollama (Llama 3.1)...';
+          aiConnStatus.style.color = 'var(--text-dim)';
+        }
+        try {
+          const provider = this.ai.service.getProvider();
+          const res = await provider.testConnection();
+          if (aiConnStatus) {
+            aiConnStatus.textContent = res.message;
+            aiConnStatus.style.color = res.success ? 'var(--accent-green)' : 'var(--accent-rose)';
+          }
+        } catch (err) {
+          if (aiConnStatus) {
+            aiConnStatus.textContent = `Error: ${err.message}`;
+            aiConnStatus.style.color = 'var(--accent-rose)';
+          }
+        }
       });
     }
 
