@@ -1,0 +1,759 @@
+/**
+ * DesignForge AI — Axiom Layout & Design System Stylesheet
+ * Conforms to DesignForge_AI_Axiom_Layout_Design_System_Spec.md (Version 1.0, 27 Oct 2026):
+ * - Primary Shell Map: Command Bar (48px), Mode Rail (48px), Navigator (272px), Canvas, Inspector (312px), Drawer (200px), Status Bar (28px)
+ * - Industrial Precision Palette: #0D0D0F base chrome, #141417 raised, #6366F1 indigo accent, #22D3EE cyan smart guides
+ * - Theme Switcher: Axiom Dark, Axiom Light, High Contrast
+ * - Accessible 32px layer rows, 12px tree indent, persistent focus rings, and WCAG 2.2 AA contrast
+ */
+
+/* ==========================================================================
+   1. AXIOM DESIGN SYSTEM TOKENS (Section 8.2)
+   ========================================================================== */
+
+:root,
+body.theme-axiom-dark {
+  /* Surfaces */
+  --surface-canvas-chrome: #0D0D0F;
+  --surface-raised: #141417;
+  --surface-input: #1A1A1E;
+  --surface-hover: #1E1F24;
+  --surface-selected: #312E81;
+
+  /* Borders */
+  --border-subtle: #27272C;
+  --border-strong: #3F3F46;
+
+  /* Text & Content */
+  --text-primary: #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+
+  /* Brand Accents & Actions */
+  --brand-accent: #6366F1;
+  --brand-action: #4F46E5;
+  --brand-accent-soft: #A5B4FC;
+
+  /* Guides & States */
+  --guide-info: #22D3EE; /* Cyan smart guides - distinct from error red */
+  --status-success: #22C55E;
+  --status-warning: #F59E0B;
+  --status-danger: #F87171;
+
+  /* Legacy & Semantic Aliases for complete backward-compatibility */
+  --bg-app: var(--surface-canvas-chrome);
+  --bg-panel: var(--surface-raised);
+  --bg-surface: var(--surface-input);
+  --bg-hover: var(--surface-hover);
+  --bg-input: var(--surface-input);
+  --text-main: var(--text-primary);
+  --text-dim: var(--text-muted);
+  --accent-blue: var(--brand-accent);
+  --accent-indigo: var(--brand-accent);
+
+  /* Geometry & Layout Dimensions (Section 3.2) */
+  --command-bar-height: 48px;
+  --mode-rail-width: 48px;
+  --navigator-width: 272px;
+  --inspector-width: 312px;
+  --tool-shelf-height: 40px;
+  --drawer-height: 220px;
+  --status-bar-height: 28px;
+  --control-height: 32px;
+  --control-height-compact: 28px;
+
+  /* Spacing Grid (4px scale) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* Axiom Light Theme (Section 8.3) */
+body.theme-axiom-light {
+  --surface-canvas-chrome: #F4F4F5;
+  --surface-raised: #FFFFFF;
+  --surface-input: #E4E4E7;
+  --surface-hover: #E4E4E7;
+  --surface-selected: #EEF2FF;
+
+  --border-subtle: #E4E4E7;
+  --border-strong: #D4D4D8;
+
+  --text-primary: #09090B;
+  --text-secondary: #52525B;
+  --text-muted: #71717A;
+
+  --brand-accent: #4F46E5;
+  --brand-action: #4338CA;
+  --brand-accent-soft: #4F46E5;
+
+  --guide-info: #0284C7;
+  --bg-app: var(--surface-canvas-chrome);
+  --bg-panel: var(--surface-raised);
+  --bg-surface: #F8FAFC;
+  --text-main: var(--text-primary);
+}
+
+/* High Contrast Theme (Section 8.3) */
+body.theme-high-contrast {
+  --surface-canvas-chrome: #000000;
+  --surface-raised: #0A0A0A;
+  --surface-input: #121212;
+  --surface-hover: #262626;
+  --surface-selected: #3730A3;
+
+  --border-subtle: #52525B;
+  --border-strong: #A1A1AA;
+
+  --text-primary: #FFFFFF;
+  --text-secondary: #E4E4E7;
+  --text-muted: #A1A1AA;
+
+  --brand-accent: #818CF8;
+  --brand-action: #6366F1;
+  --guide-info: #38BDF8;
+}
+
+/* ==========================================================================
+   2. APPLICATION SHELL GEOGRAPHY (Section 3.1)
+   ========================================================================== */
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--surface-canvas-chrome);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+}
+
+/* A. Global Command Bar (48px high) */
+.global-command-bar {
+  height: var(--command-bar-height);
+  background-color: var(--surface-raised);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.command-bar-left,
+.command-bar-center,
+.command-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Geometric Axiom Spark Logo */
+.axiom-brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  letter-spacing: -0.02em;
+}
+
+.axiom-spark-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-action);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.4);
+}
+
+.doc-name-input {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  outline: none;
+  max-width: 240px;
+  transition: all 0.15s ease;
+}
+
+.doc-name-input:hover,
+.doc-name-input:focus {
+  background: var(--surface-input);
+  border-color: var(--border-strong);
+}
+
+/* Save / Sync Indicator with Explicit Text */
+.sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--status-success);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.sync-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--status-success);
+}
+
+/* Search & Command Bar (Center) */
+.command-search-btn {
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  min-width: 240px;
+  transition: all 0.15s ease;
+}
+
+.command-search-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.command-shortcut-hint {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--brand-accent-soft);
+  margin-left: auto;
+}
+
+/* Main Workspace Middle Grid */
+.axiom-workspace-body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  position: relative;
+}
+
+/* E. Vertical Mode Rail (48px wide) (Section 3.4) */
+.mode-rail {
+  width: var(--mode-rail-width);
+  background-color: var(--surface-raised);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 6px;
+  z-index: 40;
+  flex-shrink: 0;
+}
+
+.mode-rail-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.mode-rail-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.mode-rail-btn.active {
+  background: var(--surface-selected);
+  color: #fff;
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.mode-rail-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--brand-accent);
+}
+
+/* Tooltip for Mode Rail */
+.mode-rail-btn[data-title]:hover::after {
+  content: attr(data-title);
+  position: absolute;
+  left: 48px;
+  background: #000;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+  border: 1px solid var(--border-strong);
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+/* B. Navigator Panel (272px wide, resizable) (Section 3.5) */
+.axiom-navigator {
+  width: var(--navigator-width);
+  min-width: 224px;
+  max-width: 400px;
+  background-color: var(--surface-raised);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  z-index: 30;
+}
+
+/* Page Selector Header */
+.page-selector-header {
+  height: 38px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.page-dropdown-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Navigator Mode Tabs */
+.navigator-tabs {
+  display: flex;
+  background: var(--surface-input);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 2px 8px;
+  gap: 4px;
+}
+
+.nav-tab-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.nav-tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.nav-tab-btn.active {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* Search filter in Navigator */
+.navigator-search {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.nav-search-input {
+  width: 100%;
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+  padding: 5px 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+.nav-search-input:focus {
+  border-color: var(--brand-accent);
+}
+
+/* Semantic Layer Tree Items (Section 5.2) */
+.layer-tree-item {
+  height: 32px; /* 32px comfortable row height */
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.1s ease;
+}
+
+.layer-tree-item:hover {
+  background: var(--surface-hover);
+}
+
+.layer-tree-item.selected {
+  background: var(--surface-selected);
+  color: #fff;
+}
+
+.layer-tree-item.selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--brand-accent);
+}
+
+.layer-type-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+}
+
+/* Quick Actions in Tree on Hover (Eye, Lock) */
+.layer-quick-actions {
+  margin-left: auto;
+  display: none;
+  gap: 4px;
+}
+
+.layer-tree-item:hover .layer-quick-actions {
+  display: flex;
+}
+
+.btn-layer-action {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.btn-layer-action:hover {
+  background: var(--surface-hover);
+  color: #fff;
+}
+
+/* C. Center Workspace Canvas & Floating Shelf */
+.axiom-canvas-area {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--surface-canvas-chrome);
+}
+
+/* Docked/Floating Tool Shelf (40px high) (Section 3.6) */
+.axiom-tool-shelf {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: var(--tool-shelf-height);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  z-index: 50;
+  backdrop-filter: blur(12px);
+}
+
+/* D. Right Inspector Panel (312px wide, resizable) (Section 6) */
+.axiom-inspector {
+  width: var(--inspector-width);
+  min-width: 272px;
+  max-width: 420px;
+  background-color: var(--surface-raised);
+  border-left: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  z-index: 30;
+}
+
+/* Stable Identity Row */
+.inspector-identity-header {
+  height: 44px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.inspector-identity-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Inspector Tabs (Design, Prototype, Accessibility, Export) */
+.inspector-tabs-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-input);
+  padding: 2px 6px;
+  gap: 2px;
+}
+
+.inspector-tab-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.inspector-tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.inspector-tab-btn.active {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* Inspector Accordion Sections */
+.inspector-section {
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 14px;
+}
+
+.inspector-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+/* Numeric Scrubbing Field with Monospace Tabular Digits */
+.scrub-field {
+  display: flex;
+  align-items: center;
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  padding: 0 8px;
+  height: var(--control-height);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.15s ease;
+}
+
+.scrub-field:focus-within {
+  border-color: var(--brand-accent);
+}
+
+.scrub-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: ew-resize;
+  margin-right: 6px;
+  user-select: none;
+}
+
+.scrub-input {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: inherit;
+  width: 100%;
+  outline: none;
+}
+
+/* F. Bottom Drawer (collapsed by default, resizable 140-300px) (Section 3.1 & 3.2) */
+.axiom-bottom-drawer {
+  height: var(--drawer-height);
+  background-color: var(--surface-raised);
+  border-top: 1px solid var(--border-strong);
+  display: none;
+  flex-direction: column;
+  z-index: 60;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4);
+  transition: height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.axiom-bottom-drawer.open {
+  display: flex;
+}
+
+.drawer-header {
+  height: 36px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+}
+
+.drawer-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.drawer-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+}
+
+.drawer-tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.drawer-tab-btn.active {
+  background: var(--surface-input);
+  color: var(--brand-accent);
+}
+
+.drawer-body {
+  flex: 1;
+  overflow: auto;
+  padding: 14px;
+}
+
+/* G. Status Bar (28px high) (Section 3.1 & 3.2) */
+.axiom-status-bar {
+  height: var(--status-bar-height);
+  background-color: var(--surface-raised);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  z-index: 70;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.status-bar-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-bar-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+}
+
+.status-bar-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+/* Persistent Visible Keyboard Focus Rings (Section 11) */
+*:focus-visible {
+  outline: 2px solid var(--brand-accent) !important;
+  outline-offset: 1px !important;
+}
