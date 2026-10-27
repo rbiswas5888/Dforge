@@ -180,8 +180,9 @@
           <button class="btn-icon-sm" id="btnZoomFit" title="Zoom to Fit (⇧1)">⊡</button>
         </div>
 
-        <button class="btn-icon" id="btnToggleTheme" title="Toggle Light / Dark Mode" style="font-size: 13px;">🌙</button>
+        <button class="btn-icon" id="btnToggleTheme" title="Toggle Light / Dark / High-Contrast Mode" style="font-size: 13px;">🌙</button>
         <button class="menu-dropdown-btn" id="btnImportDesignTop" title="Import Design from Sketch, Figma, SVG, XD (⌘⌥I)" style="color: #c084fc; border: 1px solid rgba(192,132,252,0.4); font-size: 11px; font-weight: 600;">📥 Import</button>
+        <button class="menu-dropdown-btn" id="btnMobilePreviewQr" title="Mobile Live Preview & QR Usability Player (Blueprint Section 11)" style="color: #38bdf8; border: 1px solid rgba(56,189,248,0.4); font-size: 11px; font-weight: 600;">📱 Mobile Preview</button>
         <button class="menu-dropdown-btn" id="btnDevModeToggle" title="Toggle Dev Mode (⇧D)" style="color: #10b981; border: 1px solid rgba(16,185,129,0.4); font-size: 11px; font-weight: 600;">🛠 Dev Mode</button>
         <div id="devModeBadge" style="display: none; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; font-size: 10px; font-weight: 700;">DEV MODE</div>
         <button class="menu-dropdown-btn" id="btnOpenMcpHub" title="Model Context Protocol (MCP) Hub & Tool Gateway (⌘⌥M)" style="color: #38bdf8; border: 1px solid rgba(56,189,248,0.4); font-size: 11px; font-weight: 600;">⚡ MCP Hub</button>
@@ -193,14 +194,34 @@
       </div>
     </header>
 
-    <!-- Main 3-Column Workspace -->
-    <main class="main-workspace">
-      <!-- Left Sidebar: Layers, Assets & Pages -->
-      <aside class="left-sidebar">
-        <div class="sidebar-tabs">
-          <button class="sidebar-tab-btn active" data-tab="layers">Layers</button>
-          <button class="sidebar-tab-btn" data-tab="assets">Assets</button>
-          <button class="sidebar-tab-btn" data-tab="pages">Pages</button>
+    <!-- Main 3-Column Workspace with Axiom Geography (Section 3.1) -->
+    <main class="main-workspace axiom-workspace-body">
+      <!-- E. Axiom Vertical Mode Rail (48px wide) (Section 3.4) -->
+      <nav class="mode-rail" id="axiomModeRail">
+        <button class="mode-rail-btn active" data-mode="design" data-title="Design Mode" title="Design Mode (1)">🎨</button>
+        <button class="mode-rail-btn" data-mode="prototype" data-title="Prototype Mode" title="Prototype Mode (2)">⚡</button>
+        <button class="mode-rail-btn" data-mode="system" data-title="Design System Mode" title="Design System Mode (3)">❖</button>
+        <button class="mode-rail-btn" data-mode="dev" data-title="Developer Handoff Mode" title="Developer Mode (4)">🛠</button>
+        <button class="mode-rail-btn" data-mode="comments" data-title="Comments & Review" title="Comments Mode (5)">💬</button>
+        <button class="mode-rail-btn" data-mode="ai" data-title="AI Assistant" title="AI Assistant (6)">✦</button>
+      </nav>
+
+      <!-- B. Left Sidebar: Navigator Panel (272px wide, resizable) (Section 3.5) -->
+      <aside class="left-sidebar axiom-navigator" id="leftNavigatorSidebar">
+        <!-- Page Selector Header (Section 3.5) -->
+        <div class="page-selector-header" id="pageSelectorHeader">
+          <button class="page-dropdown-btn" id="btnPageSelectorMenu" title="Switch or manage document pages">
+            <span>📄</span>
+            <span id="currentPageLabel">Page 1</span>
+            <span style="font-size: 10px; color: var(--text-muted);">▾</span>
+          </button>
+          <button class="btn-icon-xs" id="btnQuickAddPage" title="Add New Page">+</button>
+        </div>
+
+        <div class="sidebar-tabs navigator-tabs">
+          <button class="sidebar-tab-btn nav-tab-btn active" data-tab="layers">Layers</button>
+          <button class="sidebar-tab-btn nav-tab-btn" data-tab="assets">Assets</button>
+          <button class="sidebar-tab-btn nav-tab-btn" data-tab="pages">Pages</button>
         </div>
 
         <!-- 1. Layers Tab -->
@@ -638,6 +659,78 @@
         </div>
       </aside>
     </main>
+
+    <!-- F. Axiom Bottom Drawer (Section 3.1 & 3.2) -->
+    <section class="axiom-bottom-drawer" id="axiomBottomDrawer">
+      <div class="drawer-header">
+        <div class="drawer-tabs">
+          <button class="drawer-tab-btn active" data-drawer-tab="timeline">⏱ Timeline</button>
+          <button class="drawer-tab-btn" data-drawer-tab="variables">🔢 Variables & Tokens</button>
+          <button class="drawer-tab-btn" data-drawer-tab="comments">💬 Comments</button>
+          <button class="drawer-tab-btn" data-drawer-tab="issues">⚡ Issues & Linter</button>
+          <button class="drawer-tab-btn" data-drawer-tab="console">💻 Console</button>
+          <button class="drawer-tab-btn" data-drawer-tab="ai-activity">✦ AI Activity</button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn-icon-xs" id="btnCloseDrawer" title="Collapse Drawer">✕</button>
+        </div>
+      </div>
+      <div class="drawer-body" id="drawerBody">
+        <!-- 1. Timeline Tab -->
+        <div id="drawerTabTimeline" class="drawer-pane">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-primary);">Prototype Flow Transitions & Spring Timelines</span>
+            <button class="menu-dropdown-btn-sm" id="btnPlayDrawerTimeline" style="color: var(--brand-accent);">▶ Simulate Active Flow</button>
+          </div>
+          <div id="drawerTimelineGraph" style="font-size: 11px; color: var(--text-muted); padding: 8px; background: var(--surface-input); border-radius: 6px;">
+            Active flow: Fintech Treasury User Onboarding • Analytical Springs: Stiff (240ms, damping: 0.82)
+          </div>
+        </div>
+
+        <!-- 2. Variables & Tokens Tab -->
+        <div id="drawerTabVariables" class="drawer-pane" style="display: none;">
+          <div id="drawerVariablesContent" style="font-size: 11px;"></div>
+        </div>
+
+        <!-- 3. Comments Tab -->
+        <div id="drawerTabComments" class="drawer-pane" style="display: none;">
+          <div id="drawerCommentsContent" style="font-size: 11px;"></div>
+        </div>
+
+        <!-- 4. Issues & Linter Tab -->
+        <div id="drawerTabIssues" class="drawer-pane" style="display: none;">
+          <div id="drawerIssuesContent" style="font-size: 11px;"></div>
+        </div>
+
+        <!-- 5. Console Tab -->
+        <div id="drawerTabConsole" class="drawer-pane" style="display: none;">
+          <pre id="drawerConsoleLog" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; margin: 0; line-height: 1.5;">[Axiom Engine] Document loaded: ForgePay AI — Treasury Platform&#10;[Axiom Engine] Design tokens synced: 21 tokens active&#10;[Axiom Engine] Canvas resolution: High-DPI ready&#10;[Axiom Engine] Ready for interaction.</pre>
+        </div>
+
+        <!-- 6. AI Activity Tab -->
+        <div id="drawerTabAiActivity" class="drawer-pane" style="display: none;">
+          <div id="drawerAiActivityContent" style="font-size: 11px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- G. Axiom Status Bar (28px high) (Section 3.1 & 3.2) -->
+    <footer class="axiom-status-bar" id="axiomStatusBar">
+      <div class="status-bar-section">
+        <span id="statusToolHint">Tool: Select / Move (V) • Hold Space to Pan Canvas</span>
+      </div>
+      <div class="status-bar-section">
+        <span id="statusSelectionSummary">Selected: None • Canvas</span>
+      </div>
+      <div class="status-bar-section">
+        <button class="status-bar-btn" id="btnToggleBottomDrawer" title="Toggle Bottom Drawer (Timeline, Variables, Issues)">
+          ⌃ Drawer: Variables & Issues
+        </button>
+        <span id="statusZoomLevel">85%</span>
+        <span class="sync-indicator" style="padding: 1px 6px; font-size: 10px;">● Saved locally</span>
+        <span id="statusIssuesCount" style="color: var(--status-warning); cursor: pointer;" title="Open Linter Issues">⚡ 0 issues</span>
+      </div>
+    </footer>
 
     <!-- Modal: React Code Export & Live Preview (Section 12) -->
     <div class="modal-backdrop" id="modalExport" style="display: none;">
@@ -1385,6 +1478,28 @@
         <div class="ds-modal-footer">
           <button class="ds-action-btn" id="btnCancelPublish">Cancel</button>
           <button class="ds-action-btn primary" id="btnConfirmPublish">Publish Release</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Mobile Live Preview QR Code Modal (Blueprint Section 11) -->
+    <div class="modal-backdrop" id="modalMobilePreviewQr" style="display: none; align-items: center; justify-content: center; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);">
+      <div class="modal-window" style="width: 440px; padding: 24px; background: var(--surface-raised); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: 0 20px 50px rgba(0,0,0,0.7);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+            <span>📱</span>
+            <span>Mobile Live Preview</span>
+          </div>
+          <button class="btn-icon-xs" id="btnCloseMobilePreviewQr">✕</button>
+        </div>
+        <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
+          Scan with your phone's camera to run this prototype live in your mobile browser with native gestures, touch ripple, and safe-area presets.
+        </p>
+        <div id="modalQrSvgContainer" style="display: flex; justify-content: center; align-items: center; padding: 16px; background: #ffffff; border-radius: 12px; margin-bottom: 14px;"></div>
+        <div id="modalQrUrlText" style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); word-break: break-all; margin-bottom: 16px; text-align: center;"></div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button class="menu-dropdown-btn" id="btnCopyMobilePreviewLink" style="font-size: 12px;">Copy Link</button>
+          <button class="btn-primary" id="btnOpenMobilePreviewInTab" style="font-size: 12px; background: var(--brand-action);">Open in New Tab</button>
         </div>
       </div>
     </div>

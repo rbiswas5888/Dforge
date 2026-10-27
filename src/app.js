@@ -52,6 +52,7 @@ import {
   ReactDesignSystemImporter,
   DesignSystemUIController
 } from './engine/design_system/index.js';
+import { generateQRCodeSVG } from './editor-core/qr-code.js';
 
 export class DesignForgeApp {
   constructor() {
@@ -145,6 +146,9 @@ export class DesignForgeApp {
 
     // Initialize Unified Design System UI Controller
     this.dsUi.init();
+
+    // Initialize Axiom Layout Design System (Section 3 & 8)
+    this.initAxiomLayout();
 
     // Top Bar Mode Switcher
     const modeTabs = document.querySelectorAll('.mode-tab');
@@ -1206,6 +1210,27 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     document.querySelectorAll('.tool-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tool === tool);
     });
+
+    // Update Axiom Status Bar Tool Hint (Section 3.1 & 3.2)
+    const hints = {
+      select: 'Tool: Select / Move (V) • Hold Space to Pan Canvas',
+      scale: 'Tool: Scale Proportionally (K)',
+      hand: 'Tool: Hand / Pan Canvas (H or hold Space)',
+      frame: 'Tool: Frame / Artboard (F) • Click & drag on canvas',
+      section: 'Tool: Section Tool (⇧S) • Group visual frames',
+      slice: 'Tool: Slice / Export Region (S)',
+      rectangle: 'Tool: Rectangle (R) • Click & drag',
+      ellipse: 'Tool: Ellipse (O) • Click & drag',
+      line: 'Tool: Line (L) • Shift for 45° snaps',
+      pen: 'Tool: Pen / Vector Path (P)',
+      star: 'Tool: Star Shape',
+      polygon: 'Tool: Polygon / Triangle Shape',
+      text: 'Tool: Text (T) • Click canvas to type',
+      comment: 'Tool: Comment (C) • Click canvas to pin review note',
+      ai: 'Tool: AI Assistant (⌘⇧K)'
+    };
+    const hintEl = document.getElementById('statusToolHint');
+    if (hintEl) hintEl.textContent = hints[tool] || `Tool: ${tool}`;
   }
 
   setHandMode(active) {
@@ -1303,9 +1328,22 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const container = document.getElementById('inspectorProperties');
     const badge = document.getElementById('selectionCountBadge');
     const title = document.getElementById('inspectorSelectionTitle');
+    const summaryEl = document.getElementById('statusSelectionSummary');
     if (!container) return;
 
     if (badge) badge.textContent = `${selectedIds.length} selected`;
+
+    // Update Status Bar Selection Summary (Section 3.1 & 3.2)
+    if (summaryEl) {
+      if (selectedIds.length === 0) {
+        summaryEl.textContent = 'Selected: None • Canvas';
+      } else if (selectedIds.length === 1) {
+        const node = this.engine.getNode(selectedIds[0]);
+        summaryEl.textContent = `Selected: ${node?.type || 'node'} "${node?.name || 'Unnamed'}" (${Math.round(node?.transform?.width || 0)} × ${Math.round(node?.transform?.height || 0)})`;
+      } else {
+        summaryEl.textContent = `Selected: ${selectedIds.length} objects`;
+      }
+    }
 
     // 1. When Nothing is Selected: Canvas & Page Settings
     if (selectedIds.length === 0) {
@@ -3560,13 +3598,230 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   }
 
   toggleTheme() {
-    const current = this.doc.themeMode || 'dark';
-    const next = current === 'dark' ? 'light' : 'dark';
-    this.engine.setThemeMode(next);
+    const themes = ['axiom-dark', 'axiom-light', 'high-contrast'];
+    const current = (typeof localStorage !== 'undefined' ? localStorage.getItem('designforge_theme') : null) || (this.doc.themeMode === 'light' ? 'axiom-light' : 'axiom-dark');
+    const idx = themes.indexOf(current);
+    const next = themes[(idx + 1) % themes.length];
+    
+    if (typeof document !== 'undefined') {
+      document.body.className = `theme-${next}`;
+      if (typeof localStorage !== 'undefined') localStorage.setItem('designforge_theme', next);
+    }
+    this.doc.themeMode = next === 'axiom-light' ? 'light' : 'dark';
+    this.engine.setThemeMode(this.doc.themeMode);
+
     const btn = document.getElementById('btnToggleTheme');
-    if (btn) btn.textContent = next === 'light' ? '☀️' : '🌙';
+    if (btn) btn.textContent = next === 'axiom-light' ? '☀️' : (next === 'high-contrast' ? '👁' : '🌙');
     this.renderer.render();
   }
+
+  // --- Axiom Layout Controller (Section 3, 5, 6, 8, 11) ---
+  initAxiomLayout() {
+    if (typeof document === 'undefined') return;
+
+    // 1. Mode Rail Controller (Section 3.4)
+    const modeRailBtns = document.querySelectorAll('.mode-rail-btn');
+    modeRailBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        modeRailBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const mode = btn.dataset.mode;
+        this.setAxiomMode(mode);
+      });
+    });
+
+    // 2. Page Selector Header
+    const pageLabel = document.getElementById('currentPageLabel');
+    if (pageLabel) {
+      const activePage = this.engine.getActivePage();
+      pageLabel.textContent = activePage?.name || 'Page 1';
+    }
+    document.getElementById('btnQuickAddPage')?.addEventListener('click', () => {
+      this.addNewPage();
+      const pLabel = document.getElementById('currentPageLabel');
+      if (pLabel) pLabel.textContent = this.engine.getActivePage()?.name || 'New Page';
+    });
+    document.getElementById('btnPageSelectorMenu')?.addEventListener('click', () => {
+      const pagesTabBtn = document.querySelector('.sidebar-tab-btn[data-tab="pages"]');
+      pagesTabBtn?.click();
+    });
+
+    // 3. Bottom Drawer Controller (Section 3.1 & 3.2)
+    const drawer = document.getElementById('axiomBottomDrawer');
+    const toggleDrawerBtn = document.getElementById('btnToggleBottomDrawer');
+    const closeDrawerBtn = document.getElementById('btnCloseDrawer');
+
+    const toggleDrawer = () => {
+      if (drawer) {
+        drawer.classList.toggle('open');
+        if (drawer.classList.contains('open')) {
+          this.refreshDrawerContent();
+        }
+      }
+    };
+
+    toggleDrawerBtn?.addEventListener('click', toggleDrawer);
+    closeDrawerBtn?.addEventListener('click', toggleDrawer);
+
+    const drawerTabBtns = document.querySelectorAll('.drawer-tab-btn');
+    drawerTabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        drawerTabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tabKey = btn.dataset.drawerTab;
+        const panes = document.querySelectorAll('.drawer-pane');
+        panes.forEach(p => p.style.display = 'none');
+        const activePane = document.getElementById(`drawerTab${tabKey.charAt(0).toUpperCase() + tabKey.slice(1).replace(/-([a-z])/g, g => g[1].toUpperCase())}`);
+        if (activePane) activePane.style.display = 'block';
+        this.refreshDrawerContent(tabKey);
+      });
+    });
+
+    // 4. Mobile Live Preview QR Modal (Blueprint Section 11)
+    document.getElementById('btnMobilePreviewQr')?.addEventListener('click', () => {
+      this.openMobilePreviewQrModal();
+    });
+    document.getElementById('btnCloseMobilePreviewQr')?.addEventListener('click', () => {
+      const modal = document.getElementById('modalMobilePreviewQr');
+      if (modal) modal.style.display = 'none';
+    });
+    document.getElementById('btnCopyMobilePreviewLink')?.addEventListener('click', () => {
+      const text = document.getElementById('modalQrUrlText')?.textContent;
+      if (text) {
+        navigator.clipboard?.writeText(text);
+        const btn = document.getElementById('btnCopyMobilePreviewLink');
+        if (btn) {
+          btn.textContent = 'Copied!';
+          setTimeout(() => { btn.textContent = 'Copy Link'; }, 2000);
+        }
+      }
+    });
+    document.getElementById('btnOpenMobilePreviewInTab')?.addEventListener('click', () => {
+      const text = document.getElementById('modalQrUrlText')?.textContent;
+      if (text) window.open(text, '_blank');
+    });
+
+    // 5. Restore Saved Theme
+    const savedTheme = (typeof localStorage !== 'undefined' ? localStorage.getItem('designforge_theme') : null) || 'axiom-dark';
+    document.body.className = `theme-${savedTheme}`;
+    const themeBtn = document.getElementById('btnToggleTheme');
+    if (themeBtn) {
+      themeBtn.textContent = savedTheme === 'axiom-light' ? '☀️' : (savedTheme === 'high-contrast' ? '👁' : '🌙');
+    }
+  }
+
+  setAxiomMode(mode) {
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+
+    if (mode === 'design') {
+      this.switchToDesignMode();
+      const tabBtn = document.querySelector('.right-tab-btn[data-mode="design"]') || document.querySelector('.right-tab-btn[data-mode="properties"]');
+      tabBtn?.click();
+    } else if (mode === 'prototype') {
+      this.switchToDesignMode();
+      const tabBtn = document.querySelector('.right-tab-btn[data-mode="prototype"]');
+      tabBtn?.click();
+    } else if (mode === 'system') {
+      this.switchToDesignSystemMode();
+    } else if (mode === 'dev') {
+      this.switchToDesignMode();
+      this.toggleDevMode(true);
+      const tabBtn = document.querySelector('.right-tab-btn[data-mode="inspect"]');
+      tabBtn?.click();
+    } else if (mode === 'comments') {
+      this.switchToDesignMode();
+      this.setTool('comment');
+    } else if (mode === 'ai') {
+      this.switchToDesignMode();
+      this.switchToAiTab();
+    }
+  }
+
+  refreshDrawerContent(tabKey = 'timeline') {
+    if (tabKey === 'variables') {
+      const el = document.getElementById('drawerVariablesContent');
+      if (el) {
+        const tokens = this.linter?.getAllTokens?.() || [];
+        const vars = this.prototype?.variablesStore?.getAll?.() || [];
+        let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">';
+        for (const t of tokens.slice(0, 12)) {
+          html += `<div style="padding: 8px; background: var(--surface-input); border-radius: 4px; border: 1px solid var(--border-subtle);"><span style="color: var(--brand-accent); font-weight: 600;">${t.id || t.name}</span>: <span style="color: var(--text-primary);">${t.value}</span></div>`;
+        }
+        for (const v of vars) {
+          html += `<div style="padding: 8px; background: var(--surface-input); border-radius: 4px; border: 1px solid var(--border-subtle);"><span style="color: #10b981; font-weight: 600;">$${v.name}</span> = <span style="color: var(--text-primary);">${v.value}</span></div>`;
+        }
+        html += '</div>';
+        el.innerHTML = html;
+      }
+    } else if (tabKey === 'comments') {
+      const el = document.getElementById('drawerCommentsContent');
+      if (el) {
+        const comments = this.doc.comments || [];
+        if (comments.length === 0) {
+          el.innerHTML = '<div style="color: var(--text-muted);">No review comments yet. Press (C) to add a review comment on canvas.</div>';
+        } else {
+          el.innerHTML = comments.map(c => `<div style="padding: 6px 10px; margin-bottom: 6px; background: var(--surface-input); border-radius: 4px;"><strong>${c.author || 'Reviewer'}:</strong> ${c.content} <span style="color: var(--text-muted); font-size: 10px; margin-left: 8px;">(${c.status || 'open'})</span></div>`).join('');
+        }
+      }
+    } else if (tabKey === 'issues') {
+      const el = document.getElementById('drawerIssuesContent');
+      if (el) {
+        const findings = this.linter?.lint?.()?.findings || [];
+        if (findings.length === 0) {
+          el.innerHTML = '<div style="color: var(--status-success);">✓ Zero design system or contrast issues found. Document is 100% compliant.</div>';
+        } else {
+          el.innerHTML = findings.slice(0, 10).map(f => `<div style="padding: 6px 10px; margin-bottom: 6px; background: var(--surface-input); border-radius: 4px; border-left: 3px solid ${f.level === 'error' ? 'var(--status-danger)' : 'var(--status-warning)'};"><strong>${f.level.toUpperCase()}:</strong> ${f.message}</div>`).join('');
+        }
+      }
+    } else if (tabKey === 'ai-activity') {
+      const el = document.getElementById('drawerAiActivityContent');
+      if (el) {
+        const history = this.ai?.service?.history || [];
+        if (history.length === 0) {
+          el.innerHTML = '<div style="color: var(--text-muted);">No AI operations executed yet in this session.</div>';
+        } else {
+          el.innerHTML = history.slice(-5).map(h => `<div style="padding: 6px 10px; margin-bottom: 6px; background: var(--surface-input); border-radius: 4px;"><strong>Prompt:</strong> ${h.prompt} <span style="color: var(--brand-accent); margin-left: 8px;">(${h.plan?.riskLevel || 'low'} risk)</span></div>`).join('');
+        }
+      }
+    }
+  }
+
+  async openMobilePreviewQrModal() {
+    const modal = document.getElementById('modalMobilePreviewQr');
+    const container = document.getElementById('modalQrSvgContainer');
+    const urlText = document.getElementById('modalQrUrlText');
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    if (container) container.innerHTML = '<div style="color: #64748b; font-size: 12px;">Generating preview session...</div>';
+
+    try {
+      const res = await fetch('/api/preview/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: this.doc.name,
+          documentSnapshot: this.doc
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.previewUrl) {
+        const fullUrl = `${window.location.origin}${data.previewUrl}`;
+        const svg = generateQRCodeSVG(fullUrl, { size: 200, padding: 2 });
+        if (container) container.innerHTML = svg;
+        if (urlText) urlText.textContent = fullUrl;
+      } else {
+        throw new Error(data.error || 'Failed to initialize preview session');
+      }
+    } catch (err) {
+      console.warn('Preview session generation note, using direct URL:', err.message);
+      const fallbackUrl = `${window.location.origin}/preview.html`;
+      const svg = generateQRCodeSVG(fallbackUrl, { size: 200, padding: 2 });
+      if (container) container.innerHTML = svg;
+      if (urlText) urlText.textContent = fallbackUrl;
+    }
+  }
+
 
   openShareModal() {
     const modal = document.getElementById('modalShare');
