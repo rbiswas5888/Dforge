@@ -4,6 +4,7 @@
  */
 
 import { TOKEN_CATEGORIES, VARIABLE_TYPES, THEME_MODES, DESIGN_SYSTEM_STARTERS } from './types.js';
+import { RNEUI_COMPONENT_CATALOG, addRneuiComponentToRegistry } from './rneui_catalog.js';
 
 export class DesignSystemUIController {
   constructor(app) {
@@ -789,14 +790,37 @@ export class DesignSystemUIController {
     const comps = this.registry.getAllComponents();
 
     container.innerHTML = `
+      <section class="ds-card" style="margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
+          <div>
+            <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">React Native Elements catalog</div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
+              Add reusable component references from @rneui/themed. These are React Native components and are catalog entries, not live browser-rendered widgets.
+            </div>
+          </div>
+          <span style="font-size: 10px; color: var(--text-muted);">@rneui/themed · v5.0.0</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px;">
+          ${RNEUI_COMPONENT_CATALOG.map(component => {
+            const added = comps.some(item => item.sourceMetadata?.catalogId === component.id);
+            return `
+              <article style="border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;">
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-main);">${component.name}</div>
+                <div style="font-size: 10px; color: var(--text-dim); min-height: 28px;">${component.description}</div>
+                <button type="button" class="ds-btn-secondary" data-rneui-component="${component.id}" ${added ? 'disabled' : ''}>
+                  ${added ? 'Added to system' : 'Add to system'}
+                </button>
+              </article>
+            `;
+          }).join('')}
+        </div>
+      </section>
       <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
         ${comps.length === 0 ? `
-          <div style="grid-column: 1 / -1; text-align: center; color: var(--text-dim); padding: 40px;">No components published yet.</div>
+          <div style="grid-column: 1 / -1; text-align: center; color: var(--text-dim); padding: 28px;">No components registered yet. Add one from the catalog above or import a component library.</div>
         ` : comps.map(c => `
           <div class="ds-card" style="display: flex; flex-direction: column; gap: 8px;">
-            <div style="height: 90px; background: var(--bg-surface); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 28px;">
-              ❖
-            </div>
+            <div style="height: 90px; background: var(--bg-surface); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 28px;">❖</div>
             <div style="font-size: 13px; font-weight: 700; color: var(--text-main);">${c.name}</div>
             <div style="font-size: 11px; color: var(--text-dim);">${c.description || 'Governed component definition'}</div>
             <div style="display: flex; gap: 6px; margin-top: auto; padding-top: 8px;">
@@ -807,6 +831,21 @@ export class DesignSystemUIController {
         `).join('')}
       </div>
     `;
+
+    container.querySelectorAll('[data-rneui-component]').forEach(button => {
+      button.addEventListener('click', () => {
+        try {
+          const result = addRneuiComponentToRegistry(this.registry, button.dataset.rneuiComponent);
+          if (result.added) {
+            this.updateHeaderInfo();
+            this.renderComponentsView(container);
+            this.app.showToast(`${result.component.name} added to the design system catalog.`);
+          }
+        } catch (error) {
+          this.app.showToast(`Could not add RNEUI component: ${error.message}`);
+        }
+      });
+    });
   }
 
   renderStylesView(container) {
