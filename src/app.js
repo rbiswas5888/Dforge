@@ -3824,6 +3824,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     this.dsUi.extractor = this.compVarExtractor;
     this.dsUi.importer = this.reactDsImporter;
 
+    this.bindCanvasEvents();
     this.bindEngineEvents();
     this.updatePagesList();
     this.updateLayersTree();
