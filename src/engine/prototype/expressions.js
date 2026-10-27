@@ -146,3 +146,8 @@ export class ExpressionEvaluator {
     return Boolean(res);
   }
 }
+
+const defaultEvaluator = new ExpressionEvaluator();
+export function evaluateExpression(expr, scope = {}) {
+  return defaultEvaluator.evaluate(expr, scope);
+}

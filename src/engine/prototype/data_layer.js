@@ -97,3 +97,4 @@ export class PrototypeDataLayer {
     };
   }
 }
+export { PrototypeDataLayer as DataLayer };

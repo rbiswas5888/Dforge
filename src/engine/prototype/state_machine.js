@@ -89,3 +89,4 @@ export class ComponentStateMachine {
     return this.bindings[s] || null;
   }
 }
+export { ComponentStateMachine as ComponentStateMachineRuntime };

@@ -15,8 +15,7 @@ import { PrototypeEngine } from '../src/engine/prototype.js';
 import { evaluateExpression } from '../src/engine/prototype/expressions.js';
 import { ComponentStateMachineRuntime } from '../src/engine/prototype/state_machine.js';
 import { DataLayer } from '../src/engine/prototype/data_layer.js';
-import { AnalyticalSpring } from '../src/editor-core/AnalyticalSpring.js';
-import { CubicBezier } from '../src/editor-core/CubicBezier.js';
+import { AnalyticalSpring, CubicBezier } from '../src/editor-core/index.js';
 
 function assert(condition, message) {
   if (!condition) {
