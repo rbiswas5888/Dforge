@@ -80,13 +80,72 @@ export class StorageEngine {
   }
 
   /**
+   * Creates a structured .dforge container bundle conforming to Blueprint Section 6.6
+   * @param {Object} document
+   * @returns {Object} Container bundle mapping filenames to contents
+   */
+  createDForgeBundle(document) {
+    const manifest = {
+      format: 'dforge',
+      schemaVersion: document.schemaVersion || SCHEMA_VERSION,
+      documentId: document.id,
+      name: document.name,
+      createdAt: document.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      capabilities: ['scene-graph', 'design-system', 'prototype'],
+      assetManifest: []
+    };
+
+    const bundle = {
+      'manifest.json': manifest,
+      'document.json': document,
+      'design-system/tokens.json': document.tokens || document.tokenCollections || [],
+      'design-system/components.json': document.components || [],
+      'prototype/flows.json': document.prototypeFlows || []
+    };
+
+    return bundle;
+  }
+
+  /**
+   * Unpacks a .dforge container bundle or parsed JSON document
+   * @param {Object|string} bundleOrJson
+   * @returns {Object} Canonical design document
+   */
+  unpackDForgeBundle(bundleOrJson) {
+    if (typeof bundleOrJson === 'string') {
+      try {
+        const parsed = JSON.parse(bundleOrJson);
+        return this.unpackDForgeBundle(parsed);
+      } catch (err) {
+        throw new Error(`Failed to parse .dforge file: ${err.message}`);
+      }
+    }
+
+    if (bundleOrJson && bundleOrJson['manifest.json'] && bundleOrJson['document.json']) {
+      const doc = bundleOrJson['document.json'];
+      if (bundleOrJson['design-system/tokens.json'] && (!doc.tokens || doc.tokens.length === 0)) {
+        doc.tokens = bundleOrJson['design-system/tokens.json'];
+      }
+      if (bundleOrJson['prototype/flows.json'] && (!doc.prototypeFlows || doc.prototypeFlows.length === 0)) {
+        doc.prototypeFlows = bundleOrJson['prototype/flows.json'];
+      }
+      return doc;
+    }
+
+    // Direct document schema fallback
+    if (bundleOrJson && bundleOrJson.schemaVersion && bundleOrJson.pages) {
+      return bundleOrJson;
+    }
+
+    throw new Error('Invalid DesignForge file: missing schemaVersion or manifest.json');
+  }
+
+  /**
    * Parses an imported .dforge file content
    */
   parseDForgeContent(jsonString) {
-    const doc = JSON.parse(jsonString);
-    if (!doc.schemaVersion || !doc.pages) {
-      throw new Error('Invalid DesignForge file: missing schemaVersion or pages');
-    }
-    return doc;
+    return this.unpackDForgeBundle(jsonString);
   }
 }
+

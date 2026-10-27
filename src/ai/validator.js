@@ -3,7 +3,7 @@
  * Strict pre-flight validation preventing document corruption, cyclic hierarchies, and invalid geometries
  */
 
-import { OPERATIONS, ValidationError } from './types.js';
+import { OPERATIONS, ValidationError, RISK_LEVELS, CHECK_STATUS, EXECUTION_STATUS } from './types.js';
 
 export class OperationValidator {
   constructor(document = null, activePageId = null) {
@@ -207,4 +207,162 @@ export class OperationValidator {
            /^rgba?\([\d\s,\.%]+\)$/.test(color) ||
            color === 'transparent';
   }
+
+  /**
+   * Evaluates Change-Risk Policy Classification (Agent Master Prompt Section 4)
+   * Low: Rename layer, single property, explain, comment
+   * Medium: Generate screen, rework layout, tokens/variants, batch operations
+   * High: Delete >= 5 nodes or root frame, replace design system, global token overwrite
+   * @param {Array|Object} operations
+   * @returns {{ level: 'low'|'medium'|'high', approvalRequired: boolean, reasons: string[] }}
+   */
+  assessRisk(operations) {
+    const list = Array.isArray(operations) ? operations : [operations];
+    const reasons = [];
+    let deleteCount = 0;
+    let createCount = 0;
+    let modifiesTokens = false;
+    let touchesRootFrame = false;
+    const page = this.getActivePage();
+
+    for (const op of list) {
+      const type = op.type || op.op;
+      if (type === OPERATIONS.DELETE_NODE || type === 'deleteNode') {
+        deleteCount++;
+        const targetId = op.nodeId || op.id;
+        if (page.rootIds && page.rootIds.includes(targetId)) {
+          touchesRootFrame = true;
+          reasons.push(`Deletes root frame '${targetId}'.`);
+        }
+      } else if (type === OPERATIONS.CREATE_NODE || type === 'createNode') {
+        createCount++;
+        const node = op.node || op.payload || op;
+        if (node.type === 'frame' && !node.parentId) {
+          touchesRootFrame = true;
+        }
+      } else if (type === OPERATIONS.UPDATE_TOKENS || type === 'updateTokens') {
+        modifiesTokens = true;
+      }
+    }
+
+    if (deleteCount >= 5) {
+      reasons.push(`Bulk deletion of ${deleteCount} nodes.`);
+    }
+
+    if (deleteCount >= 5 || touchesRootFrame) {
+      return {
+        level: RISK_LEVELS.HIGH,
+        approvalRequired: true,
+        reasons
+      };
+    }
+
+    if (createCount >= 3 || touchesRootFrame || modifiesTokens || list.length > 5) {
+      return {
+        level: RISK_LEVELS.MEDIUM,
+        approvalRequired: false,
+        reasons: [`Touches ${list.length} operations across layout/tokens.`]
+      };
+    }
+
+    return {
+      level: RISK_LEVELS.LOW,
+      approvalRequired: false,
+      reasons: ['Localized low-risk property change.']
+    };
+  }
+
+  /**
+   * Builds strict ValidationReport shape conforming to Agent Master Prompt Section 5
+   * @param {Object} validationResult - Result from validate()
+   * @param {Object} diagnosticReport - Optional findings from DesignIntelligenceAnalyzer
+   * @returns {Object} Structured report with checks and unresolvedIssues
+   */
+  buildValidationReport(validationResult, diagnosticReport = null) {
+    const checks = [];
+    const unresolvedIssues = [];
+
+    // 1. Schema & Document Integrity Check
+    if (validationResult.valid) {
+      checks.push({
+        check: 'document_schema',
+        status: CHECK_STATUS.PASSED,
+        scope: ['document'],
+        evidence: 'Pre-flight schema validation passed with 0 errors.'
+      });
+    } else {
+      checks.push({
+        check: 'document_schema',
+        status: CHECK_STATUS.FAILED,
+        scope: ['document'],
+        evidence: validationResult.errors.join('; ')
+      });
+      unresolvedIssues.push(...validationResult.errors);
+    }
+
+    // 2. Diagnostics integration if available
+    if (diagnosticReport && Array.isArray(diagnosticReport.findings)) {
+      const contrastIssues = diagnosticReport.findings.filter(f => f.type === 'contrast');
+      const overflowIssues = diagnosticReport.findings.filter(f => f.type === 'overflow');
+
+      if (contrastIssues.length === 0) {
+        checks.push({
+          check: 'contrast',
+          status: CHECK_STATUS.PASSED,
+          scope: ['active_page'],
+          evidence: 'All tested text elements meet WCAG contrast thresholds against rendered background.'
+        });
+      } else {
+        checks.push({
+          check: 'contrast',
+          status: CHECK_STATUS.FAILED,
+          scope: contrastIssues.map(i => i.nodeId),
+          evidence: `${contrastIssues.length} text elements do not meet minimum contrast threshold.`
+        });
+        unresolvedIssues.push(...contrastIssues.map(i => i.message));
+      }
+
+      if (overflowIssues.length === 0) {
+        checks.push({
+          check: 'layout_overflow',
+          status: CHECK_STATUS.PASSED,
+          scope: ['active_page'],
+          evidence: 'No horizontal or vertical bounding box clipping detected.'
+        });
+      } else {
+        checks.push({
+          check: 'layout_overflow',
+          status: CHECK_STATUS.FAILED,
+          scope: overflowIssues.map(i => i.nodeId),
+          evidence: `${overflowIssues.length} containers exhibit child overflow.`
+        });
+        unresolvedIssues.push(...overflowIssues.map(i => i.message));
+      }
+    } else {
+      checks.push({
+        check: 'contrast',
+        status: CHECK_STATUS.NOT_CHECKED,
+        scope: ['document'],
+        evidence: 'Contrast audit was not executed for this operation set.'
+      });
+    }
+
+    // 3. Screen reader semantics check
+    checks.push({
+      check: 'screen_reader_semantics',
+      status: CHECK_STATUS.NOT_CHECKED,
+      scope: ['document'],
+      evidence: 'Visual document does not encode assistive-technology tree semantics directly; handoff compiler handles ARIA mapping.'
+    });
+
+    const hasFailures = checks.some(c => c.status === CHECK_STATUS.FAILED);
+    const hasUnchecked = checks.some(c => c.status === CHECK_STATUS.NOT_CHECKED);
+
+    return {
+      status: hasFailures ? EXECUTION_STATUS.FAILED : (hasUnchecked ? EXECUTION_STATUS.PARTIAL : EXECUTION_STATUS.SUCCEEDED),
+      checks,
+      unresolvedIssues
+    };
+  }
 }
+

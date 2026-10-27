@@ -138,43 +138,68 @@ export class DesignForgeAIService {
       const provider = this.getProvider();
       const rawPlan = await provider.generate(prompt, context, { signal, onProgress });
 
-      // 4. Pre-flight strict validation
+      // 4. Pre-flight strict validation & risk assessment
       const validation = this.validator.validate(rawPlan.operations);
+      const riskAssessment = this.validator.assessRisk(rawPlan.operations);
+      const diagnosticReport = this.intelligence.audit();
+      const validationReport = this.validator.buildValidationReport(validation, diagnosticReport);
+
       if (!validation.valid) {
         throw new ValidationError(`Proposed operations failed validation:\n${validation.errors.join('\n')}`, validation.errors);
       }
 
       const verifiedPlan = {
         id: `plan_${Date.now()}`,
+        status: riskAssessment.approvalRequired ? 'approval_required' : 'proposed',
         prompt,
         intent: rawPlan.intent || prompt,
+        goal: rawPlan.intent || prompt,
         explanation: rawPlan.explanation || 'Design plan synthesized successfully.',
         operations: rawPlan.operations,
+        riskLevel: riskAssessment.level,
+        approvalRequired: riskAssessment.approvalRequired,
+        risks: riskAssessment.reasons,
+        validationReport,
         provider: provider.name,
         model: provider.model,
         timestamp: new Date().toISOString()
       };
 
       this.history.push({ prompt, plan: verifiedPlan });
-      return { plan: verifiedPlan, validation };
+      return { plan: verifiedPlan, validation, validationReport, riskAssessment };
     } finally {
       this.activeAbortController = null;
     }
   }
 
   /**
-   * Applies an approved plan to the document via CommandEngine
+   * Applies an approved plan to the document via CommandEngine with Risk Gate
    */
-  applyPlan(plan) {
+  applyPlan(plan, userApproved = false) {
     if (!plan || !plan.operations) return null;
     const validation = this.validator.validate(plan.operations);
     if (!validation.valid) {
       throw new ValidationError(`Cannot execute invalid operations: ${validation.errors.join(', ')}`);
     }
 
-    const report = this.executor.execute(plan.operations, `AI: ${plan.intent}`);
+    const riskAssessment = this.validator.assessRisk(plan.operations);
+    if (riskAssessment.approvalRequired && !userApproved) {
+      return {
+        status: 'blocked',
+        approvalRequired: true,
+        riskLevel: riskAssessment.level,
+        risks: riskAssessment.reasons,
+        message: 'Explicit user confirmation required for high-risk operations.'
+      };
+    }
+
+    const report = this.executor.execute(plan.operations, `AI: ${plan.intent || plan.goal}`);
+    const postDiagnostics = this.intelligence.audit();
+    report.validationReport = this.validator.buildValidationReport(validation, postDiagnostics);
+    report.status = report.errors && report.errors.length > 0 ? 'partial' : 'succeeded';
     return report;
   }
+
 
   /**
    * Code-Aware query handler (analyzes React compiler output for current selection)
