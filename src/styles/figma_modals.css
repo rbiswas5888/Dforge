@@ -1,0 +1,452 @@
+/**
+ * DesignForge AI — Figma Web-Grade Modal & Prompt System Stylesheet
+ * Provides interactive floating modals, Figma AI prompt bar, suggestion chips,
+ * and toast notification banners matching Figma's desktop web application UX.
+ */
+
+/* ==========================================================================
+   1. FIGMA UNIVERSAL PROMPT MODAL
+   ========================================================================== */
+
+.figma-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.figma-modal-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.figma-prompt-dialog {
+  width: 500px;
+  max-width: 92vw;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: scale(0.96) translateY(8px);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--text-main);
+}
+
+.figma-modal-backdrop.active .figma-prompt-dialog {
+  transform: scale(1) translateY(0);
+}
+
+.figma-prompt-header {
+  padding: 16px 20px 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.figma-prompt-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.figma-prompt-icon-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--brand-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.figma-prompt-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.figma-prompt-close {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 14px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.figma-prompt-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.figma-prompt-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.figma-prompt-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.figma-prompt-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.figma-prompt-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text-main);
+  font-family: inherit;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.figma-prompt-input:focus {
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.figma-prompt-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  height: 120px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text-main);
+  font-family: 'JetBrains Mono', monospace;
+  outline: none;
+  resize: vertical;
+  line-height: 1.5;
+  transition: all 0.15s ease;
+}
+
+.figma-prompt-textarea:focus {
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* Preset Chips */
+.figma-prompt-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.figma-preset-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+  margin-right: 2px;
+}
+
+.figma-preset-chip {
+  background: var(--bg-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.figma-preset-chip:hover {
+  background: var(--surface-selected);
+  border-color: var(--brand-accent);
+  color: var(--brand-accent-soft);
+  transform: translateY(-1px);
+}
+
+.figma-prompt-error {
+  font-size: 11px;
+  color: var(--accent-rose);
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.figma-prompt-footer {
+  padding: 12px 20px 16px 20px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.figma-btn-cancel {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.figma-btn-cancel:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.figma-btn-primary {
+  background: var(--brand-action);
+  border: none;
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.figma-btn-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   2. FIGMA AI FLOATING PROMPT BAR (FIRST DRAFT & CANVAS AI)
+   ========================================================================== */
+
+.figma-ai-floating-bar {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  width: 720px;
+  max-width: 92vw;
+  background: var(--bg-panel);
+  border: 1px solid var(--brand-accent);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 24px rgba(99, 102, 241, 0.25);
+  z-index: 9999;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--text-main);
+  opacity: 0;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+.figma-ai-floating-bar.active {
+  display: flex;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.figma-ai-bar-top {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 12px;
+}
+
+.figma-ai-spark-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366F1, #8B5CF6);
+  color: #ffffff;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  flex-shrink: 0;
+}
+
+.figma-ai-bar-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: var(--text-main);
+  font-family: inherit;
+}
+
+.figma-ai-bar-input::placeholder {
+  color: var(--text-dim);
+}
+
+.figma-ai-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.figma-ai-model-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: var(--accent-green);
+  white-space: nowrap;
+}
+
+.figma-ai-bar-bottom {
+  padding: 8px 16px 12px 16px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.figma-ai-presets-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.figma-ai-chip {
+  background: var(--bg-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.figma-ai-chip:hover {
+  background: var(--surface-selected);
+  border-color: var(--brand-accent);
+  color: var(--brand-accent-soft);
+}
+
+/* ==========================================================================
+   3. FIGMA TOAST NOTIFICATION BANNER
+   ========================================================================== */
+
+.figma-toast-container {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 100000;
+  pointer-events: none;
+}
+
+.figma-toast {
+  pointer-events: auto;
+  min-width: 260px;
+  max-width: 520px;
+  padding: 10px 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-main);
+  animation: figmaToastSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.figma-toast.toast-success {
+  border-color: var(--accent-green);
+}
+
+.figma-toast.toast-error {
+  border-color: var(--accent-rose);
+}
+
+.figma-toast.toast-warning {
+  border-color: var(--accent-amber);
+}
+
+.figma-toast-icon {
+  font-size: 14px;
+}
+
+.figma-toast-msg {
+  flex: 1;
+}
+
+.figma-toast-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px;
+}
+
+.figma-toast-close:hover {
+  color: var(--text-main);
+}
+
+@keyframes figmaToastSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

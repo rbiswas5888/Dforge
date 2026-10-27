@@ -1,29 +1,105 @@
 /* DesignForge AI - Professional Design Application Styles */
 
-:root {
-  --bg-app: #0f1219;
-  --bg-panel: #161a24;
-  --bg-surface: #1e2332;
-  --bg-hover: #262c3e;
-  --bg-active: #2f374d;
-  --bg-input: #12151e;
-  --border-subtle: #242a3b;
-  --border-focus: #0d99ff;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
-  --accent-blue: #0d99ff;
-  --accent-purple: #8b5cf6;
-  --accent-green: #10b981;
-  --accent-amber: #f59e0b;
-  --accent-rose: #f43f5e;
+:root,
+body.theme-axiom-dark,
+body.theme-dark {
+  --bg-app: #0D0D0F;
+  --bg-panel: #141417;
+  --bg-surface: #1A1A1E;
+  --bg-hover: #1E1F24;
+  --bg-active: #27272C;
+  --bg-input: #1A1A1E;
+  --border-subtle: #27272C;
+  --border-strong: #3F3F46;
+  --border-focus: #6366F1;
+  --text-main: #FAFAFA;
+  --text-muted: #A1A1AA;
+  --text-dim: #71717A;
+  --accent-blue: #6366F1;
+  --accent-purple: #8B5CF6;
+  --accent-green: #22C55E;
+  --accent-amber: #F59E0B;
+  --accent-rose: #F87171;
+  --surface-canvas-chrome: #0D0D0F;
+  --surface-raised: #141417;
+  --surface-input: #1A1A1E;
+  --surface-hover: #1E1F24;
+  --surface-selected: #312E81;
+  --text-primary: #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --brand-accent: #6366F1;
+  --brand-action: #4F46E5;
+  --brand-accent-soft: #A5B4FC;
+  --guide-info: #22D3EE;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --header-height: 48px;
-  --sidebar-width: 250px;
-  --inspector-width: 280px;
+  --sidebar-width: 272px;
+  --inspector-width: 312px;
+}
+
+body.theme-axiom-light,
+body.theme-light {
+  --bg-app: #F4F4F5;
+  --bg-panel: #FFFFFF;
+  --bg-surface: #F8FAFC;
+  --bg-hover: #F1F5F9;
+  --bg-active: #E2E8F0;
+  --bg-input: #FFFFFF;
+  --border-subtle: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --border-focus: #4F46E5;
+  --text-main: #0F172A;
+  --text-muted: #475569;
+  --text-dim: #64748B;
+  --accent-blue: #4F46E5;
+  --accent-purple: #7C3AED;
+  --accent-green: #16A34A;
+  --accent-amber: #D97706;
+  --accent-rose: #E11D48;
+  --surface-canvas-chrome: #E4E4E7;
+  --surface-raised: #FFFFFF;
+  --surface-input: #FFFFFF;
+  --surface-hover: #F1F5F9;
+  --surface-selected: #EEF2FF;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --brand-accent: #4F46E5;
+  --brand-action: #4338CA;
+  --brand-accent-soft: #4F46E5;
+  --guide-info: #0284C7;
+}
+
+body.theme-high-contrast {
+  --bg-app: #000000;
+  --bg-panel: #0A0A0A;
+  --bg-surface: #121212;
+  --bg-hover: #262626;
+  --bg-active: #333333;
+  --bg-input: #121212;
+  --border-subtle: #52525B;
+  --border-strong: #A1A1AA;
+  --border-focus: #FFFFFF;
+  --text-main: #FFFFFF;
+  --text-muted: #E4E4E7;
+  --text-dim: #A1A1AA;
+  --accent-blue: #818CF8;
+  --accent-purple: #C084FC;
+  --accent-green: #4ADE80;
+  --accent-amber: #FBBF24;
+  --accent-rose: #FB7185;
+  --surface-canvas-chrome: #000000;
+  --surface-raised: #0A0A0A;
+  --surface-input: #121212;
+  --surface-hover: #262626;
+  --surface-selected: #3730A3;
+  --text-primary: #FFFFFF;
+  --text-secondary: #E4E4E7;
+  --brand-accent: #818CF8;
+  --brand-action: #6366F1;
+  --guide-info: #38BDF8;
 }
 
 * {
@@ -355,7 +431,7 @@ body, html {
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: #14171f;
+  background: var(--surface-canvas-chrome);
   display: flex;
 }
 
@@ -884,10 +960,10 @@ body, html {
   top: 100%;
   left: 0;
   margin-top: 4px;
-  background: #141724;
-  border: 1px solid #283046;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.3);
   padding: 4px;
   min-width: 220px;
   z-index: 1000;
@@ -920,7 +996,7 @@ body, html {
 
 .dropdown-divider {
   height: 1px;
-  background: #283046;
+  background: var(--border-subtle);
   margin: 4px 0;
 }
 

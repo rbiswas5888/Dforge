@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -257,6 +257,23 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`⚡ DesignForge AI server running at http://localhost:${PORT}/ and http://127.0.0.1:${PORT}/`);
+let currentPort = PORT;
+
+function startServer(portToTry) {
+  currentPort = portToTry;
+  server.listen(portToTry, '0.0.0.0', () => {
+    console.log(`⚡ DesignForge AI server running at http://localhost:${portToTry}/ and http://127.0.0.1:${portToTry}/`);
+  });
+}
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    currentPort += 1;
+    console.warn(`⚠️ Port ${currentPort - 1} in use, trying port ${currentPort}...`);
+    startServer(currentPort);
+  } else {
+    console.error('Server error:', err);
+  }
 });
+
+startServer(currentPort);

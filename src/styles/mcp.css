@@ -19,23 +19,23 @@
   max-width: 95vw;
   height: 680px;
   max-height: 90vh;
-  background: #111827;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  color: #f8fafc;
+  color: var(--text-main);
 }
 
 .mcp-hub-header {
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #1e293b;
+  background: var(--bg-surface);
 }
 
 .mcp-hub-title {
@@ -44,15 +44,15 @@
   gap: 10px;
   font-size: 16px;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--text-main);
 }
 
 .mcp-hub-nav {
   display: flex;
   gap: 4px;
   padding: 8px 16px;
-  background: rgba(15, 23, 42, 0.6);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border-subtle);
   overflow-x: auto;
 }
 
@@ -92,8 +92,8 @@
 }
 
 .mcp-kpi-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 14px;
 }
@@ -101,7 +101,7 @@
 .mcp-kpi-label {
   font-size: 11px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -109,26 +109,27 @@
 .mcp-kpi-value {
   font-size: 26px;
   font-weight: 800;
-  color: #f8fafc;
+  color: var(--text-main);
   margin: 6px 0 2px 0;
 }
 
 .mcp-kpi-sub {
   font-size: 11px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .mcp-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 14px 16px;
   margin-bottom: 10px;
   transition: border-color 0.15s ease;
+  color: var(--text-main);
 }
 
 .mcp-card:hover {
-  border-color: rgba(56, 189, 248, 0.3);
+  border-color: var(--accent-blue);
 }
 
 .mcp-servers-grid {
@@ -138,10 +139,11 @@
 }
 
 .mcp-server-mini-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 12px;
+  color: var(--text-main);
 }
 
 .mcp-badge {

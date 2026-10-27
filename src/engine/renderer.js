@@ -116,7 +116,12 @@ export class CanvasRenderer {
     const viewH = canvas.height / dpr;
 
     // 1. Clear background
-    ctx.fillStyle = '#14171f';
+    const isLight = (this.engine.doc?.themeMode === 'light') || 
+      (typeof document !== 'undefined' && (document.body.classList.contains('theme-axiom-light') || document.body.classList.contains('theme-light')));
+    const isHighContrast = (this.engine.doc?.themeMode === 'high-contrast') || 
+      (typeof document !== 'undefined' && document.body.classList.contains('theme-high-contrast'));
+
+    ctx.fillStyle = isHighContrast ? '#000000' : (isLight ? '#E4E4E7' : '#0D0D0F');
     ctx.fillRect(0, 0, viewW, viewH);
 
     // 2. Draw Subtle Infinite Dot Grid
@@ -185,7 +190,14 @@ export class CanvasRenderer {
     const offsetX = (this.panX % gridSize + gridSize) % gridSize;
     const offsetY = (this.panY % gridSize + gridSize) % gridSize;
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+    const isLight = (this.engine.doc?.themeMode === 'light') || 
+      (typeof document !== 'undefined' && (document.body.classList.contains('theme-axiom-light') || document.body.classList.contains('theme-light')));
+    const isHighContrast = (this.engine.doc?.themeMode === 'high-contrast') || 
+      (typeof document !== 'undefined' && document.body.classList.contains('theme-high-contrast'));
+
+    ctx.fillStyle = isHighContrast 
+      ? 'rgba(255, 255, 255, 0.22)' 
+      : (isLight ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.08)');
     for (let x = offsetX; x < w; x += gridSize) {
       for (let y = offsetY; y < h; y += gridSize) {
         ctx.fillRect(Math.floor(x), Math.floor(y), 1.5, 1.5);

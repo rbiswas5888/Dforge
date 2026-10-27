@@ -84,29 +84,36 @@ body.theme-axiom-dark {
 }
 
 /* Axiom Light Theme (Section 8.3) */
-body.theme-axiom-light {
-  --surface-canvas-chrome: #F4F4F5;
+body.theme-axiom-light,
+body.theme-light {
+  --surface-canvas-chrome: #E4E4E7;
   --surface-raised: #FFFFFF;
-  --surface-input: #E4E4E7;
-  --surface-hover: #E4E4E7;
+  --surface-input: #FFFFFF;
+  --surface-hover: #F1F5F9;
   --surface-selected: #EEF2FF;
 
-  --border-subtle: #E4E4E7;
-  --border-strong: #D4D4D8;
+  --border-subtle: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --border-focus: #4F46E5;
 
-  --text-primary: #09090B;
-  --text-secondary: #52525B;
-  --text-muted: #71717A;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --text-dim: #64748B;
+  --text-main: #0F172A;
 
   --brand-accent: #4F46E5;
   --brand-action: #4338CA;
   --brand-accent-soft: #4F46E5;
+  --accent-blue: #4F46E5;
 
   --guide-info: #0284C7;
   --bg-app: var(--surface-canvas-chrome);
   --bg-panel: var(--surface-raised);
   --bg-surface: #F8FAFC;
-  --text-main: var(--text-primary);
+  --bg-input: #FFFFFF;
+  --bg-hover: #F1F5F9;
+  --bg-active: #E2E8F0;
 }
 
 /* High Contrast Theme (Section 8.3) */
@@ -119,14 +126,25 @@ body.theme-high-contrast {
 
   --border-subtle: #52525B;
   --border-strong: #A1A1AA;
+  --border-focus: #FFFFFF;
 
   --text-primary: #FFFFFF;
   --text-secondary: #E4E4E7;
   --text-muted: #A1A1AA;
+  --text-dim: #A1A1AA;
+  --text-main: #FFFFFF;
 
   --brand-accent: #818CF8;
   --brand-action: #6366F1;
+  --accent-blue: #818CF8;
   --guide-info: #38BDF8;
+
+  --bg-app: #000000;
+  --bg-panel: #0A0A0A;
+  --bg-surface: #121212;
+  --bg-input: #121212;
+  --bg-hover: #262626;
+  --bg-active: #333333;
 }
 
 /* ==========================================================================
