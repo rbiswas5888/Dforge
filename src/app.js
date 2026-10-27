@@ -312,6 +312,7 @@ export class DesignForgeApp {
               this.renderer.zoomToFit();
               this.updateRulers();
               this.storage.scheduleAutosave(this.doc);
+              if (eventType !== 'selection-change') this.refreshOpenPrototypePreview();
               this.showToast(`Project "${loadedDoc.name}" loaded successfully!`, 'success');
             } catch (err) {
               this.showToast(`Failed to load file: ${err.message}`, 'error');
@@ -1435,6 +1436,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         if (input) input.value = color;
         targetElement.style.background = color;
         this.renderer.render();
+        this.refreshOpenPrototypePreview();
       },
       onChange: color => {
         committedColor = this.normalizeHexColor(color, committedColor);
@@ -1444,6 +1446,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         targetElement.style.background = committedColor;
         this.renderer.render();
         this.storage.scheduleAutosave(this.doc);
+        this.refreshOpenPrototypePreview();
       }
     });
   }
@@ -1465,6 +1468,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         options.preview(previewColor);
         syncColorControls(previewColor);
         this.renderer.render();
+        this.refreshOpenPrototypePreview();
       },
       onChange: nextColor => {
         const colorToCommit = this.normalizeHexColor(nextColor, committedColor);
@@ -3952,6 +3956,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const modal = document.getElementById('modalPrototype');
     if (!modal) return;
     modal.style.display = 'flex';
+    this.prototype.startFlow();
 
     const iframe = document.getElementById('protoPreviewIframe');
     if (iframe) {
@@ -3959,7 +3964,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     }
 
     document.querySelectorAll('.btn-device-switch').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.onclick = () => {
         document.querySelectorAll('.btn-device-switch').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         const device = btn.dataset.device;
@@ -3980,8 +3985,15 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             bezel.className = 'device-bezel desktop';
           }
         }
-      });
+      };
     });
+  }
+
+  refreshOpenPrototypePreview() {
+    const modal = document.getElementById('modalPrototype');
+    const iframe = document.getElementById('protoPreviewIframe');
+    if (!modal || modal.style.display === 'none' || !iframe) return;
+    iframe.srcdoc = this.prototype.generatePrototypeHtml();
   }
 
   showShortcutModal() {

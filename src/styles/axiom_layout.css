@@ -1007,6 +1007,10 @@ body.theme-high-contrast {
   font: 10px var(--font-mono);
 }
 
+.cp-text-input[aria-invalid="true"] {
+  color: var(--status-danger);
+}
+
 .cp-rgb-row {
   gap: 4px;
   margin-top: 4px;

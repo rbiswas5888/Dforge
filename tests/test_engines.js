@@ -52,6 +52,19 @@ engine.undo();
 assert.strictEqual(page.nodes[testNode.id].transform.x, 50);
 console.log('   ✓ Command execution, mutations, undo, and redo validated with 100% precision.');
 
+const reorderDoc = createInitialDocument('Layer Reorder Project');
+const reorderEngine = new CommandEngine(reorderDoc);
+const reorderPage = reorderEngine.getActivePage();
+const [firstRoot, secondRoot] = reorderPage.rootIds;
+assert.ok(reorderEngine.reorderNodeTo(firstRoot, secondRoot, 'after'));
+assert.deepStrictEqual(reorderPage.rootIds.slice(0, 2), [secondRoot, firstRoot]);
+assert.ok(reorderEngine.undo());
+assert.deepStrictEqual(reorderPage.rootIds.slice(0, 2), [firstRoot, secondRoot]);
+assert.ok(reorderEngine.redo());
+assert.deepStrictEqual(reorderPage.rootIds.slice(0, 2), [secondRoot, firstRoot]);
+assert.strictEqual(reorderEngine.reorderNodeTo(firstRoot, 'missing-node'), false);
+console.log('   ✓ Layer drag-reorder command validates siblings and supports undo/redo.');
+
 // 3. Design-to-React Compiler Validation
 console.log('3. Testing Design-to-React Compiler...');
 const compiler = new ReactCompiler(doc);

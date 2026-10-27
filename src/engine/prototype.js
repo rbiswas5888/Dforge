@@ -33,6 +33,199 @@ import { ExpressionEvaluator } from './prototype/expressions.js';
 import { ComponentStateMachine } from './prototype/state_machine.js';
 import { PrototypeDataLayer } from './prototype/data_layer.js';
 
+const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
+(function () {
+  const doc = window.__DFORGE_DOC__;
+  const toolbar = document.getElementById('playerToolbar');
+  const screen = document.getElementById('deviceScreen');
+  const flowLabel = document.getElementById('activeFlowLabel');
+  const pages = doc.pages || [];
+  let page = pages[0];
+  let currentFrameId = doc.initialFrameId;
+  const history = [];
+  const overlays = [];
+
+  function getNode(id) {
+    for (const candidate of pages) {
+      if (candidate.nodes && candidate.nodes[id]) return candidate.nodes[id];
+    }
+    return null;
+  }
+
+  function escapeText(value) {
+    return String(value == null ? '' : value);
+  }
+
+  function cssColor(value, fallback) {
+    return typeof value === 'string' && value.trim() ? value : fallback;
+  }
+
+  function fillStyle(node) {
+    const fill = (node.style && node.style.fills || []).find(item => item.visible !== false);
+    if (!fill) return 'transparent';
+    if (fill.type === 'linear-gradient' || fill.type === 'gradient') {
+      const stops = fill.stops || [{ offset: 0, color: fill.color || '#334155' }, { offset: 1, color: '#8b5cf6' }];
+      return 'linear-gradient(135deg, ' + stops.map(stop => stop.color + ' ' + (stop.offset * 100) + '%').join(', ') + ')';
+    }
+    return cssColor(fill.color, '#334155');
+  }
+
+  function mountNode(node, parentElement) {
+    if (!node || node.visible === false || !node.transform) return;
+    const element = document.createElement('div');
+    const transform = node.transform;
+    const style = node.style || {};
+    const stroke = (style.strokes || []).find(item => item.visible !== false);
+    element.className = 'prototype-node prototype-' + node.type;
+    element.dataset.nodeId = node.id;
+    element.style.left = (transform.x || 0) + 'px';
+    element.style.top = (transform.y || 0) + 'px';
+    element.style.width = Math.max(0, transform.width || 0) + 'px';
+    element.style.height = Math.max(0, transform.height || 0) + 'px';
+    element.style.opacity = String(node.opacity == null ? 1 : node.opacity);
+    element.style.transform = 'rotate(' + (transform.rotation || 0) + 'deg) scale(' + (transform.scaleX == null ? 1 : transform.scaleX) + ', ' + (transform.scaleY == null ? 1 : transform.scaleY) + ')';
+    element.style.background = fillStyle(node);
+    element.style.borderRadius = typeof style.cornerRadius === 'number' ? style.cornerRadius + 'px' : '0';
+    element.style.mixBlendMode = style.blendMode && style.blendMode !== 'normal' ? style.blendMode : '';
+    if (stroke) {
+      element.style.border = (stroke.width || 1) + 'px ' + (stroke.style === 'dashed' ? 'dashed' : 'solid') + ' ' + cssColor(stroke.color, '#3b82f6');
+    }
+    if (style.shadows && style.shadows.length) {
+      element.style.boxShadow = style.shadows.map(shadow => (shadow.x || 0) + 'px ' + (shadow.y || 0) + 'px ' + (shadow.blur || 0) + 'px ' + cssColor(shadow.color, 'rgba(0,0,0,.35)')).join(', ');
+    }
+    if (node.type === 'ellipse') element.style.borderRadius = '50%';
+    if (node.type === 'star') element.style.clipPath = 'polygon(50% 0%, 62% 35%, 100% 38%, 72% 61%, 82% 100%, 50% 77%, 18% 100%, 28% 61%, 0 38%, 38% 35%)';
+    if (node.type === 'polygon') element.style.clipPath = 'polygon(50% 0%, 100% 100%, 0 100%)';
+    if (node.type === 'section' || node.type === 'slice') {
+      element.style.background = 'transparent';
+      element.style.border = '1px dashed #6366f1';
+    }
+    if (node.type === 'text' && node.text) {
+      const text = node.text;
+      element.textContent = escapeText(text.content);
+      element.style.color = cssColor(text.color, '#f8fafc');
+      element.style.fontFamily = text.fontFamily || 'Inter, sans-serif';
+      element.style.fontSize = (text.fontSize || 16) + 'px';
+      element.style.fontWeight = text.fontWeight || '400';
+      element.style.textAlign = text.textAlign || 'left';
+      element.style.whiteSpace = 'pre-wrap';
+      element.style.lineHeight = '1.2';
+    }
+    if (node.type === 'frame') {
+      element.style.overflow = node.clipContent === false ? 'visible' : 'hidden';
+    }
+    parentElement.appendChild(element);
+    for (const childId of node.childIds || []) {
+      mountNode(page.nodes[childId], element);
+    }
+    const interactions = node.interactions || [];
+    for (const interaction of interactions) {
+      const trigger = interaction.trigger || 'click';
+      const eventName = trigger === 'hover' || trigger === 'enter' ? 'pointerenter' : trigger === 'press' ? 'pointerdown' : 'click';
+      element.style.cursor = 'pointer';
+      element.addEventListener(eventName, event => {
+        event.stopPropagation();
+        runInteraction(interaction);
+      });
+    }
+  }
+
+  function renderFrame(frameId, animation) {
+    const frame = getNode(frameId);
+    if (!frame || !page.nodes[frameId]) return;
+    currentFrameId = frameId;
+    overlays.length = 0;
+    screen.innerHTML = '';
+    const frameElement = document.createElement('div');
+    frameElement.className = 'prototype-frame' + (animation ? ' transition-' + animation : '');
+    frameElement.style.width = Math.max(1, frame.transform.width || 1) + 'px';
+    frameElement.style.height = Math.max(1, frame.transform.height || 1) + 'px';
+    frameElement.style.background = fillStyle(frame);
+    frameElement.style.borderRadius = typeof frame.style?.cornerRadius === 'number' ? frame.style.cornerRadius + 'px' : '0';
+    frameElement.style.position = 'relative';
+    frameElement.style.overflow = frame.clipContent === false ? 'visible' : 'hidden';
+    frameElement.style.color = '#f8fafc';
+    frameElement.style.transformOrigin = 'top center';
+    frameElement.dataset.frameId = frame.id;
+    for (const childId of frame.childIds || []) mountNode(page.nodes[childId], frameElement);
+    screen.appendChild(frameElement);
+    if (flowLabel) flowLabel.textContent = 'Flow: ' + (frame.name || 'Prototype');
+    fitFrame(frameElement);
+  }
+
+  function fitFrame(frame) {
+    const scale = Math.min(screen.clientWidth / frame.offsetWidth, screen.clientHeight / frame.offsetHeight, 1);
+    frame.style.transform = 'scale(' + Math.max(0.1, scale) + ')';
+    frame.style.marginLeft = 'auto';
+    frame.style.marginRight = 'auto';
+    frame.style.marginBottom = Math.max(0, frame.offsetHeight * (scale - 1)) + 'px';
+  }
+
+  function renderOverlay(frameId) {
+    const frame = getNode(frameId);
+    if (!frame) return;
+    const backdrop = document.createElement('div');
+    backdrop.className = 'prototype-overlay-backdrop';
+    backdrop.addEventListener('click', () => {
+      if (overlays.length) overlays.pop();
+      backdrop.remove();
+    });
+    const overlayFrame = document.createElement('div');
+    overlayFrame.className = 'prototype-overlay-frame';
+    overlayFrame.style.width = Math.min(frame.transform.width || 360, screen.clientWidth * 0.9) + 'px';
+    overlayFrame.style.height = Math.min(frame.transform.height || 240, screen.clientHeight * 0.9) + 'px';
+    overlayFrame.style.background = fillStyle(frame);
+    overlayFrame.style.overflow = frame.clipContent === false ? 'visible' : 'hidden';
+    overlayFrame.addEventListener('click', event => event.stopPropagation());
+    for (const childId of frame.childIds || []) mountNode(page.nodes[childId], overlayFrame);
+    backdrop.appendChild(overlayFrame);
+    screen.appendChild(backdrop);
+    overlays.push(backdrop);
+  }
+
+  function runInteraction(interaction) {
+    const action = interaction.action || 'navigate';
+    if (action === 'navigate' || action === 'overlay') {
+      const target = interaction.targetId || interaction.destinationFrameId;
+      if (!getNode(target)) return;
+      if (action === 'overlay') {
+        renderOverlay(target);
+      } else {
+        history.push(currentFrameId);
+        renderFrame(target, interaction.animation);
+      }
+    } else if (action === 'back') {
+      const previous = history.pop();
+      if (previous) renderFrame(previous, interaction.animation);
+    } else if (action === 'url' && interaction.url) {
+      try {
+        const url = new URL(interaction.url, window.location.href);
+        if (url.protocol === 'https:' || url.protocol === 'http:') window.open(url.href, '_blank', 'noopener');
+      } catch (error) {
+        console.error('Invalid prototype interaction URL:', error);
+      }
+    } else if (action === 'close_overlay' || action === 'close') {
+      const overlay = overlays.pop();
+      if (overlay) overlay.remove();
+    }
+  }
+
+  function restart() {
+    history.length = 0;
+    overlays.length = 0;
+    renderFrame(doc.initialFrameId, 'instant');
+  }
+
+  document.getElementById('btnRestart').addEventListener('click', restart);
+  window.addEventListener('resize', () => {
+    const frame = screen.querySelector('.prototype-frame');
+    if (frame) fitFrame(frame);
+  });
+  if (toolbar) toolbar.hidden = false;
+  if (currentFrameId) renderFrame(currentFrameId, 'instant');
+})();
+`;
+
 export class PrototypeVariable {
   constructor(def = {}) {
     this.id = def.id || def.name;
@@ -890,7 +1083,7 @@ export class PrototypeEngine {
       variables: this.doc.variables || [],
       tokens: this.doc.tokens || [],
       initialFrameId
-    });
+    }).replace(/</g, '\\u003c');
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -977,6 +1170,55 @@ export class PrototypeEngine {
       overflow-y: auto;
       overflow-x: hidden;
       position: relative;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      background: #090d16;
+    }
+    .prototype-frame {
+      flex: 0 0 auto;
+      transform-origin: top center;
+      box-shadow: 0 12px 40px rgba(0,0,0,.32);
+    }
+    .prototype-node {
+      position: absolute;
+      box-sizing: border-box;
+      transform-origin: center;
+      user-select: none;
+    }
+    .prototype-node[data-node-id] {
+      cursor: default;
+    }
+    .prototype-overlay-backdrop {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(0,0,0,.55);
+    }
+    .prototype-overlay-frame {
+      position: relative;
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 12px;
+      box-shadow: 0 18px 48px rgba(0,0,0,.45);
+    }
+    .transition-dissolve {
+      animation: prototypeFade .18s ease-out;
+    }
+    .transition-slide-left {
+      animation: prototypeSlide .22s ease-out;
+    }
+    @keyframes prototypeFade {
+      from { opacity: .35; }
+      to { opacity: 1; }
+    }
+    @keyframes prototypeSlide {
+      from { opacity: .55; translate: 18px 0; }
+      to { opacity: 1; translate: 0 0; }
     }
   </style>
 </head>
@@ -984,13 +1226,11 @@ export class PrototypeEngine {
   <div id="playerContainer">
     <div id="playerToolbar">
       <div class="tool-group">
-        <span style="font-weight: 700; color: #0d99ff; font-size: 13px;">⚡ DesignForge Runtime</span>
+        <span style="font-weight: 700; color: #818cf8; font-size: 13px;">⚡ DesignForge Prototype</span>
         <span id="activeFlowLabel" style="font-size: 11px; color: #94a3b8;">Flow: Main</span>
       </div>
       <div class="tool-group">
         <button class="btn-player" id="btnRestart">↺ Restart (R)</button>
-        <button class="btn-player" id="btnStep">⏭ Step</button>
-        <button class="btn-player" id="btnToggleLog">📜 Event Log</button>
       </div>
     </div>
     <div id="viewportWrapper">
@@ -1004,6 +1244,7 @@ export class PrototypeEngine {
   <script>
     window.__DFORGE_DOC__ = ${docDataJson};
   </script>
+  <script>${PROTOTYPE_RUNTIME_SCRIPT}</script>
 </body>
 </html>`;
   }
