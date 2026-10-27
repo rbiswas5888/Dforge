@@ -1,0 +1,12 @@
+{
+  "name": "ai-ops",
+  "version": "0.1.0",
+  "description": "Brief reader, op-language parser, ghost-preview applier and Ollama pipeline for a Figma-style design editor",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "demo": "node scripts/demo.ts examples/example-brief.md 'Generate the Login and Home screens'"
+  }
+}

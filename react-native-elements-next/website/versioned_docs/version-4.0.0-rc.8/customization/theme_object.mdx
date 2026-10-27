@@ -1,0 +1,80 @@
+---
+title: Theme object
+sidebar_position: 1
+---
+
+import { Palette } from './Color';
+
+```tsx
+export interface Theme {
+  colors: Colors;
+  mode: 'light' | 'dark';
+  spacing: {
+    xs: number;
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+  };
+}
+```
+
+## Theme Properties
+
+### Colors
+
+By default, the theme object looks like this. You can add whatever values you
+want to the theme, and they will be merged with the default. By default the
+platform colors aren't used anywhere. These native colors are added for
+your convenience.
+
+```tsx
+interface Colors {
+  primary: string;
+  secondary: string;
+  background: string;
+  white: string;
+  black: string;
+  grey0: string;
+  grey1: string;
+  grey2: string;
+  grey3: string;
+  grey4: string;
+  grey5: string;
+  greyOutline: string;
+  searchBg: string;
+  success: string;
+  warning: string;
+  error: string;
+  disabled: string;
+  divider: string;
+  platform: {
+    ios: PlatformColors;
+    android: PlatformColors;
+    web: PlatformColors;
+    default: PlatformColors;
+  };
+}
+```
+
+#### Default Light Colors
+
+<Palette />
+
+#### Default Dark Colors
+
+<Palette dark />
+
+### Spacing
+
+The spacing object provides a standardized set of spacing values (margins, paddings, gaps, etc.) to maintain consistency across your UI. Instead of hardcoding numbers, use the theme spacing tokens to ensure predictable and scalable layouts.
+
+```tsx
+interface ThemeSpacing {
+  xs: number; // Extra small spacing, e.g. 2
+  sm: number; // Small spacing, e.g. 4
+  md: number; // Medium spacing, e.g. 8
+  lg: number; // Large spacing, e.g. 12
+  xl: number; // Extra large spacing, e.g. 24
+}
+```

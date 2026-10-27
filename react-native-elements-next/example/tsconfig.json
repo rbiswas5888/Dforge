@@ -1,0 +1,20 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ],
+   "references": [
+    {
+      "path": "../packages/base"
+    },
+    {
+      "path": "../packages/themed"
+    }
+  ],
+  "exclude": ["node_modules", "*.config.js", "website", "index.js"]
+}

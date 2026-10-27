@@ -1,0 +1,24 @@
+{
+  "tokens": [
+    { "name": "color.bg", "kind": "color", "value": "#FFFFFF", "variableId": "var:color.bg" },
+    { "name": "color.surface", "kind": "color", "value": "#F5F7FA", "variableId": "var:color.surface" },
+    { "name": "color.text.primary", "kind": "color", "value": "#111827", "variableId": "var:color.text.primary" },
+    { "name": "color.primary", "kind": "color", "value": "#1D4ED8", "variableId": "var:color.primary" },
+    { "name": "text.h1", "kind": "text", "styleId": "style:text.h1" },
+    { "name": "text.h2", "kind": "text", "styleId": "style:text.h2" },
+    { "name": "text.body", "kind": "text", "styleId": "style:text.body" },
+    { "name": "text.caption", "kind": "text", "styleId": "style:text.caption" },
+    { "name": "text.label", "kind": "text", "styleId": "style:text.label" },
+    { "name": "text.link", "kind": "text", "styleId": "style:text.link" },
+    { "name": "space.sm", "kind": "space", "value": 8 },
+    { "name": "space.md", "kind": "space", "value": 16 },
+    { "name": "space.lg", "kind": "space", "value": 24 },
+    { "name": "radius.md", "kind": "radius", "value": 8 }
+  ],
+  "components": [
+    { "id": "cmp:btn.primary", "name": "Button/Primary", "code": "#btn.primary", "props": { "label": [], "size": ["S", "M", "L"] }, "size": { "w": 320, "h": 48 } },
+    { "id": "cmp:btn.secondary", "name": "Button/Secondary", "code": "#btn.secondary", "props": { "label": [], "size": ["S", "M", "L"] }, "size": { "w": 320, "h": 48 } },
+    { "id": "cmp:input.text", "name": "Input/Text", "code": "#input.text", "props": { "label": [], "placeholder": [], "type": ["text", "email", "password"] }, "size": { "w": 320, "h": 72 } },
+    { "id": "cmp:checkbox", "name": "Checkbox", "code": "#checkbox", "props": { "label": [], "checked": ["true", "false"] } }
+  ]
+}
