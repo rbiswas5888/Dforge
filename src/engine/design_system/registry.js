@@ -13,6 +13,7 @@ import {
   TOKEN_CATEGORIES,
   VARIABLE_TYPES,
   THEME_MODES,
+  DESIGN_SYSTEM_STARTERS,
   generateDSId
 } from './types.js';
 
@@ -21,6 +22,70 @@ export class DesignSystemRegistry {
     this.doc = documentModel;
     this.storage = storageEngine;
     this.system = this.loadOrCreateSystem();
+  }
+
+  getAllTokens() {
+    return Object.values(this.system.tokens || {});
+  }
+
+  getAllVariables() {
+    return Object.values(this.system.variables || {});
+  }
+
+  getAllComponents() {
+    return Object.values(this.system.components || {});
+  }
+
+  getAllStyles() {
+    return Object.values(this.system.styles || {});
+  }
+
+  getDependents(tokenId) {
+    return this.findTokenDependents(tokenId);
+  }
+
+  initializeWithStarter(starter, name) {
+    const starterKey = String(starter || DESIGN_SYSTEM_STARTERS.MINIMAL).toLowerCase();
+    const validStarters = new Set([
+      DESIGN_SYSTEM_STARTERS.BLANK,
+      DESIGN_SYSTEM_STARTERS.MINIMAL,
+      DESIGN_SYSTEM_STARTERS.ENTERPRISE,
+      DESIGN_SYSTEM_STARTERS.FINTECH,
+      DESIGN_SYSTEM_STARTERS.ECOMMERCE
+    ]);
+    if (!validStarters.has(starterKey)) {
+      throw new Error(`Unknown design system starter: ${starter}`);
+    }
+
+    this.system.name = String(name || 'New Design System').trim() || 'New Design System';
+    this.system.status = 'draft';
+    this.system.updatedAt = new Date().toISOString();
+    if (starterKey !== DESIGN_SYSTEM_STARTERS.BLANK) {
+      const collectionName = `${this.system.name} Foundations`;
+      let collection = this.system.collections.find(item => item.name === collectionName);
+      if (!collection) {
+        collection = { id: generateDSId('col'), name: collectionName };
+        this.system.collections.push(collection);
+      }
+
+      const seedColors = {
+        minimal: [['Color / Primary', '#2563eb'], ['Color / Surface', '#ffffff'], ['Color / Text', '#0f172a']],
+        enterprise: [['Color / Primary', '#1d4ed8'], ['Color / Surface', '#f8fafc'], ['Color / Text', '#0f172a']],
+        fintech: [['Color / Primary', '#0f766e'], ['Color / Surface', '#f8fafc'], ['Color / Text', '#0f172a']],
+        ecommerce: [['Color / Primary', '#db2777'], ['Color / Surface', '#fff7ed'], ['Color / Text', '#1f2937']]
+      }[starterKey] || [];
+      for (const [tokenName, value] of seedColors) {
+        if (!this.getAllTokens().some(token => token.name.toLowerCase() === tokenName.toLowerCase())) {
+          this.addToken(TOKEN_CATEGORIES.COLOR, tokenName, value, {
+            collectionId: collection.id
+          });
+        }
+      }
+    }
+
+    this.syncDocTokensArray();
+    this.persist();
+    return this.system;
   }
 
   loadOrCreateSystem() {
@@ -398,7 +463,10 @@ export class DesignSystemRegistry {
 
   persist() {
     if (this.storage && this.doc) {
-      this.storage.saveAutosave(this.doc);
+      if (typeof this.storage.scheduleAutosave !== 'function') {
+        throw new Error('Design system persistence requires a storage engine with scheduleAutosave().');
+      }
+      this.storage.scheduleAutosave(this.doc);
     }
   }
 }

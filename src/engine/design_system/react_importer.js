@@ -210,28 +210,48 @@ export class ReactDesignSystemImporter {
    * Commits analyzed React design system into shared registry
    */
   commitImportedSystem(report, targetCollectionName = 'Imported React System') {
-    const colId = `col_${Date.now()}`;
-    this.registry.system.collections.push({
-      id: colId,
+    const collection = this.registry.system.collections.find(item => item.name === targetCollectionName) || {
+      id: `col_${Date.now()}`,
       name: targetCollectionName
-    });
+    };
+    if (!this.registry.system.collections.includes(collection)) {
+      this.registry.system.collections.push(collection);
+    }
 
     const registeredTokens = [];
-    for (const tok of report.discoveredTokens) {
-      const added = this.registry.addToken(tok.category, tok.name, tok.value, {
-        collectionId: colId,
-        description: tok.description
-      });
-      registeredTokens.push(added);
+    for (const tok of report.discoveredTokens || []) {
+      const existing = this.registry.getAllTokens().find(token =>
+        token.name.toLowerCase() === tok.name.toLowerCase()
+      );
+      if (existing) {
+        registeredTokens.push(this.registry.updateToken(existing.id, {
+          category: tok.category,
+          type: tok.type || tok.category,
+          value: tok.value,
+          description: tok.description || '',
+          collectionId: collection.id
+        }));
+      } else {
+        registeredTokens.push(this.registry.addToken(tok.category, tok.name, tok.value, {
+          collectionId: collection.id,
+          description: tok.description
+        }));
+      }
     }
 
     const registeredComponents = [];
-    for (const cmp of report.discoveredComponents) {
-      const compDef = this.registry.registerComponent(cmp.name, {
+    for (const cmp of report.discoveredComponents || []) {
+      const existing = this.registry.getAllComponents().find(component =>
+        component.name.toLowerCase() === cmp.name.toLowerCase()
+      );
+      const updates = {
         category: cmp.category,
         properties: cmp.properties,
         sourceMetadata: cmp.sourceMetadata
-      });
+      };
+      const compDef = existing
+        ? this.registry.updateComponent(existing.id, updates)
+        : this.registry.registerComponent(cmp.name, updates);
       registeredComponents.push(compDef);
     }
 
@@ -239,7 +259,7 @@ export class ReactDesignSystemImporter {
       success: true,
       importedTokensCount: registeredTokens.length,
       importedComponentsCount: registeredComponents.length,
-      collectionId: colId
+      collectionId: collection.id
     };
   }
 }
