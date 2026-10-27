@@ -59,7 +59,8 @@ export default ${compName};
     return {
       name: compName,
       code,
-      cssRules
+      cssRules,
+      rootNodeId: node.id
     };
   }
 
@@ -71,6 +72,7 @@ export default ${compName};
     // CSS styling attribute
     const styleAttr = Object.keys(styleObj).length > 0 ? ` style={${JSON.stringify(styleObj)}}` : '';
     const accessibility = node.accessibilityLabel ? ` aria-label="${node.accessibilityLabel}"` : '';
+    const nodeIdAttr = node.id ? ` data-node-id="${node.id}"` : '';
 
     // Handle interactive click triggers
     let interactionProps = '';
@@ -81,14 +83,14 @@ export default ${compName};
     if (node.type === 'text') {
       const text = this.escapeJsx(node.text?.content || '');
       return {
-        jsx: `${indent}<${tag}${styleAttr}${accessibility}${interactionProps}>${text}</${tag}>`,
+        jsx: `${indent}<${tag}${nodeIdAttr}${styleAttr}${accessibility}${interactionProps}>${text}</${tag}>`,
         cssRules: []
       };
     }
 
     if (!node.childIds || node.childIds.length === 0) {
       return {
-        jsx: `${indent}<${tag}${styleAttr}${accessibility}${interactionProps} />`,
+        jsx: `${indent}<${tag}${nodeIdAttr}${styleAttr}${accessibility}${interactionProps} />`,
         cssRules: []
       };
     }
@@ -103,7 +105,7 @@ export default ${compName};
     }
 
     return {
-      jsx: `${indent}<${tag}${styleAttr}${accessibility}${interactionProps}>\n${childrenJsx.join('\n')}\n${indent}</${tag}>`,
+      jsx: `${indent}<${tag}${nodeIdAttr}${styleAttr}${accessibility}${interactionProps}>\n${childrenJsx.join('\n')}\n${indent}</${tag}>`,
       cssRules: []
     };
   }

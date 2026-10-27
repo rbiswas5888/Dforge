@@ -201,6 +201,54 @@ All colors, spacing, and corner radii are bound to CSS variables defined in \`sr
 `;
   }
 
+  generateDesignMap(components, page) {
+    const nodeMap = {};
+    const componentList = [];
+    const ext = this.typescript ? 'tsx' : 'jsx';
+
+    const traverse = (nodeId, compName, file) => {
+      const node = page?.nodes?.[nodeId];
+      if (!node) return;
+      nodeMap[node.id] = {
+        id: node.id,
+        name: node.name || 'Unnamed',
+        type: node.type || 'element',
+        component: compName,
+        file
+      };
+      if (Array.isArray(node.childIds)) {
+        for (const cid of node.childIds) {
+          traverse(cid, compName, file);
+        }
+      }
+    };
+
+    for (const comp of components) {
+      const file = `src/components/${comp.name}.${ext}`;
+      componentList.push({
+        name: comp.name,
+        file,
+        rootNodeId: comp.rootNodeId || null
+      });
+      if (comp.rootNodeId) {
+        traverse(comp.rootNodeId, comp.name, file);
+      }
+    }
+
+    return JSON.stringify({
+      version: '1.0.0',
+      generatedAt: new Date().toISOString(),
+      documentId: this.doc.id,
+      documentName: this.doc.name,
+      components: componentList,
+      nodes: nodeMap,
+      summary: {
+        totalComponents: componentList.length,
+        totalNodesMapped: Object.keys(nodeMap).length
+      }
+    }, null, 2);
+  }
+
   toSlug(str) {
     return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'designforge-project';
   }
@@ -213,3 +261,4 @@ All colors, spacing, and corner radii are bound to CSS variables defined in \`sr
     return String(str).replace(/([{}])/g, '{\'$1\'}');
   }
 }
+

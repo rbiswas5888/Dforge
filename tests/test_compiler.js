@@ -37,13 +37,19 @@ const requiredFiles = [
   'src/tokens/tokens.css',
   'src/tokens/tokens.ts',
   'src/assets/asset-manifest.json',
-  'src/lib/interactions.tsx'
+  'src/lib/interactions.tsx',
+  'src/generated/design-map.json'
 ];
 
 for (const req of requiredFiles) {
   assert.ok(files[req], `Missing required project file: ${req}`);
 }
-console.log('   ✓ Emitted complete Vite project with %d source files.', Object.keys(files).length);
+
+const designMap = JSON.parse(files['src/generated/design-map.json']);
+assert.strictEqual(designMap.version, '1.0.0');
+assert.ok(designMap.components.length >= 2, 'Design map must contain mapped components');
+assert.ok(designMap.summary.totalNodesMapped > 0, 'Design map must track canonical node IDs');
+console.log('   ✓ Emitted complete Vite project with %d source files (including design-map.json traceability).', Object.keys(files).length);
 
 // -------------------------------------------------------------
 // Test 2: package.json Dependencies & Scripts

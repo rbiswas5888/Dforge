@@ -91,7 +91,10 @@ export class DesignForgeReactCompiler {
     fileTree[`src/main.${this.options.typescript ? 'tsx' : 'jsx'}`] = packager.generateMainEntry();
     fileTree[`src/App.${this.options.typescript ? 'tsx' : 'jsx'}`] = packager.generateApp(components);
 
-    // 7. Run Diagnostics Audit
+    // 7. Generate Dev Mode Traceability Map
+    fileTree['src/generated/design-map.json'] = packager.generateDesignMap(components, page);
+
+    // 8. Run Diagnostics Audit
     const diagnosticsCompiler = new CompilerDiagnostics(this.doc, { components, fileTree });
     const diagnostics = diagnosticsCompiler.generateReport();
     fileTree['.designforge-manifest.json'] = packager.generateManifest(diagnostics);
