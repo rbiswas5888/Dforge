@@ -5,9 +5,11 @@
  */
 
 import assert from 'node:assert';
+import fs from 'node:fs';
 import { createInitialDocument, createNode } from '../src/engine/document.js';
 import { CommandEngine } from '../src/engine/commands.js';
 import { ShortcutRegistry } from '../src/engine/shortcuts.js';
+import { DesignForgeApp } from '../src/app.js';
 
 console.log('⚡ Starting Figma Design Page Functional Map Verification Suite...\n');
 
@@ -257,5 +259,56 @@ assert.strictEqual(page.nodes[item1.id].name, 'Pricing Card / 1');
 assert.strictEqual(page.nodes[item2.id].name, 'Pricing Card / 2');
 assert.strictEqual(page.nodes[item3.id].name, 'Pricing Card / 3');
 console.log('   ✓ Bulk Renaming successfully transformed 3 layers using sequential $n pattern.');
+
+// 8. Test atomic transform history used by canvas move/resize interactions
+console.log('7. Testing atomic move/resize history...');
+const moveNode = createNode('rectangle', {
+  name: 'Undoable Move',
+  transform: { x: 10, y: 20, width: 80, height: 60 }
+});
+const resizeNode = createNode('rectangle', {
+  name: 'Undoable Resize',
+  transform: { x: 200, y: 100, width: 80, height: 60 }
+});
+engine.addNode(moveNode);
+engine.addNode(resizeNode);
+const transformsBeforeMove = [moveNode, resizeNode].map(({ id }) => ({
+  id,
+  transform: { ...page.nodes[id].transform }
+}));
+page.nodes[moveNode.id].transform.x = 35;
+page.nodes[resizeNode.id].transform.y = 145;
+const undoDepthBeforeMove = engine.undoStack.length;
+assert.strictEqual(engine.commitTransforms(transformsBeforeMove, 'Move objects'), true);
+assert.strictEqual(engine.undoStack.length, undoDepthBeforeMove + 1, 'Multi-selection movement must be one undo step');
+assert.strictEqual(engine.undo(), true);
+assert.strictEqual(page.nodes[moveNode.id].transform.x, 10);
+assert.strictEqual(page.nodes[resizeNode.id].transform.y, 100);
+assert.strictEqual(engine.redo(), true);
+assert.strictEqual(page.nodes[moveNode.id].transform.x, 35);
+assert.strictEqual(page.nodes[resizeNode.id].transform.y, 145);
+
+const transformsBeforeResize = [{ id: moveNode.id, transform: { ...page.nodes[moveNode.id].transform } }];
+page.nodes[moveNode.id].transform.width = 120;
+assert.strictEqual(engine.commitTransforms(transformsBeforeResize, 'Resize object'), true);
+assert.strictEqual(engine.undo(), true);
+assert.strictEqual(page.nodes[moveNode.id].transform.width, 80);
+assert.strictEqual(engine.redo(), true);
+assert.strictEqual(page.nodes[moveNode.id].transform.width, 120);
+const undoDepthBeforeNoop = engine.undoStack.length;
+assert.strictEqual(engine.commitTransforms([{ id: moveNode.id, transform: { ...page.nodes[moveNode.id].transform } }]), false);
+assert.strictEqual(engine.undoStack.length, undoDepthBeforeNoop, 'No-op transforms must not add history entries');
+console.log('   ✓ Multi-selection move and resize each undo and redo as a single transaction.');
+
+// 9. Ensure navigator interactions are isolated from Learn Center tabs
+const appSource = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
+assert.ok(
+  appSource.includes("document.querySelectorAll('.navigator-tabs .sidebar-tab-btn')"),
+  'Navigator tab behavior must not capture unrelated sidebar tabs'
+);
+assert.ok(appSource.includes('this.escapeAttr(c.text || \'Review note\')'), 'Comments drawer must render the stored comment text');
+const appUtilities = Object.create(DesignForgeApp.prototype);
+assert.strictEqual(appUtilities.escapeAttr(`"><script>&'`), '&quot;&gt;&lt;script&gt;&amp;&#39;');
+console.log('   ✓ Navigator tabs are scoped and the comments drawer uses the stored comment model.');
 
 console.log('\n🎉 ALL FIGMA FUNCTIONAL MAP VERIFICATIONS PASSED (100% SPEC COMPLIANCE)!');

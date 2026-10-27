@@ -94,6 +94,49 @@ export class CommandEngine {
     return true;
   }
 
+  commitTransforms(initialTransforms, description = 'Transform objects') {
+    const pageId = this.activePageId;
+    const page = this.getActivePage();
+    const before = initialTransforms
+      .filter(({ id }) => page?.nodes[id])
+      .map(({ id, transform }) => ({ id, transform: JSON.parse(JSON.stringify(transform)) }));
+    const after = before.map(({ id }) => ({
+      id,
+      transform: JSON.parse(JSON.stringify(page.nodes[id].transform))
+    }));
+
+    if (before.length === 0 || before.every((entry, index) =>
+      JSON.stringify(entry.transform) === JSON.stringify(after[index].transform)
+    )) {
+      return false;
+    }
+
+    const applyTransforms = (targets, commandDescription) => ({
+      type: 'transform-nodes',
+      description: commandDescription,
+      execute: (engine) => {
+        const targetPage = engine.doc.pages.find(item => item.id === pageId);
+        if (!targetPage) return null;
+
+        const inverse = [];
+        for (const { id, transform } of targets) {
+          const node = targetPage.nodes[id];
+          if (!node) continue;
+          inverse.push({ id, transform: JSON.parse(JSON.stringify(node.transform)) });
+          node.transform = JSON.parse(JSON.stringify(transform));
+        }
+
+        return applyTransforms(inverse, `Undo ${commandDescription}`);
+      }
+    });
+
+    for (const { id, transform } of before) {
+      page.nodes[id].transform = JSON.parse(JSON.stringify(transform));
+    }
+    this.execute(applyTransforms(after, description));
+    return true;
+  }
+
   canUndo() {
     return this.undoStack.length > 0;
   }
@@ -970,5 +1013,4 @@ export class CommandEngine {
     this.notify('document-change', { themeMode: mode });
   }
 }
-
 

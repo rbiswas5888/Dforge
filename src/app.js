@@ -192,7 +192,7 @@ export class DesignForgeApp {
     });
 
     // Sidebar navigation tabs (Layers, Assets, Pages)
-    const sidebarTabs = document.querySelectorAll('.sidebar-tab-btn');
+    const sidebarTabs = document.querySelectorAll('.navigator-tabs .sidebar-tab-btn');
     sidebarTabs.forEach(tab => {
       tab.addEventListener('click', () => {
         sidebarTabs.forEach(t => t.classList.remove('active'));
@@ -262,6 +262,7 @@ export class DesignForgeApp {
               this.updatePagesList();
               this.updateInspector();
               this.renderer.zoomToFit();
+              this.updateRulers();
               this.storage.scheduleAutosave(this.doc);
               this.showToast(`Project "${loadedDoc.name}" loaded successfully!`, 'success');
             } catch (err) {
@@ -740,7 +741,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     document.querySelectorAll('.btn-insert-asset').forEach(btn => {
       btn.addEventListener('click', () => {
         const type = btn.dataset.type;
-        const coords = { x: 300, y: 300 };
+        const coords = this.getCanvasCenter();
         this.handleShapeCreation(type === 'button' ? 'button' : 'frame', coords);
       });
     });
@@ -749,7 +750,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     document.querySelectorAll('.shape-grid-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const shape = btn.dataset.insertShape;
-        this.handleShapeCreation(shape, { x: 260, y: 240 });
+        this.handleShapeCreation(shape, this.getCanvasCenter());
       });
     });
 
@@ -799,7 +800,11 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     if (!container) return;
 
     let html = '';
-    const activeId = this.engine.getActivePage().id;
+    const activePage = this.engine.getActivePage();
+    if (!activePage) return;
+    const activeId = activePage.id;
+    const pageLabel = document.getElementById('currentPageLabel');
+    if (pageLabel) pageLabel.textContent = activePage.name || 'Page 1';
 
     for (const p of this.doc.pages) {
       const isActive = p.id === activeId;
@@ -828,11 +833,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         if (e.target.closest('button')) return;
         const pid = item.dataset.pageId;
         this.engine.setActivePage(pid);
-        this.updatePagesList();
-        this.updateLayersTree();
-        this.updateInspector();
-        this.updateAiContext();
         this.renderer.zoomToFit();
+        this.updateRulers();
       });
     });
 
@@ -841,8 +843,6 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         const clone = duplicatePageInDoc(this.doc, b.dataset.id);
         if (clone) {
           this.engine.setActivePage(clone.id);
-          this.updatePagesList();
-          this.updateLayersTree();
         }
       });
     });
@@ -875,8 +875,6 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         if (confirm('Delete this page and all its layers?')) {
           deletePageFromDoc(this.doc, b.dataset.id);
           this.engine.setActivePage(this.doc.pages[0].id);
-          this.updatePagesList();
-          this.updateLayersTree();
         }
       });
     });
@@ -884,6 +882,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
   bindEngineEvents() {
     this.engine.subscribe((eventType, detail) => {
+      if (eventType === 'page-change') {
+        this.updatePagesList();
+      }
       this.renderer.render();
       this.updateLayersTree();
       this.updateInspector();
@@ -902,10 +903,18 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       if (zoomText) {
         zoomText.textContent = `${Math.round(this.renderer.zoom * 100)}%`;
       }
+      const statusZoom = document.getElementById('statusZoomLevel');
+      if (statusZoom) statusZoom.textContent = `${Math.round(this.renderer.zoom * 100)}%`;
     });
   }
 
   updateRulers() {
+    const zoomPercent = `${Math.round(this.renderer.zoom * 100)}%`;
+    const zoomText = document.getElementById('zoomPercentText');
+    const statusZoom = document.getElementById('statusZoomLevel');
+    if (zoomText) zoomText.textContent = zoomPercent;
+    if (statusZoom) statusZoom.textContent = zoomPercent;
+
     const rh = document.getElementById('canvasRulerH');
     const rv = document.getElementById('canvasRulerV');
     if (!rh || !rv || !this.showRulers) return;
@@ -1022,14 +1031,15 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       if (selectedIds.length === 1) {
         const bounds = computeWorldBounds(page, selectedIds[0]);
         const handle = renderer.hitTestHandle(canvasCoords.x, canvasCoords.y, bounds);
-        if (handle) {
-          const node = engine.getNode(selectedIds[0]);
+        const node = engine.getNode(selectedIds[0]);
+        if (handle && node && !node.locked) {
           this.dragState = {
             type: 'resize',
             handle,
             nodeId: selectedIds[0],
             startBounds: { ...bounds },
             startTransform: { ...node.transform },
+            initialTransforms: [{ id: node.id, transform: { ...node.transform } }],
             startX: e.clientX,
             startY: e.clientY
           };
@@ -1049,16 +1059,17 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
         const node = engine.getNode(hitNodeId);
         if (node && !node.locked) {
+          const movableIds = engine.getSelection().filter(id => !engine.getNode(id)?.locked);
           this.dragState = {
             type: 'move',
             startX: canvasCoords.x,
             startY: canvasCoords.y,
             lastX: canvasCoords.x,
             lastY: canvasCoords.y,
-            nodeIds: engine.getSelection(),
-            initialPositions: engine.getSelection().map(id => {
+            nodeIds: movableIds,
+            initialTransforms: movableIds.map(id => {
               const n = engine.getNode(id);
-              return { id, x: n.transform.x, y: n.transform.y };
+              return { id, transform: { ...n.transform } };
             })
           };
         }
@@ -1164,13 +1175,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
       if (this.dragState.type === 'move') {
         renderer.snapGuides = [];
-        const totalDx = this.dragState.lastX - this.dragState.startX;
-        const totalDy = this.dragState.lastY - this.dragState.startY;
-        if (totalDx !== 0 || totalDy !== 0) {
-          engine.notify('document-change', { description: 'Move objects' });
-        }
+        engine.commitTransforms(this.dragState.initialTransforms, 'Move objects');
       } else if (this.dragState.type === 'resize') {
-        engine.notify('document-change', { description: 'Resize object' });
+        engine.commitTransforms(this.dragState.initialTransforms, 'Resize object');
       } else if (this.dragState.type === 'marquee') {
         renderer.marquee = null;
         renderer.render();
@@ -1281,6 +1288,11 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     };
     const hintEl = document.getElementById('statusToolHint');
     if (hintEl) hintEl.textContent = hints[tool] || `Tool: ${tool}`;
+  }
+
+  getCanvasCenter() {
+    const rect = this.canvas.getBoundingClientRect();
+    return this.renderer.screenToCanvas(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
   setHandMode(active) {
@@ -3657,7 +3669,13 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   }
 
   escapeAttr(str) {
-    return String(str).replace(/"/g, '&quot;');
+    return String(str).replace(/[&<>"']/g, character => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[character]);
   }
 
   booleanSelected(op) {
@@ -4105,11 +4123,13 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     } else if (tabKey === 'comments') {
       const el = document.getElementById('drawerCommentsContent');
       if (el) {
-        const comments = this.doc.comments || [];
+        const comments = (this.doc.comments || []).filter(comment =>
+          comment.pageId === this.engine.getActivePage()?.id
+        );
         if (comments.length === 0) {
           el.innerHTML = '<div style="color: var(--text-muted);">No review comments yet. Press (C) to add a review comment on canvas.</div>';
         } else {
-          el.innerHTML = comments.map(c => `<div style="padding: 6px 10px; margin-bottom: 6px; background: var(--surface-input); border-radius: 4px;"><strong>${c.author || 'Reviewer'}:</strong> ${c.content} <span style="color: var(--text-muted); font-size: 10px; margin-left: 8px;">(${c.status || 'open'})</span></div>`).join('');
+          el.innerHTML = comments.map(c => `<div style="padding: 6px 10px; margin-bottom: 6px; background: var(--surface-input); border-radius: 4px;"><strong>${this.escapeAttr(c.author || 'Reviewer')}:</strong> ${this.escapeAttr(c.text || 'Review note')} <span style="color: var(--text-muted); font-size: 10px; margin-left: 8px;">(${c.resolved ? 'resolved' : 'open'})</span></div>`).join('');
         }
       }
     } else if (tabKey === 'issues') {
@@ -4479,4 +4499,3 @@ if (typeof window !== 'undefined') {
     initApp();
   }
 }
-
