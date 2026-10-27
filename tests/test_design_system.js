@@ -12,6 +12,7 @@ import {
   ResponsiveTokenEngine,
   ComponentVariableExtractor,
   ReactDesignSystemImporter,
+  addRneuiComponentToRegistry,
   TOKEN_CATEGORIES,
   VARIABLE_TYPES,
   THEME_MODES
@@ -209,6 +210,13 @@ assert.ok(autosaveCount > 0, 'Starter creation must persist through the StorageE
 const starterTokenCount = starterRegistry.getAllTokens().length;
 starterRegistry.initializeWithStarter('material', 'Material Starter');
 assert.strictEqual(starterRegistry.getAllTokens().length, starterTokenCount, 'Repeated starter initialization must not duplicate seed tokens');
+const catalogRegistry = new DesignSystemRegistry(createInitialDocument('RNEUI Catalog Test'));
+const addedRneuiButton = addRneuiComponentToRegistry(catalogRegistry, 'button');
+assert.strictEqual(addedRneuiButton.added, true);
+assert.strictEqual(addedRneuiButton.component.sourceMetadata.package, '@rneui/themed');
+assert.strictEqual(addedRneuiButton.component.sourceMetadata.platform, 'react-native');
+assert.strictEqual(addRneuiComponentToRegistry(catalogRegistry, 'button').added, false, 'Catalog additions must be idempotent');
+assert.throws(() => addRneuiComponentToRegistry(catalogRegistry, 'not-a-component'), /Unknown RNEUI catalog component/);
 console.log('   ✓ DTCG token schema parsed and transactionally registered into Design System Registry.');
 
 // 7. Versioning & Releases (Section 17)

@@ -2466,3 +2466,7 @@ Do not report a feature as complete merely because its UI exists. Do not claim z
 Build DesignForge AI’s Design System as one connected, persistent, versioned, and testable subsystem. Give designers two primary routes—import an existing React-based design system or create one from scratch—plus guided AI token generation and explicitly requested component-variable extraction. Automatically synchronize saved reusable entities across Tokens, Variables, Components, Styles, Assets, the Design editor, Prototyping, and supported React exports through the shared registry.
 
 Preserve the existing application’s UI and working behavior. Deliver functioning workflows, not just a visual prototype. Validate changes, preserve user control, keep responsive adaptations traceable, handle import limitations honestly, and prove the implementation with tests.
+
+## Current RNEUI catalog boundary
+
+The application installs `@rneui/themed` and `@rneui/base` v5.0.0 and exposes a curated RNEUI component catalog in Design System → Components. Adding a catalog item creates a persistent component reference with package and platform provenance; it does not render React Native components inside the browser-based editor. A React Native or Expo export target is required to render those components at runtime.

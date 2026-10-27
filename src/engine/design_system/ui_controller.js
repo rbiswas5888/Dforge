@@ -807,7 +807,7 @@ export class DesignSystemUIController {
               <article style="border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;">
                 <div style="font-size: 12px; font-weight: 700; color: var(--text-main);">${component.name}</div>
                 <div style="font-size: 10px; color: var(--text-dim); min-height: 28px;">${component.description}</div>
-                <button type="button" class="ds-btn-secondary" data-rneui-component="${component.id}" ${added ? 'disabled' : ''}>
+                <button type="button" class="ds-action-btn" data-rneui-component="${component.id}" ${added ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''}>
                   ${added ? 'Added to system' : 'Add to system'}
                 </button>
               </article>
