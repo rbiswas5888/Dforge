@@ -53,6 +53,7 @@ import {
   DesignSystemUIController
 } from './engine/design_system/index.js';
 import { generateQRCodeSVG } from './editor-core/qr-code.js';
+import { ColorPickerPopover } from './editor-core/color-picker.js';
 
 export class DesignForgeApp {
   constructor() {
@@ -108,6 +109,7 @@ export class DesignForgeApp {
     // DOM references
     this.canvas = document.getElementById('canvas2d');
     this.renderer = new CanvasRenderer(this.canvas, this.engine);
+    this.colorPicker = new ColorPickerPopover();
     this.shortcuts = new ShortcutRegistry(this);
 
     this.initUI();
@@ -150,6 +152,39 @@ export class DesignForgeApp {
     // Initialize Axiom Layout Design System (Section 3 & 8)
     this.initAxiomLayout();
 
+    const appMenuBar = document.querySelector('.app-menu-bar');
+    const responsiveMenuSection = document.getElementById('responsiveAppMenuSection');
+    const responsiveWorkspaceSection = document.getElementById('responsiveWorkspaceSection');
+    const topBarLeft = document.querySelector('.top-bar-left');
+    const topBarRight = document.querySelector('.top-bar-right');
+    const breakpointBar = document.getElementById('topBreakpointBar');
+    const modeRail = document.getElementById('axiomModeRail');
+    const themeToggle = document.getElementById('btnToggleTheme');
+    const moreMenu = document.querySelector('.top-action-menu');
+    const toolShelf = document.querySelector('.tool-shelf');
+    const modeToolDivider = document.querySelector('.mode-tool-divider');
+    const undoButton = document.getElementById('btnUndo');
+    const projectTitleInput = document.getElementById('projectTitleInput');
+    const placeAppMenu = () => {
+      if (!appMenuBar || !responsiveMenuSection || !responsiveWorkspaceSection || !topBarLeft || !topBarRight) return;
+      if (window.innerWidth <= 900) {
+        responsiveMenuSection.appendChild(appMenuBar);
+        responsiveWorkspaceSection.appendChild(breakpointBar);
+      } else {
+        topBarLeft.insertBefore(appMenuBar, projectTitleInput);
+        topBarRight.insertBefore(breakpointBar, undoButton);
+      }
+      if (window.innerWidth <= 700) {
+        responsiveWorkspaceSection.appendChild(modeRail);
+        responsiveWorkspaceSection.appendChild(themeToggle);
+      } else {
+        toolShelf.insertBefore(modeRail, modeToolDivider);
+        topBarRight.insertBefore(themeToggle, moreMenu);
+      }
+    };
+    placeAppMenu();
+    window.addEventListener('resize', placeAppMenu);
+
     // Initialize Figma Universal Modal & Prompt System
     this.initFigmaModals();
 
@@ -167,13 +202,13 @@ export class DesignForgeApp {
         tab.classList.add('active');
         const mode = tab.dataset.mode;
         if (mode === 'prototype') {
-          this.openPrototypeModal();
+          this.setAxiomMode('prototype');
         } else if (mode === 'code') {
           this.openExportModal();
         } else if (mode === 'design-system') {
-          this.switchToDesignSystemMode();
+          this.setAxiomMode('system');
         } else if (mode === 'design') {
-          this.switchToDesignMode();
+          this.setAxiomMode('design');
         }
       });
     });
@@ -188,6 +223,19 @@ export class DesignForgeApp {
         } else {
           this.setTool(tool);
         }
+      });
+    });
+    document.querySelectorAll('.tool-group-toggle').forEach(toggle => {
+      toggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const group = toggle.closest('.tool-menu-group');
+        const shouldOpen = !group.classList.contains('open');
+        document.querySelectorAll('.tool-menu-group').forEach(item => {
+          item.classList.remove('open');
+          item.querySelector('.tool-group-toggle')?.setAttribute('aria-expanded', 'false');
+        });
+        group.classList.toggle('open', shouldOpen);
+        toggle.setAttribute('aria-expanded', String(shouldOpen));
       });
     });
 
@@ -288,8 +336,17 @@ export class DesignForgeApp {
       });
     });
 
-    window.addEventListener('click', () => {
-      menuItems.forEach(m => m.classList.remove('open'));
+    window.addEventListener('click', (event) => {
+      if (!event.target.closest('.app-menu-bar .menu-btn')) {
+        menuItems.forEach(m => m.classList.remove('open'));
+      }
+      document.querySelectorAll('.tool-menu-group').forEach(group => {
+        group.classList.remove('open');
+        group.querySelector('.tool-group-toggle')?.setAttribute('aria-expanded', 'false');
+      });
+      if (!event.target.closest('.top-action-menu-trigger, .app-menu-bar .menu-btn')) {
+        document.querySelectorAll('.top-action-menu[open]').forEach(menu => menu.removeAttribute('open'));
+      }
       const ctxMenu = document.getElementById('canvasContextMenu');
       if (ctxMenu) ctxMenu.style.display = 'none';
     });
@@ -889,6 +946,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       this.updateLayersTree();
       this.updateInspector();
       this.updateAiContext();
+      if (this.rightTabMode === 'prototype') this.updatePrototypePanel();
+      if (this.rightTabMode === 'inspect') this.updateInspectPanel();
+      if (this.rightTabMode === 'export') this.updateExportPanel();
       this.updateRulers();
       this.storage.scheduleAutosave(this.doc);
 
@@ -1267,6 +1327,12 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     document.querySelectorAll('.tool-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tool === tool);
     });
+    document.querySelectorAll('.tool-menu-group').forEach(group => {
+      const tools = group.dataset.toolGroup.split(',');
+      group.classList.toggle('has-active-tool', tools.includes(tool));
+      group.classList.remove('open');
+      group.querySelector('.tool-group-toggle')?.setAttribute('aria-expanded', 'false');
+    });
 
     // Update Axiom Status Bar Tool Hint (Section 3.1 & 3.2)
     const hints = {
@@ -1288,6 +1354,78 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     };
     const hintEl = document.getElementById('statusToolHint');
     if (hintEl) hintEl.textContent = hints[tool] || `Tool: ${tool}`;
+  }
+
+  normalizeHexColor(value, fallback = '#3B82F6') {
+    const color = String(value || '').trim();
+    return /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color)
+      ? color.toUpperCase()
+      : fallback;
+  }
+
+  getDocumentColorPalette() {
+    const colors = (this.doc.tokens || []).flatMap(group =>
+      (group.tokens || [])
+        .filter(token => token.type === 'color' && /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(String(token.value)))
+        .map(token => token.value)
+    );
+    return [...new Set(colors)];
+  }
+
+  openPageColorPicker(targetElement, page) {
+    const initialColor = this.normalizeHexColor(page.background, '#090D16');
+    let committedColor = initialColor;
+    this.colorPicker.open({
+      targetElement,
+      initialColor,
+      documentColors: this.getDocumentColorPalette(),
+      onInput: color => {
+        page.background = color;
+        const input = document.getElementById('propPageBg');
+        if (input) input.value = color;
+        targetElement.style.background = color;
+        this.renderer.render();
+      },
+      onChange: color => {
+        committedColor = this.normalizeHexColor(color, committedColor);
+        page.background = committedColor;
+        const input = document.getElementById('propPageBg');
+        if (input) input.value = committedColor;
+        targetElement.style.background = committedColor;
+        this.renderer.render();
+        this.storage.scheduleAutosave(this.doc);
+      }
+    });
+  }
+
+  openNodeColorPicker(targetElement, color, options) {
+    const initialColor = this.normalizeHexColor(color, '#3B82F6');
+    let committedColor = initialColor;
+    const syncColorControls = nextColor => {
+      targetElement.style.background = nextColor;
+      const input = targetElement.closest('.props-row')?.querySelector('input');
+      if (input) input.value = nextColor;
+    };
+    this.colorPicker.open({
+      targetElement,
+      initialColor,
+      documentColors: this.getDocumentColorPalette(),
+      onInput: nextColor => {
+        const previewColor = this.normalizeHexColor(nextColor, committedColor);
+        options.preview(previewColor);
+        syncColorControls(previewColor);
+        this.renderer.render();
+      },
+      onChange: nextColor => {
+        const colorToCommit = this.normalizeHexColor(nextColor, committedColor);
+        options.preview(committedColor);
+        syncColorControls(colorToCommit);
+        if (colorToCommit !== committedColor) {
+          this.engine.updateNode(options.node.id, options.commit(colorToCommit), options.description);
+          committedColor = colorToCommit;
+        }
+      }
+    });
   }
 
   getCanvasCenter() {
@@ -1418,7 +1556,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         <div class="section-group">
           <div class="section-title">Canvas Settings</div>
           <div class="props-row">
-            <div class="color-swatch-box" style="background: ${page.background || '#090d16'};"></div>
+            <button type="button" class="color-swatch-box" id="swatchPageBackground"
+              style="background: ${page.background || '#090d16'};" title="Choose canvas background color"
+              aria-label="Choose canvas background color"></button>
             <div class="prop-field">
               <span class="prop-label">Background</span>
               <input type="text" class="prop-input" id="propPageBg" value="${page.background || '#090d16'}">
@@ -1464,8 +1604,16 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       `;
 
       document.getElementById('propPageBg')?.addEventListener('change', (e) => {
-        page.background = e.target.value;
+        const color = this.normalizeHexColor(e.target.value, page.background || '#090d16');
+        page.background = color;
+        e.target.value = color;
+        const swatch = document.getElementById('swatchPageBackground');
+        if (swatch) swatch.style.background = color;
         this.renderer.render();
+        this.storage.scheduleAutosave(this.doc);
+      });
+      document.getElementById('swatchPageBackground')?.addEventListener('click', (e) => {
+        this.openPageColorPicker(e.currentTarget, page);
       });
 
       document.getElementById('chkShowLayoutGrid')?.addEventListener('change', (e) => {
@@ -1514,7 +1662,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const radBR = isQuadRadius ? (radius.bottomRight || 0) : radius;
     const radBL = isQuadRadius ? (radius.bottomLeft || 0) : radius;
 
-    const fills = s.fills && s.fills.length > 0 ? s.fills : [{ type: 'solid', color: '#334155', opacity: 1 }];
+    const fills = s.fills || [];
     const strokes = s.strokes && s.strokes.length > 0 ? s.strokes : [];
     const shadows = s.shadows && s.shadows.length > 0 ? s.shadows : [];
     const isText = node.type === 'text';
@@ -1722,9 +1870,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           <span>Fill</span>
           <button class="btn-icon-xs" id="btnAddFill" title="Add Fill">+</button>
         </div>
-        ${fills.map((f, idx) => `
+        ${fills.length ? fills.map((f, idx) => `
         <div class="props-row" style="margin-bottom: 6px;">
-          <div class="color-swatch-box" style="background: ${f.color || '#334155'};" id="swatchFill_${idx}"></div>
+          <button type="button" class="color-swatch-box paint-swatch" style="background: ${f.color || '#334155'};"
+            id="swatchFill_${idx}" data-index="${idx}" title="Choose fill color" aria-label="Choose fill color"></button>
           <div class="prop-field">
             <input type="text" class="prop-input fill-hex-input" data-index="${idx}" value="${f.color || '#334155'}">
             ${f.tokenName ? `<span class="token-chip-badge" title="Bound to token">${f.tokenName}</span>` : ''}
@@ -1732,7 +1881,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           <button class="btn-icon-xs btn-bind-token" data-index="${idx}" title="Bind to Theme Token">❖</button>
           <button class="btn-icon-xs btn-remove-fill" data-index="${idx}" title="Remove Fill">✕</button>
         </div>
-        `).join('')}
+        `).join('') : '<div style="font-size: 11px; color: var(--text-dim);">No fill applied</div>'}
       </div>
 
       <!-- 6. Strokes Section -->
@@ -1743,7 +1892,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         </div>
         ${strokes.length > 0 ? strokes.map((st, idx) => `
         <div class="props-row">
-          <div class="color-swatch-box" style="background: ${st.color || '#3b82f6'};"></div>
+          <button type="button" class="color-swatch-box paint-swatch stroke-swatch"
+            style="background: ${st.color || '#3b82f6'};" data-index="${idx}" title="Choose stroke color"
+            aria-label="Choose stroke color"></button>
           <div class="prop-field">
             <input type="text" class="prop-input stroke-hex-input" data-index="${idx}" value="${st.color || '#3b82f6'}">
           </div>
@@ -1812,6 +1963,15 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             <button class="sizing-pill-btn ${node.text?.textAlign === 'left' || !node.text?.textAlign ? 'active' : ''}" id="btnAlignLeft">Left</button>
             <button class="sizing-pill-btn ${node.text?.textAlign === 'center' ? 'active' : ''}" id="btnAlignCenter">Center</button>
             <button class="sizing-pill-btn ${node.text?.textAlign === 'right' ? 'active' : ''}" id="btnAlignRight">Right</button>
+          </div>
+        </div>
+        <div class="props-row">
+          <button type="button" class="color-swatch-box paint-swatch" id="swatchTextColor"
+            style="background: ${node.text?.color || '#f8fafc'};" title="Choose text color"
+            aria-label="Choose text color"></button>
+          <div class="prop-field">
+            <span class="prop-label">Color</span>
+            <input type="text" class="prop-input" id="propTextColor" value="${node.text?.color || '#f8fafc'}">
           </div>
         </div>
         <div class="props-row">
@@ -2066,9 +2226,26 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         const idx = parseInt(inp.dataset.index, 10);
         const curFills = JSON.parse(JSON.stringify(s.fills || []));
         if (curFills[idx]) {
-          curFills[idx].color = e.target.value;
+          curFills[idx].color = this.normalizeHexColor(e.target.value, curFills[idx].color || '#334155');
           this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Change Fill Color');
         }
+      });
+    });
+    document.querySelectorAll('.paint-swatch:not(.stroke-swatch)').forEach(swatch => {
+      swatch.addEventListener('click', (e) => {
+        const idx = Number(swatch.dataset.index || 0);
+        const fill = node.style?.fills?.[idx];
+        if (!fill || fill.type === 'image' || fill.type === 'gradient') return;
+        this.openNodeColorPicker(e.currentTarget, fill.color || '#334155', {
+          node,
+          description: 'Change Fill Color',
+          preview: color => { node.style.fills[idx].color = color; },
+          commit: color => {
+            const nextFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+            if (nextFills[idx]) nextFills[idx].color = color;
+            return { style: { fills: nextFills } };
+          }
+        });
       });
     });
     document.querySelectorAll('.btn-remove-fill').forEach(btn => {
@@ -2119,9 +2296,26 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         const idx = parseInt(inp.dataset.index, 10);
         const curStrokes = JSON.parse(JSON.stringify(s.strokes || []));
         if (curStrokes[idx]) {
-          curStrokes[idx].color = e.target.value;
+          curStrokes[idx].color = this.normalizeHexColor(e.target.value, curStrokes[idx].color || '#3b82f6');
           this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Change Stroke Color');
         }
+      });
+    });
+    document.querySelectorAll('.stroke-swatch').forEach(swatch => {
+      swatch.addEventListener('click', (e) => {
+        const idx = Number(swatch.dataset.index);
+        const stroke = node.style?.strokes?.[idx];
+        if (!stroke) return;
+        this.openNodeColorPicker(e.currentTarget, stroke.color || '#3b82f6', {
+          node,
+          description: 'Change Stroke Color',
+          preview: color => { node.style.strokes[idx].color = color; },
+          commit: color => {
+            const nextStrokes = JSON.parse(JSON.stringify(node.style?.strokes || []));
+            if (nextStrokes[idx]) nextStrokes[idx].color = color;
+            return { style: { strokes: nextStrokes } };
+          }
+        });
       });
     });
     document.querySelectorAll('.stroke-width-input').forEach(inp => {
@@ -2170,6 +2364,18 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     });
     document.getElementById('propTextContent')?.addEventListener('change', (e) => {
       this.engine.updateNode(node.id, { text: { content: e.target.value } }, 'Edit Text');
+    });
+    document.getElementById('propTextColor')?.addEventListener('change', (e) => {
+      const color = this.normalizeHexColor(e.target.value, node.text?.color || '#f8fafc');
+      this.engine.updateNode(node.id, { text: { color } }, 'Change Text Color');
+    });
+    document.getElementById('swatchTextColor')?.addEventListener('click', (e) => {
+      this.openNodeColorPicker(e.currentTarget, node.text?.color || '#f8fafc', {
+        node,
+        description: 'Change Text Color',
+        preview: color => { node.text.color = color; },
+        commit: color => ({ text: { color } })
+      });
     });
     document.getElementById('btnAlignLeft')?.addEventListener('click', () => {
       this.engine.updateNode(node.id, { text: { textAlign: 'left' } }, 'Align Text Left');
@@ -2232,7 +2438,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     container.innerHTML = `
       <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">
-        Layer: <strong>${node.name}</strong> (${node.type})
+        Layer: <strong>${this.escapeAttr(node.name)}</strong> (${this.escapeAttr(node.type)})
       </div>
 
       <!-- Flow Starting Point Toggle -->
@@ -2269,10 +2475,18 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             <option value="url" ${int.action === 'url' ? 'selected' : ''}>Open External URL</option>
           </select>
         </div>
+        ${int.action === 'url' ? `
+        <div class="proto-row">
+          <span style="color: var(--text-dim);">URL:</span>
+          <input type="url" class="prop-input sel-url" data-index="${idx}" value="${this.escapeAttr(int.url || '')}" placeholder="https://example.com">
+        </div>` : ''}
         <div class="proto-row">
           <span style="color: var(--text-dim);">Target:</span>
-          <select class="prop-select sel-target" data-index="${idx}" style="font-size: 11px;">
-            ${frames.map(f => `<option value="${f.id}" ${int.targetId === f.id ? 'selected' : ''}>${f.name}</option>`).join('')}
+          <select class="prop-select sel-target" data-index="${idx}" style="font-size: 11px;"
+            ${int.action === 'back' || int.action === 'url' || frames.length === 0 ? 'disabled' : ''}>
+            ${frames.length
+              ? frames.map(f => `<option value="${f.id}" ${int.targetId === f.id ? 'selected' : ''}>${this.escapeAttr(f.name)}</option>`).join('')
+              : '<option value="">No frames on this page</option>'}
           </select>
         </div>
         <div class="proto-row">
@@ -2296,25 +2510,24 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       this.engine.updateNode(node.id, { isFlowStart: e.target.checked }, 'Toggle Flow Starting Point');
     });
 
-    document.getElementById('btnAddInteractionBtn')?.addEventListener('click', () => {
+    const addInteractionButton = document.getElementById('btnAddInteractionBtn');
+    if (addInteractionButton) addInteractionButton.onclick = () => {
       const cur = JSON.parse(JSON.stringify(node.interactions || []));
-      const targetId = frames[0]?.id || null;
+      const targetId = frames.find(frame => frame.id !== node.id)?.id || frames[0]?.id || null;
       cur.push({ trigger: 'click', action: 'navigate', targetId, animation: 'dissolve' });
       this.engine.updateNode(node.id, { interactions: cur }, 'Add Interaction');
-      this.updatePrototypePanel();
-    });
+    };
 
-    document.querySelectorAll('.btn-remove-interaction').forEach(btn => {
+    container.querySelectorAll('.btn-remove-interaction').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.index, 10);
         const cur = JSON.parse(JSON.stringify(node.interactions || []));
         cur.splice(idx, 1);
         this.engine.updateNode(node.id, { interactions: cur }, 'Remove Interaction');
-        this.updatePrototypePanel();
       });
     });
 
-    document.querySelectorAll('.sel-trigger').forEach(sel => {
+    container.querySelectorAll('.sel-trigger').forEach(sel => {
       sel.addEventListener('change', (e) => {
         const idx = parseInt(sel.dataset.index, 10);
         const cur = JSON.parse(JSON.stringify(node.interactions || []));
@@ -2325,13 +2538,46 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       });
     });
 
-    document.querySelectorAll('.sel-target').forEach(sel => {
+    container.querySelectorAll('.sel-action').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = Number(sel.dataset.index);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].action = e.target.value;
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Action');
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-target').forEach(sel => {
       sel.addEventListener('change', (e) => {
         const idx = parseInt(sel.dataset.index, 10);
         const cur = JSON.parse(JSON.stringify(node.interactions || []));
         if (cur[idx]) {
           cur[idx].targetId = e.target.value;
           this.engine.updateNode(node.id, { interactions: cur }, 'Change Target Frame');
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-anim').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = Number(sel.dataset.index);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].animation = e.target.value;
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Animation');
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-url').forEach(input => {
+      input.addEventListener('change', (e) => {
+        const idx = Number(input.dataset.index);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].url = e.target.value.trim();
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Interaction URL');
         }
       });
     });
@@ -4078,7 +4324,11 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   }
 
   setAxiomMode(mode) {
-    document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+    const topMode = mode === 'system' ? 'design-system' : mode;
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === topMode));
+    document.querySelectorAll('.mode-rail-btn').forEach(button => {
+      button.classList.toggle('active', button.dataset.mode === mode);
+    });
 
     if (mode === 'design') {
       this.switchToDesignMode();

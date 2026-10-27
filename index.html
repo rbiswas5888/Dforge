@@ -168,9 +168,6 @@
           <span style="color: var(--accent-blue); font-weight: 700;">⌘K</span>
           <span style="color: var(--text-dim);">Find anything...</span>
         </button>
-        <button class="btn-ai-sparkle" id="btnOpenFigmaAiPrompt" title="Prompt Figma AI to Design (⌘J)"
-          style="font-size: 11px; padding: 4px 10px;">✦ Prompt AI</button>
-
         <!-- Responsive Breakpoints Switcher (Section 2.1 & 7) -->
         <div class="breakpoint-selector" id="topBreakpointBar" title="Preview responsive breakpoints">
           <button class="bp-btn active" data-bp="desktop" title="Desktop 1440px">💻 1440</button>
@@ -192,30 +189,41 @@
 
         <button class="btn-icon" id="btnToggleTheme" title="Toggle Light / Dark / High-Contrast Mode"
           style="font-size: 13px;">🌙</button>
-        <button class="menu-dropdown-btn" id="btnImportDesignTop"
-          title="Import Design from Sketch, Figma, SVG, XD (⌘⌥I)"
-          style="color: #c084fc; border: 1px solid rgba(192,132,252,0.4); font-size: 11px; font-weight: 600;">📥
-          Import</button>
-        <button class="menu-dropdown-btn" id="btnMobilePreviewQr"
-          title="Mobile Live Preview & QR Usability Player (Blueprint Section 11)"
-          style="color: #38bdf8; border: 1px solid rgba(56,189,248,0.4); font-size: 11px; font-weight: 600;">📱 Mobile
-          Preview</button>
-        <button class="menu-dropdown-btn" id="btnDevModeToggle" title="Toggle Dev Mode (⇧D)"
-          style="color: #10b981; border: 1px solid rgba(16,185,129,0.4); font-size: 11px; font-weight: 600;">🛠 Dev
-          Mode</button>
-        <div id="devModeBadge"
-          style="display: none; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; font-size: 10px; font-weight: 700;">
-          DEV MODE</div>
-        <button class="menu-dropdown-btn" id="btnOpenMcpHub"
-          title="Model Context Protocol (MCP) Hub & Tool Gateway (⌘⌥M)"
-          style="color: #38bdf8; border: 1px solid rgba(56,189,248,0.4); font-size: 11px; font-weight: 600;">⚡ MCP
-          Hub</button>
-        <button class="menu-dropdown-btn" id="btnOpenLearnCenter" title="Learn & Tutorials Center (Section 15 & 16)"
-          style="color: #a855f7; border: 1px solid rgba(168,85,247,0.3); font-size: 11px;">📚 Learn</button>
-        <button class="menu-dropdown-btn" id="btnOpenLinter" title="Design System Linter (⌥L)"
-          style="color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); font-size: 11px;">⚡ Linter</button>
-        <button class="menu-dropdown-btn" id="btnShareModal" title="Share & Collaborate" style="font-size: 11px;">👥
-          Share</button>
+        <details class="top-action-menu">
+          <summary class="top-action-menu-trigger" title="Document, preview, collaboration, and design tools">More
+            <span aria-hidden="true">⌄</span>
+          </summary>
+          <div class="top-action-menu-panel">
+            <div class="top-action-menu-section" id="responsiveAppMenuSection">
+              <span class="top-action-menu-heading">Menu</span>
+            </div>
+            <div class="top-action-menu-section" id="responsiveWorkspaceSection">
+              <span class="top-action-menu-heading">View & Modes</span>
+            </div>
+            <div class="top-action-menu-section">
+              <span class="top-action-menu-heading">AI design</span>
+              <button class="top-action-menu-item btn-ai-sparkle" id="btnOpenFigmaAiPrompt"
+                title="Prompt Figma AI to Design (⌘J)">✦ Prompt AI</button>
+            </div>
+            <div class="top-action-menu-section">
+              <span class="top-action-menu-heading">Document</span>
+              <button class="top-action-menu-item" id="btnImportDesignTop">📥 Import Design</button>
+              <button class="top-action-menu-item" id="btnShareModal">👥 Share & Collaborate</button>
+            </div>
+            <div class="top-action-menu-section">
+              <span class="top-action-menu-heading">Preview & inspect</span>
+              <button class="top-action-menu-item" id="btnMobilePreviewQr">📱 Mobile Preview</button>
+              <button class="top-action-menu-item" id="btnDevModeToggle">🛠 Dev Mode</button>
+              <div id="devModeBadge">DEV MODE</div>
+              <button class="top-action-menu-item" id="btnOpenLinter">⚡ Design Linter</button>
+            </div>
+            <div class="top-action-menu-section">
+              <span class="top-action-menu-heading">Workspace</span>
+              <button class="top-action-menu-item" id="btnOpenMcpHub">⚡ MCP Hub</button>
+              <button class="top-action-menu-item" id="btnOpenLearnCenter">📚 Learn Center</button>
+            </div>
+          </div>
+        </details>
         <button class="menu-dropdown-btn" id="btnPlayProtoTop" title="Play Prototype (⌥⌘P)"
           style="color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); font-size: 11px;">▶ Play</button>
         <button class="btn-primary" id="btnExportReactTop" title="Compile to Production React (⌘⇧E)">⚡ Export</button>
@@ -224,21 +232,6 @@
 
     <!-- Main 3-Column Workspace with Axiom Geography (Section 3.1) -->
     <main class="main-workspace axiom-workspace-body">
-      <!-- E. Axiom Vertical Mode Rail (48px wide) (Section 3.4) -->
-      <nav class="mode-rail" id="axiomModeRail">
-        <button class="mode-rail-btn active" data-mode="design" data-title="Design Mode"
-          title="Design Mode (1)">🎨</button>
-        <button class="mode-rail-btn" data-mode="prototype" data-title="Prototype Mode"
-          title="Prototype Mode (2)">⚡</button>
-        <button class="mode-rail-btn" data-mode="system" data-title="Design System Mode"
-          title="Design System Mode (3)">❖</button>
-        <button class="mode-rail-btn" data-mode="dev" data-title="Developer Handoff Mode"
-          title="Developer Mode (4)">🛠</button>
-        <button class="mode-rail-btn" data-mode="comments" data-title="Comments & Review"
-          title="Comments Mode (5)">💬</button>
-        <button class="mode-rail-btn" data-mode="ai" data-title="AI Assistant" title="AI Assistant (6)">✦</button>
-      </nav>
-
       <!-- B. Left Sidebar: Navigator Panel (272px wide, resizable) (Section 3.5) -->
       <aside class="left-sidebar axiom-navigator" id="leftNavigatorSidebar">
         <!-- Page Selector Header (Section 3.5) -->
@@ -329,8 +322,22 @@
 
         <canvas id="canvas2d"></canvas>
 
-        <!-- Bottom Floating Tool Shelf -->
-        <nav class="tool-shelf">
+        <!-- Bottom Dock: modes and grouped canvas tools -->
+        <nav class="tool-shelf" aria-label="Editor tools">
+          <div class="mode-rail" id="axiomModeRail" role="group" aria-label="Workspace modes">
+            <button class="mode-rail-btn active" data-mode="design" data-title="Design Mode"
+              title="Design Mode (1)">🎨</button>
+            <button class="mode-rail-btn" data-mode="prototype" data-title="Prototype Mode"
+              title="Prototype Mode (2)">⚡</button>
+            <button class="mode-rail-btn" data-mode="system" data-title="Design System Mode"
+              title="Design System Mode (3)">❖</button>
+            <button class="mode-rail-btn" data-mode="dev" data-title="Developer Handoff Mode"
+              title="Developer Mode (4)">🛠</button>
+            <button class="mode-rail-btn" data-mode="comments" data-title="Comments & Review"
+              title="Comments Mode (5)">💬</button>
+            <button class="mode-rail-btn" data-mode="ai" data-title="AI Assistant" title="AI Assistant (6)">✦</button>
+          </div>
+          <div class="shelf-divider mode-tool-divider"></div>
           <button class="tool-btn active" data-tool="select" title="Move / Select (V)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
@@ -351,12 +358,15 @@
             </svg>
           </button>
           <div class="shelf-divider"></div>
-          <button class="tool-btn" data-tool="frame" title="Frame (F)">
+          <div class="tool-menu-group" data-tool-group="frame,section,slice">
+            <button class="tool-btn group-primary" data-tool="frame" title="Frame (F)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect width="18" height="18" x="3" y="3" rx="2" />
               <path d="M7 3v18M17 3v18M3 7h18M3 17h18" />
             </svg>
-          </button>
+            </button>
+            <button class="tool-group-toggle" type="button" aria-label="More frame tools" aria-expanded="false">⌄</button>
+            <div class="tool-menu" role="group" aria-label="Frame tools">
           <button class="tool-btn" data-tool="section" title="Section Tool (⇧S)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3" />
@@ -368,11 +378,16 @@
               <path d="M7 2v20M17 2v20M2 7h20M2 17h20" />
             </svg>
           </button>
-          <button class="tool-btn" data-tool="rectangle" title="Rectangle (R)">
+            </div>
+          </div>
+          <div class="tool-menu-group" data-tool-group="rectangle,ellipse,line,star,polygon">
+            <button class="tool-btn group-primary" data-tool="rectangle" title="Rectangle (R)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect width="18" height="18" x="3" y="3" rx="2" />
             </svg>
-          </button>
+            </button>
+            <button class="tool-group-toggle" type="button" aria-label="More shape tools" aria-expanded="false">⌄</button>
+            <div class="tool-menu" role="group" aria-label="Shape tools">
           <button class="tool-btn" data-tool="ellipse" title="Ellipse (O)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10" />
@@ -401,6 +416,8 @@
               <polygon points="12 3 22 21 2 21 12 3" />
             </svg>
           </button>
+            </div>
+          </div>
           <button class="tool-btn" data-tool="text" title="Text (T)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="4 7 4 4 20 4 20 7" />

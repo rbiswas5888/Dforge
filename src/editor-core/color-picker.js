@@ -592,9 +592,11 @@ export class ColorPickerPopover {
 
     // Position popover intelligently relative to targetElement
     if (this.container) {
-      const popoverW = 264;
-      const popoverH = 410;
-      let left = window.innerWidth - popoverW - 290;
+      this.container.style.display = 'block';
+      const bounds = this.container.getBoundingClientRect();
+      const popoverW = bounds.width || 264;
+      const popoverH = bounds.height || 410;
+      let left = window.innerWidth - popoverW - 16;
       let top = 80;
 
       if (targetElement) {
@@ -602,16 +604,14 @@ export class ColorPickerPopover {
         left = rect.left - popoverW - 12;
         top = rect.top - 20;
 
-        if (left < 10) {
+        if (left < 10 && rect.right + popoverW + 12 <= window.innerWidth - 10) {
           left = rect.right + 12;
         }
       }
 
-      if (top + popoverH > window.innerHeight - 10) {
-        top = window.innerHeight - popoverH - 10;
-      }
+      left = Math.max(10, Math.min(left, window.innerWidth - popoverW - 10));
+      top = Math.min(top, window.innerHeight - Math.min(popoverH, window.innerHeight - 20) - 10);
       if (top < 10) top = 10;
-      if (left < 10) left = 10;
 
       this.container.style.left = `${Math.round(left)}px`;
       this.container.style.top = `${Math.round(top)}px`;
@@ -625,6 +625,7 @@ export class ColorPickerPopover {
 
   close() {
     if (!this.isOpen) return;
+    this.notifyChange();
     if (this.container) {
       this.container.style.display = 'none';
     }

@@ -408,7 +408,7 @@ export class DesignSystemUIController {
   }
 
   updateHeaderInfo() {
-    const metrics = this.registry.getOverviewMetrics();
+    const metrics = this.registry.computeOverviewMetrics();
     const titleEl = document.getElementById('dsActiveSystemName');
     const badgeEl = document.getElementById('dsActiveVersionBadge');
     if (titleEl) titleEl.textContent = this.registry.system.name;
@@ -421,11 +421,11 @@ export class DesignSystemUIController {
     const bStyles = document.getElementById('dsNavBadgeStyles');
     const bAssets = document.getElementById('dsNavBadgeAssets');
 
-    if (bTokens) bTokens.textContent = metrics.tokenCount;
-    if (bVars) bVars.textContent = metrics.variableCount;
-    if (bComps) bComps.textContent = metrics.componentCount;
-    if (bStyles) bStyles.textContent = metrics.styleCount;
-    if (bAssets) bAssets.textContent = metrics.assetCount;
+    if (bTokens) bTokens.textContent = metrics.totalTokens;
+    if (bVars) bVars.textContent = metrics.totalVariables;
+    if (bComps) bComps.textContent = metrics.totalComponents;
+    if (bStyles) bStyles.textContent = metrics.totalStyles;
+    if (bAssets) bAssets.textContent = metrics.totalAssets;
   }
 
   renderView(view) {
@@ -472,33 +472,33 @@ export class DesignSystemUIController {
   // --- Views ---
 
   renderOverviewView(container) {
-    const metrics = this.registry.getOverviewMetrics();
+    const metrics = this.registry.computeOverviewMetrics();
 
     container.innerHTML = `
       <div class="ds-metrics-grid">
         <div class="ds-metric-card" onclick="window.designForgeApp.dsUi.renderView('tokens')">
           <span class="ds-metric-label">Design Tokens</span>
-          <span class="ds-metric-value">${metrics.tokenCount}</span>
+          <span class="ds-metric-value">${metrics.totalTokens}</span>
           <span class="ds-metric-subtext">${metrics.duplicateCandidates.length} duplicates detected</span>
         </div>
         <div class="ds-metric-card" onclick="window.designForgeApp.dsUi.renderView('variables')">
           <span class="ds-metric-label">Variables</span>
-          <span class="ds-metric-value">${metrics.variableCount}</span>
+          <span class="ds-metric-value">${metrics.totalVariables}</span>
           <span class="ds-metric-subtext">Mapped to layout & colors</span>
         </div>
         <div class="ds-metric-card" onclick="window.designForgeApp.dsUi.renderView('components')">
           <span class="ds-metric-label">Components</span>
-          <span class="ds-metric-value">${metrics.componentCount}</span>
-          <span class="ds-metric-subtext">${metrics.variantCount} total variants</span>
+          <span class="ds-metric-value">${metrics.totalComponents}</span>
+          <span class="ds-metric-subtext">${metrics.totalVariants} total variants</span>
         </div>
         <div class="ds-metric-card" onclick="window.designForgeApp.dsUi.renderView('styles')">
           <span class="ds-metric-label">Styles</span>
-          <span class="ds-metric-value">${metrics.styleCount}</span>
+          <span class="ds-metric-value">${metrics.totalStyles}</span>
           <span class="ds-metric-subtext">Color & Typography</span>
         </div>
         <div class="ds-metric-card" onclick="window.designForgeApp.dsUi.renderView('assets')">
           <span class="ds-metric-label">Assets</span>
-          <span class="ds-metric-value">${metrics.assetCount}</span>
+          <span class="ds-metric-value">${metrics.totalAssets}</span>
           <span class="ds-metric-subtext">100% synchronized</span>
         </div>
       </div>
@@ -514,7 +514,7 @@ export class DesignSystemUIController {
           ${metrics.duplicateCandidates.length > 0 ? `
             <div class="ds-issue-item">
               <div>
-                <strong>Duplicate Token Candidates:</strong> ${metrics.duplicateCandidates.map(d => `${d.tokens.join(' = ')} (${d.value})`).join('; ')}
+                <strong>Duplicate Token Candidates:</strong> ${metrics.duplicateCandidates.map(d => `${d.tokenA.name} = ${d.tokenB.name} (${d.value})`).join('; ')}
               </div>
             </div>
           ` : `
@@ -522,9 +522,9 @@ export class DesignSystemUIController {
               <div>✓ Zero duplicate token candidates detected. Registry is normalized.</div>
             </div>
           `}
-          ${metrics.unboundRawValues.length > 0 ? `
+          ${metrics.unboundCount > 0 ? `
             <div class="ds-issue-item">
-              <div><strong>Unbound Raw Values in Document:</strong> ${metrics.unboundRawValues.length} candidate layers could use tokens.</div>
+              <div><strong>Unbound Raw Values in Document:</strong> ${metrics.unboundCount} candidate layers could use tokens.</div>
             </div>
           ` : `
             <div class="ds-issue-item info">
@@ -545,7 +545,7 @@ export class DesignSystemUIController {
             <div><strong>Current Version:</strong> v${this.registry.system.version}</div>
             <div><strong>Status:</strong> <span style="color: var(--accent-blue);">${this.registry.system.status}</span></div>
             <div><strong>Last Modified:</strong> ${new Date(this.registry.system.updatedAt).toLocaleTimeString()}</div>
-            <div><strong>Releases Published:</strong> ${this.registry.releases.length}</div>
+            <div><strong>Releases Published:</strong> ${this.registry.system.history.length}</div>
           </div>
         </div>
       </div>
@@ -817,7 +817,7 @@ export class DesignSystemUIController {
   }
 
   renderVersionsView(container) {
-    const releases = this.registry.releases;
+    const releases = this.registry.system.history;
 
     container.innerHTML = `
       <div class="ds-card" style="max-width: 760px;">
@@ -831,16 +831,14 @@ export class DesignSystemUIController {
               <th>Version</th>
               <th>Release Notes</th>
               <th>Published At</th>
-              <th>Author</th>
             </tr>
           </thead>
           <tbody>
             ${releases.map(r => `
               <tr>
                 <td><span class="ds-version-pill">v${r.version}</span></td>
-                <td style="font-size: 12px; color: var(--text-main);">${r.changelog}</td>
+                <td style="font-size: 12px; color: var(--text-main);">${r.summary}</td>
                 <td style="font-size: 11px; color: var(--text-dim);">${new Date(r.publishedAt).toLocaleDateString()}</td>
-                <td style="font-size: 11px; color: var(--text-dim);">${r.author}</td>
               </tr>
             `).join('')}
           </tbody>

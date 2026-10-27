@@ -56,6 +56,7 @@ const metrics = registry.computeOverviewMetrics();
 assert.ok(metrics.totalTokens >= 2, 'Should count tokens');
 assert.ok(metrics.totalVariables >= 1, 'Should count variables');
 assert.ok(metrics.totalAssets >= 3, 'Should count assets');
+assert.equal(metrics.totalStyles, Object.keys(registry.system.styles).length, 'Should count registered styles');
 assert.ok(metrics.duplicateCandidatesCount >= 1, 'Should detect duplicate token candidates');
 assert.ok(metrics.duplicateCandidates.some(d => d.value === '#2563eb'), 'Should detect the #2563eb duplicate candidate');
 console.log('   ✓ Overview metrics accurately calculated: %d tokens, %d variables, %d duplicate candidate(s).',

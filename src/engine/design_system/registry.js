@@ -272,6 +272,7 @@ export class DesignSystemRegistry {
       totalVariables: variables.length,
       totalComponents: components.length,
       totalVariants,
+      totalStyles: Object.keys(this.system.styles).length,
       totalAssets: assets.length,
       activeMode: this.system.activeMode,
       version: this.system.version,
