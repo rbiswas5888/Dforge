@@ -980,6 +980,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
   bindCanvasEvents() {
     const { canvas, renderer, engine } = this;
+    this.canvasEventController?.abort();
+    this.canvasEventController = new AbortController();
+    const listenerOptions = { signal: this.canvasEventController.signal };
 
     // Wheel zooming & panning
     canvas.addEventListener('wheel', (e) => {
@@ -991,7 +994,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         renderer.panBy(-e.deltaX, -e.deltaY);
       }
       this.updateRulers();
-    }, { passive: false });
+    }, { ...listenerOptions, passive: false });
 
     // Canvas Context Menu (Right-click)
     canvas.addEventListener('contextmenu', (e) => {
@@ -1007,7 +1010,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         ctxMenu.style.left = `${Math.min(e.clientX, window.innerWidth - 220)}px`;
         ctxMenu.style.top = `${Math.min(e.clientY, window.innerHeight - 260)}px`;
       }
-    });
+    }, listenerOptions);
 
     canvas.addEventListener('mousedown', async (e) => {
       if (e.button === 2) return; // Right-click handled by contextmenu
@@ -1148,7 +1151,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         this.dragState = { type: 'marquee', startX: canvasCoords.x, startY: canvasCoords.y };
         renderer.marquee = { startX: canvasCoords.x, startY: canvasCoords.y, currentX: canvasCoords.x, currentY: canvasCoords.y };
       }
-    });
+    }, listenerOptions);
 
     window.addEventListener('mousemove', (e) => {
       const canvasCoords = renderer.screenToCanvas(e.clientX, e.clientY);
@@ -1250,7 +1253,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         renderer.marquee.currentY = canvasCoords.y;
         renderer.render();
       }
-    });
+    }, listenerOptions);
 
     window.addEventListener('mouseup', () => {
       if (!this.dragState) return;
@@ -1281,14 +1284,14 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
       this.dragState = null;
       canvas.style.cursor = this.isHandMode ? 'grab' : 'default';
-    });
+    }, listenerOptions);
 
     window.addEventListener('keyup', (e) => {
       if (e.key === 'Alt' && renderer.altMeasureActive) {
         renderer.altMeasureActive = false;
         renderer.render();
       }
-    });
+    }, listenerOptions);
 
     // Double click to inline edit text
     canvas.addEventListener('dblclick', async (e) => {
@@ -1311,7 +1314,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           }
         }
       }
-    });
+    }, listenerOptions);
   }
 
   handleShapeCreation(tool, coords, bounds = null) {
