@@ -129,6 +129,28 @@ async function runPrototypingEngineVerificationSuite() {
   // 1. Flow starting points & Navigation History
   console.log('1. Testing Flows & Navigation History (Section 3 & 4)...');
   const engine = new PrototypeEngine(mockDocument);
+  const prototypeHtml = new PrototypeEngine({
+    name: 'Prototype Layout',
+    pages: [{
+      id: 'page',
+      rootIds: ['frame'],
+      nodes: {
+        frame: {
+          id: 'frame',
+          type: 'frame',
+          name: 'Screen',
+          childIds: [],
+          transform: { width: 375, height: 812 }
+        }
+      }
+    }]
+  }).generatePrototypeHtml();
+  assert(
+    prototypeHtml.includes('id="activeDeviceBezel" style="width: 100%; height: 100%; border: 0;'),
+    'Prototype player viewport should fit its iframe so screen interactions remain reachable'
+  );
+  console.log('   ✓ Prototype player viewport scales to its iframe.');
+
   engine.setFlowStartingPoints([
     { id: 'flow_onboarding', name: 'User Onboarding Flow', startingFrameId: 'screen_home' },
     { id: 'flow_checkout', name: 'Direct Checkout Flow', startingFrameId: 'screen_checkout' }

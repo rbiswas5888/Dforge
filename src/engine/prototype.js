@@ -1234,7 +1234,7 @@ export class PrototypeEngine {
       </div>
     </div>
     <div id="viewportWrapper">
-      <div class="device-bezel" id="activeDeviceBezel" style="width: 375px; height: 812px;">
+      <div class="device-bezel" id="activeDeviceBezel" style="width: 100%; height: 100%; border: 0; border-radius: 0; box-shadow: none; background: transparent;">
         <div class="device-screen" id="deviceScreen">
           <!-- Interactive DOM Elements dynamically mounted -->
         </div>
