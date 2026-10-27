@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>DesignForge AI — Mobile Live Preview & Usability Player</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-app: #080b12;
+      --bg-surface: #101623;
+      --bg-card: #182234;
+      --border-color: #24324a;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top Navigation Toolbar */
+    .preview-header {
+      height: 52px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 800;
+      font-size: 15px;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+    }
+
+    .logo-badge span {
+      color: var(--accent);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    .status-pill.stale {
+      background: rgba(245, 158, 11, 0.12);
+      color: var(--warning);
+      border-color: rgba(245, 158, 11, 0.25);
+    }
+    .status-pill.stale .status-dot {
+      background: var(--warning);
+      box-shadow: 0 0 8px var(--warning);
+    }
+
+    .status-pill.offline {
+      background: rgba(239, 68, 68, 0.12);
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.25);
+    }
+    .status-pill.offline .status-dot {
+      background: var(--danger);
+      box-shadow: 0 0 8px var(--danger);
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-select, .btn-action {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-family: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .control-select:focus, .btn-action:hover {
+      border-color: var(--accent);
+      outline: none;
+    }
+
+    .btn-action.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Main Stage Workspace */
+    .preview-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: radial-gradient(circle at center, #111827 0%, #06090e 100%);
+      overflow: auto;
+      padding: 24px;
+    }
+
+    /* Device Mockup Shell */
+    .device-shell {
+      position: relative;
+      background: #000;
+      border: 12px solid #282f3d;
+      border-radius: 48px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .device-shell.native-mode {
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      width: 100vw !important;
+      height: 100vh !important;
+    }
+
+    /* Dynamic Island / Notch */
+    .device-notch {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 110px;
+      height: 28px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      pointer-events: none;
+    }
+
+    .notch-camera {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+    }
+
+    .notch-sensor {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #020617;
+    }
+
+    /* Screen Viewport */
+    .screen-viewport {
+      flex: 1;
+      position: relative;
+      background: #0b0f19;
+      overflow-y: auto;
+      overflow-x: hidden;
+      touch-action: pan-y pinch-zoom;
+    }
+
+    .screen-content {
+      min-height: 100%;
+      width: 100%;
+      position: relative;
+    }
+
+    /* Gesture & Tap Feedback Ripple */
+    .tap-ripple {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(56, 189, 248, 0.4);
+      transform: translate(-50%, -50%) scale(0);
+      pointer-events: none;
+      animation: ripple 0.45s ease-out forwards;
+      z-index: 999;
+    }
+
+    @keyframes ripple {
+      0% { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+    }
+
+    /* Modal Dialogs */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      width: 90%;
+      max-width: 460px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .modal-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .qr-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      background: #ffffff;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #030712;
+      font-weight: 600;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    /* Usability Consent Banner */
+    .consent-banner {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-surface);
+      border: 1px solid var(--accent);
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      gap: 16px;
+      z-index: 500;
+      font-size: 13px;
+    }
+
+    .consent-banner.show {
+      display: flex;
+    }
+
+    /* Overlay Layer for Prototyping */
+    .prototype-overlay-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Toolbar -->
+  <header class="preview-header">
+    <div class="brand-section">
+      <div class="logo-badge">DesignForge <span>Live</span></div>
+      <div class="status-pill" id="syncStatus">
+        <div class="status-dot"></div>
+        <span id="syncStatusText">Connecting...</span>
+      </div>
+    </div>
+
+    <div class="toolbar-actions">
+      <!-- Device Preset -->
+      <select id="deviceSelector" class="control-select" title="Change Device Preset">
+        <option value="iphone_15_pro">iPhone 15 Pro (393 × 852)</option>
+        <option value="iphone_14">iPhone 14 / 13 (390 × 844)</option>
+        <option value="iphone_se">iPhone SE 3rd gen (375 × 667)</option>
+        <option value="pixel_8">Google Pixel 8 (412 × 915)</option>
+        <option value="ipad_mini">iPad Mini (744 × 1133)</option>
+        <option value="native_screen">Native Device / Fullscreen</option>
+      </select>
+
+      <!-- Orientation Toggle -->
+      <button id="orientationBtn" class="btn-action" title="Toggle Portrait / Landscape">
+        🔄 <span id="orientationLabel">Portrait</span>
+      </button>
+
+      <!-- Restart Flow -->
+      <button id="restartBtn" class="btn-action" title="Restart Prototype Flow">
+        ⏮ Restart
+      </button>
+
+      <!-- Usability Recording Toggle -->
+      <button id="usabilityBtn" class="btn-action" title="Toggle Usability Testing Logger">
+        📹 Usability Test
+      </button>
+
+      <!-- Share QR Modal -->
+      <button id="qrBtn" class="btn-action" title="View Mobile QR Code">
+        📱 Scan QR
+      </button>
+    </div>
+  </header>
+
+  <!-- Prototype Canvas Stage -->
+  <main class="preview-stage" id="stage">
+    <div class="device-shell" id="deviceShell" style="width: 393px; height: 852px;">
+      <!-- Dynamic Island Mockup -->
+      <div class="device-notch" id="deviceNotch">
+        <div class="notch-sensor"></div>
+        <div class="notch-camera"></div>
+      </div>
+
+      <!-- Live Screen Viewport -->
+      <div class="screen-viewport" id="viewport">
+        <div class="screen-content" id="screenContent">
+          <!-- Dynamic Document Frame Rendered Here -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Usability Consent Banner -->
+  <div class="consent-banner" id="consentBanner">
+    <span>🔒 <strong>Usability Testing Consent:</strong> Enable anonymous touch & gesture logging? All sensitive inputs (passwords, cards) are strictly redacted.</span>
+    <button class="btn-primary" id="consentAccept">Accept & Record</button>
+    <button class="btn-secondary" id="consentDecline">Decline</button>
+  </div>
+
+  <!-- QR Code Modal -->
+  <div class="modal-overlay" id="qrModal">
+    <div class="modal-card">
+      <h3 class="modal-title">📱 Test on Your Mobile Device</h3>
+      <p class="modal-desc">Scan this QR code with your iPhone or Android camera to open this prototype live in your mobile browser with touch & safe-area gestures.</p>
+      <div class="qr-container" id="qrContainer">
+        <!-- QR SVG will be injected here -->
+      </div>
+      <div style="font-size: 11px; color: var(--text-muted); word-break: break-all; margin-bottom: 16px;" id="qrUrlText"></div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="copyUrlBtn">Copy Link</button>
+        <button class="btn-primary" id="closeQrBtn">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Runtime Logic Script (ES Module) -->
+  <script type="module">
+    import { PrototypeEngine } from './src/engine/prototype.js';
+    import { generateQRCodeSVG } from './src/editor-core/qr-code.js';
+    import { createInitialDocument } from './src/engine/document.js';
+
+    // Parse URL Query Params
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session');
+    const sessionToken = urlParams.get('token');
+
+    // State Variables
+    let currentDoc = null;
+    let prototypeEngine = null;
+    let currentFlowId = null;
+    let currentRevision = 0;
+    let isLandscape = false;
+    let usabilityConsent = false;
+    let recordedEventsCount = 0;
+
+    const PRESETS = {
+      iphone_15_pro: { width: 393, height: 852, notch: true, name: 'iPhone 15 Pro' },
+      iphone_14: { width: 390, height: 844, notch: true, name: 'iPhone 14' },
+      iphone_se: { width: 375, height: 667, notch: false, name: 'iPhone SE' },
+      pixel_8: { width: 412, height: 915, notch: false, name: 'Pixel 8' },
+      ipad_mini: { width: 744, height: 1133, notch: false, name: 'iPad Mini' }
+    };
+
+    // DOM Elements
+    const syncStatusEl = document.getElementById('syncStatus');
+    const syncStatusText = document.getElementById('syncStatusText');
+    const deviceShell = document.getElementById('deviceShell');
+    const deviceNotch = document.getElementById('deviceNotch');
+    const viewport = document.getElementById('viewport');
+    const screenContent = document.getElementById('screenContent');
+    const deviceSelector = document.getElementById('deviceSelector');
+    const orientationBtn = document.getElementById('orientationBtn');
+    const orientationLabel = document.getElementById('orientationLabel');
+    const restartBtn = document.getElementById('restartBtn');
+    const usabilityBtn = document.getElementById('usabilityBtn');
+    const consentBanner = document.getElementById('consentBanner');
+    const consentAccept = document.getElementById('consentAccept');
+    const consentDecline = document.getElementById('consentDecline');
+    const qrBtn = document.getElementById('qrBtn');
+    const qrModal = document.getElementById('qrModal');
+    const qrContainer = document.getElementById('qrContainer');
+    const qrUrlText = document.getElementById('qrUrlText');
+    const closeQrBtn = document.getElementById('closeQrBtn');
+    const copyUrlBtn = document.getElementById('copyUrlBtn');
+
+    // 1. Initialize Sync / Document Loading
+    async function initSession() {
+      if (sessionId) {
+        try {
+          const res = await fetch(`/api/preview/session/${sessionId}`);
+          if (!res.ok) throw new Error('Session not found or expired');
+          const data = await res.json();
+          if (data.success && data.session) {
+            currentDoc = data.session.documentSnapshot;
+            currentFlowId = data.session.flowId;
+            currentRevision = data.session.revision;
+            updateSyncStatus('live', `Live (v${currentRevision})`);
+            startPolling();
+          } else {
+            throw new Error('Invalid session payload');
+          }
+        } catch (err) {
+          console.warn('Could not load session from server, falling back to local demo:', err.message);
+          updateSyncStatus('stale', 'Offline Demo');
+          loadDefaultDocument();
+        }
+      } else {
+        updateSyncStatus('live', 'Local Demo');
+        loadDefaultDocument();
+      }
+
+      setupPrototypeEngine();
+      renderActiveFrame();
+    }
+
+    function loadDefaultDocument() {
+      currentDoc = createInitialDocument('Fintech Treasury Mobile App');
+    }
+
+    function updateSyncStatus(status, text) {
+      syncStatusEl.className = `status-pill ${status}`;
+      syncStatusText.textContent = text;
+    }
+
+    // 2. Poll for Live Updates (Blueprint Section 11.2)
+    function startPolling() {
+      setInterval(async () => {
+        if (!sessionId) return;
+        try {
+          const res = await fetch(`/api/preview/session/${sessionId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.session && data.session.revision !== currentRevision) {
+              currentRevision = data.session.revision;
+              currentDoc = data.session.documentSnapshot;
+              updateSyncStatus('live', `Live (v${currentRevision})`);
+              setupPrototypeEngine();
+              renderActiveFrame();
+            }
+          } else {
+            updateSyncStatus('stale', 'Stale Connection');
+          }
+        } catch (e) {
+          updateSyncStatus('offline', 'Offline');
+        }
+      }, 3000);
+    }
+
+    // 3. Prototyping Engine Runtime Setup
+    function setupPrototypeEngine() {
+      if (!currentDoc) return;
+      prototypeEngine = new PrototypeEngine(currentDoc);
+      if (currentDoc.prototype?.flows && currentDoc.prototype.flows.length > 0) {
+        prototypeEngine.setFlowStartingPoints(currentDoc.prototype.flows);
+        const targetFlow = currentFlowId || currentDoc.prototype.flows[0].id;
+        prototypeEngine.startFlow(targetFlow);
+      } else {
+        const firstFrameId = currentDoc.pages[0]?.rootIds[0];
+        if (firstFrameId) {
+          prototypeEngine.startFlow(firstFrameId);
+        }
+      }
+    }
+
+    // 4. Render Active Screen
+    function renderActiveFrame() {
+      if (!currentDoc || !prototypeEngine) return;
+      const state = prototypeEngine.getState();
+      const frameId = state.currentFrameId;
+      const page = currentDoc.pages[0];
+      const frameNode = page?.nodes[frameId];
+
+      if (!frameNode) {
+        screenContent.innerHTML = `<div style="padding: 40px 20px; text-align: center; color: var(--text-muted);">
+          <h3>No Active Frame</h3>
+          <p style="margin-top: 8px; font-size: 13px;">Selected flow frame could not be found.</p>
+        </div>`;
+        return;
+      }
+
+      // Render frame HTML
+      screenContent.innerHTML = renderNodeHtml(frameNode, page);
+      attachInteractionListeners();
+    }
+
+    function renderNodeHtml(node, page) {
+      if (!node || !node.visible) return '';
+
+      const style = buildNodeStyle(node);
+      const isInteractive = (node.interactions && node.interactions.length > 0);
+      const interactiveAttr = isInteractive ? ` data-interactive="true" data-node-id="${node.id}"` : ` data-node-id="${node.id}"`;
+
+      if (node.type === 'text') {
+        const text = node.text?.content || '';
+        return `<div${interactiveAttr} style="${style}; display: flex; align-items: center;">${escapeHtml(text)}</div>`;
+      }
+
+      const childHtml = (node.childIds || []).map(cid => renderNodeHtml(page.nodes[cid], page)).join('');
+      return `<div${interactiveAttr} style="${style}">${childHtml}</div>`;
+    }
+
+    function buildNodeStyle(node) {
+      const styles = ['position: relative', 'box-sizing: border-box'];
+
+      if (node.transform) {
+        if (node.transform.width) styles.push(`width: ${node.transform.width}px`);
+        if (node.transform.height) styles.push(`height: ${node.transform.height}px`);
+      }
+
+      if (node.layout) {
+        if (node.layout.mode === 'stack-vertical') {
+          styles.push('display: flex', 'flex-direction: column');
+        } else if (node.layout.mode === 'stack-horizontal') {
+          styles.push('display: flex', 'flex-direction: row');
+        }
+        if (node.layout.gap) styles.push(`gap: ${node.layout.gap}px`);
+        if (node.layout.paddingTop) styles.push(`padding-top: ${node.layout.paddingTop}px`);
+        if (node.layout.paddingRight) styles.push(`padding-right: ${node.layout.paddingRight}px`);
+        if (node.layout.paddingBottom) styles.push(`padding-bottom: ${node.layout.paddingBottom}px`);
+        if (node.layout.paddingLeft) styles.push(`padding-left: ${node.layout.paddingLeft}px`);
+        if (node.layout.alignItems) styles.push(`align-items: ${node.layout.alignItems}`);
+        if (node.layout.justifyContent) styles.push(`justify-content: ${node.layout.justifyContent}`);
+      }
+
+      if (node.fills && node.fills.length > 0) {
+        const fill = node.fills[0];
+        if (fill.type === 'solid' && fill.color) {
+          styles.push(`background-color: ${fill.color}`);
+        }
+      }
+
+      if (node.borderRadius) {
+        styles.push(`border-radius: ${node.borderRadius}px`);
+      }
+
+      if (node.text) {
+        if (node.text.fontSize) styles.push(`font-size: ${node.text.fontSize}px`);
+        if (node.text.fontWeight) styles.push(`font-weight: ${node.text.fontWeight}`);
+        if (node.text.fill) styles.push(`color: ${node.text.fill}`);
+      }
+
+      return styles.join('; ');
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // 5. Interaction & Usability Gestures Handling
+    function attachInteractionListeners() {
+      const interactiveEls = screenContent.querySelectorAll('[data-interactive="true"]');
+      interactiveEls.forEach(el => {
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const nodeId = el.getAttribute('data-node-id');
+          triggerRipple(e.clientX, e.clientY);
+          logUsabilityEvent('tap', nodeId, { x: e.clientX, y: e.clientY });
+          executeNodeInteraction(nodeId, 'click');
+        });
+      });
+    }
+
+    function executeNodeInteraction(nodeId, triggerType) {
+      if (!prototypeEngine) return;
+      const res = prototypeEngine.handleInteraction(nodeId, triggerType);
+      if (res.actionExecuted) {
+        renderActiveFrame();
+      }
+    }
+
+    // Touch & Swipe Gestures
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    viewport.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    viewport.addEventListener('touchend', (e) => {
+      const touchEndX = e.changedTouches[0].screenX;
+      const touchEndY = e.changedTouches[0].screenY;
+      handleGesture(touchStartX, touchStartY, touchEndX, touchEndY);
+    }, { passive: true });
+
+    function handleGesture(startX, startY, endX, endY) {
+      const dx = endX - startX;
+      const dy = endY - startY;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+
+      if (Math.max(absDx, absDy) > 40) {
+        let direction = '';
+        if (absDx > absDy) {
+          direction = dx > 0 ? 'swipe-right' : 'swipe-left';
+        } else {
+          direction = dy > 0 ? 'swipe-down' : 'swipe-up';
+        }
+
+        logUsabilityEvent('gesture', null, { gesture: direction, deltaX: dx, deltaY: dy });
+
+        // Check if active frame has swipe triggers
+        const state = prototypeEngine?.getState();
+        if (state && state.currentFrameId) {
+          executeNodeInteraction(state.currentFrameId, direction);
+        }
+      }
+    }
+
+    // Visual Touch Ripple
+    function triggerRipple(x, y) {
+      const rect = viewport.getBoundingClientRect();
+      const ripple = document.createElement('div');
+      ripple.className = 'tap-ripple';
+      ripple.style.left = `${x - rect.left}px`;
+      ripple.style.top = `${y - rect.top}px`;
+      viewport.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 450);
+    }
+
+    // Usability Testing Logger
+    async function logUsabilityEvent(eventType, nodeId, payload = {}) {
+      if (!usabilityConsent || !sessionId) return;
+      const eventData = {
+        eventType,
+        targetNodeId: nodeId,
+        timestamp: Date.now(),
+        viewportWidth: viewport.clientWidth,
+        viewportHeight: viewport.clientHeight,
+        orientation: isLandscape ? 'landscape' : 'portrait',
+        ...payload
+      };
+
+      recordedEventsCount++;
+      usabilityBtn.textContent = `📹 Usability (${recordedEventsCount})`;
+
+      try {
+        await fetch(`/api/preview/session/${sessionId}/events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventData)
+        });
+      } catch (err) {
+        console.warn('Failed to send usability telemetry event:', err);
+      }
+    }
+
+    // 6. Device & Layout Controls
+    function updateDeviceDimensions() {
+      const selected = deviceSelector.value;
+      if (selected === 'native_screen') {
+        deviceShell.className = 'device-shell native-mode';
+        deviceNotch.style.display = 'none';
+        deviceShell.style.width = '100vw';
+        deviceShell.style.height = '100vh';
+        return;
+      }
+
+      deviceShell.className = 'device-shell';
+      const preset = PRESETS[selected] || PRESETS.iphone_15_pro;
+      const w = isLandscape ? preset.height : preset.width;
+      const h = isLandscape ? preset.width : preset.height;
+
+      deviceShell.style.width = `${w}px`;
+      deviceShell.style.height = `${h}px`;
+      deviceNotch.style.display = (preset.notch && !isLandscape) ? 'flex' : 'none';
+    }
+
+    deviceSelector.addEventListener('change', updateDeviceDimensions);
+
+    orientationBtn.addEventListener('click', () => {
+      isLandscape = !isLandscape;
+      orientationLabel.textContent = isLandscape ? 'Landscape' : 'Portrait';
+      updateDeviceDimensions();
+    });
+
+    restartBtn.addEventListener('click', () => {
+      if (prototypeEngine) {
+        prototypeEngine.resetState();
+        renderActiveFrame();
+      }
+    });
+
+    // Usability Consent UI
+    usabilityBtn.addEventListener('click', () => {
+      if (!usabilityConsent) {
+        consentBanner.classList.add('show');
+      } else {
+        usabilityConsent = false;
+        usabilityBtn.classList.remove('active');
+        usabilityBtn.textContent = '📹 Usability Test';
+      }
+    });
+
+    consentAccept.addEventListener('click', () => {
+      usabilityConsent = true;
+      consentBanner.classList.remove('show');
+      usabilityBtn.classList.add('active');
+      usabilityBtn.textContent = `📹 Recording (0)`;
+    });
+
+    consentDecline.addEventListener('click', () => {
+      consentBanner.classList.remove('show');
+      usabilityConsent = false;
+    });
+
+    // 7. QR Code Sharing Modal
+    qrBtn.addEventListener('click', () => {
+      const currentUrl = window.location.href;
+      const qrSvg = generateQRCodeSVG(currentUrl, { size: 240, padding: 3 });
+      qrContainer.innerHTML = qrSvg;
+      qrUrlText.textContent = currentUrl;
+      qrModal.classList.add('open');
+    });
+
+    closeQrBtn.addEventListener('click', () => {
+      qrModal.classList.remove('open');
+    });
+
+    copyUrlBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(window.location.href);
+      copyUrlBtn.textContent = 'Copied!';
+      setTimeout(() => copyUrlBtn.textContent = 'Copy Link', 2000);
+    });
+
+    // Start App
+    initSession();
+    updateDeviceDimensions();
+  </script>
+</body>
+</html>

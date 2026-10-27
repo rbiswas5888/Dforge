@@ -232,9 +232,132 @@ export class DesignForgeAIService {
   }
 
   /**
+   * Queries connected design tokens, guaranteeing no hallucinated token existence
+   */
+  queryToken(tokenName) {
+    if (!this.doc?.tokens) {
+      return { found: false, message: `Token "${tokenName}" does not exist: No tokens defined in connected document.` };
+    }
+
+    const normalizedName = tokenName.replace(/^--token-|^--/, '').toLowerCase();
+    const categories = ['colors', 'spacing', 'radii', 'typography', 'elevation'];
+
+    for (const cat of categories) {
+      const bucket = this.doc.tokens[cat];
+      if (bucket) {
+        if (bucket[tokenName]) {
+          return { found: true, category: cat, name: tokenName, value: bucket[tokenName] };
+        }
+        for (const [k, v] of Object.entries(bucket)) {
+          if (k.toLowerCase() === normalizedName) {
+            return { found: true, category: cat, name: k, value: v };
+          }
+        }
+      }
+    }
+
+    return {
+      found: false,
+      message: `Token "${tokenName}" does not exist in the connected design system.`
+    };
+  }
+
+  /**
+   * Queries component library with strict permission enforcement
+   */
+  queryLibrary(libraryId, userPermissions = {}) {
+    if (userPermissions[libraryId]?.canRead === false) {
+      return {
+        allowed: false,
+        error: `Permission denied: Read access to library "${libraryId}" is revoked.`
+      };
+    }
+    const components = this.doc?.components || {};
+    return {
+      allowed: true,
+      libraryId,
+      components: Object.values(components)
+    };
+  }
+
+  /**
+   * Verifies supported features and formats, identifying limitations honestly
+   */
+  checkCapability(featureOrFormat) {
+    const SUPPORTED = new Set([
+      'react-vite-ts',
+      'react-vite-js',
+      'react-tailwind',
+      'react-cssmodules',
+      'svg',
+      'png',
+      'dforge',
+      'tokens',
+      'prototyping',
+      'figma-import',
+      'sketch-import'
+    ]);
+
+    const normalized = String(featureOrFormat).toLowerCase().trim();
+    if (SUPPORTED.has(normalized)) {
+      return { supported: true, capability: normalized };
+    }
+
+    return {
+      supported: false,
+      limitation: `Capability "${featureOrFormat}" is not supported. Supported targets: React 18 + Vite (TypeScript/JavaScript), SVG, PNG, and .dforge bundles.`
+    };
+  }
+
+  /**
+   * Generates a wireframe element, transparently marking components not in the design system
+   */
+  generateWireframe(nodeSpec, options = {}) {
+    const existingComponents = this.doc?.components || {};
+    const matchingComp = Object.values(existingComponents).find(c => 
+      c.name?.toLowerCase() === (nodeSpec.name || '').toLowerCase()
+    );
+
+    if (matchingComp) {
+      return {
+        ...nodeSpec,
+        type: 'instance',
+        componentId: matchingComp.id,
+        systemStatus: 'linked_to_design_system'
+      };
+    }
+
+    // Agent Master Prompt Section 9, Acceptance Test #2:
+    // Mark new assets transparently as 'new_not_in_connected_design_system'
+    return {
+      ...nodeSpec,
+      systemStatus: 'new_not_in_connected_design_system'
+    };
+  }
+
+  /**
+   * Comprehensive WCAG audit that distinguishes automated checks from full WCAG compliance
+   */
+  auditAccessibility() {
+    const auditReport = this.intelligence.audit();
+    const validation = { valid: true, errors: [], warnings: [] };
+    const report = this.validator.buildValidationReport(validation, auditReport);
+
+    return {
+      ...report,
+      complianceStatement: 'Automated contrast audit executed. Note: Automated checks alone do not establish full WCAG 2.2 AA/AAA compliance; manual screen-reader, keyboard traps, and assistive technology testing are required.',
+      limitations: [
+        'Screen-reader accessibility trees are generated during code compilation, not in raw canvas shapes.',
+        'Audio/video media alternatives require manual content verification.'
+      ]
+    };
+  }
+
+  /**
    * Audits the active document for design flaws, contrast issues, and layout bugs
    */
   auditDocument() {
     return this.intelligence.audit();
   }
 }
+

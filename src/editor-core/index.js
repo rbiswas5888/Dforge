@@ -20,3 +20,4 @@ export * from './color-math-engine.js';
 export * from './advanced-prototype-engine.js';
 export * from './design-tools-suite.js';
 export * from './sketch-data-suppliers.js';
+export * from './qr-code.js';
