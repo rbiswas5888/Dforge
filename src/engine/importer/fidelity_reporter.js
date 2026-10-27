@@ -38,6 +38,10 @@ export class ImportFidelityEngine {
       warnings: [],
       recommendations: []
     };
+    if (cirDoc.metadata?.warnings?.length) {
+      report.warnings.push(...cirDoc.metadata.warnings);
+      report.approximatedFeatures.push('Some dynamic React expressions or unsupported inline CSS were omitted');
+    }
 
     // 1. Calculate node counts and collect node types
     let cirNodeCount = 0;

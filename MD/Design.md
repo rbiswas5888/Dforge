@@ -1637,6 +1637,13 @@ Report counts and affected object IDs so users can find issues.
 - For formats whose native editable structure cannot reliably be parsed, offer supported alternatives such as SVG/PDF/artboard export, exchange packages, or source-specific documented paths; clearly describe what these alternatives lose.
 - Export must include a report of unsupported constructs and any flattening performed.
 
+#### Current import coverage
+
+- Standard `.sketch` ZIP archives are parsed from their document and page JSON entries. Unsupported archive variants or compression methods are reported rather than silently treated as valid designs.
+- Figma REST/API interchange JSON (`.figma.json`), SVG, and static React JSX/TSX source have import adapters. React source is parsed as static markup and supported inline styles; uploaded code is never executed.
+- React/design-token analysis accepts JSON, CSS, JS, JSX, TS, and TSX source and extracts statically declared token values.
+- Native Figma-family binaries (`.fig`, `.jam`, `.deck`, `.buzz`, `.site`, `.make`) and Adobe XD `.xd` files are recognized by the upload flow but are not decoded. Users must provide a supported interchange export; file selection does not imply native-format support.
+
 ### 15.4 Export targets
 
 Provide native `.dforge` project save/open, packaged project archive, SVG, PNG, JPEG/WebP, PDF, and code-oriented export where supported. Preserve source assets and internal references in `.dforge`. For React and other code outputs, map design tokens and reusable components to structured source rather than emitting a single opaque screenshot.

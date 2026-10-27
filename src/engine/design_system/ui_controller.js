@@ -236,9 +236,26 @@ export class DesignSystemUIController {
     const btnCancelImp = document.getElementById('btnCancelImportReact');
     const btnAnalyzeImp = document.getElementById('btnAnalyzeImportSource');
     const btnCommitImp = document.getElementById('btnCommitImportReact');
+    const btnChooseImportFile = document.getElementById('btnChooseImportReactFile');
+    const importFileInput = document.getElementById('importReactFileInput');
     const closeImp = () => { if (modalImp) modalImp.style.display = 'none'; };
     if (btnCloseImp) btnCloseImp.addEventListener('click', closeImp);
     if (btnCancelImp) btnCancelImp.addEventListener('click', closeImp);
+    if (btnChooseImportFile && importFileInput) {
+      btnChooseImportFile.addEventListener('click', () => importFileInput.click());
+      importFileInput.addEventListener('change', async () => {
+        const file = importFileInput.files?.[0];
+        if (!file) return;
+        const source = await file.text();
+        const input = document.getElementById('importReactSourceInput');
+        const status = document.getElementById('importAnalysisStatus');
+        if (input) input.value = source;
+        if (status) status.textContent = `Loaded ${file.name}. Analyze to inspect tokens and components.`;
+        if (btnCommitImp) btnCommitImp.style.display = 'none';
+        document.getElementById('importReportBox').style.display = 'none';
+        importFileInput.value = '';
+      });
+    }
 
     if (btnAnalyzeImp) {
       btnAnalyzeImp.addEventListener('click', async () => {

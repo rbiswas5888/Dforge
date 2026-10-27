@@ -44,9 +44,9 @@ export const SOURCE_CAPABILITY_REGISTRY = {
   },
   figma: {
     name: 'Figma',
-    extensions: ['.fig', '.figma.json'],
+    extensions: ['.figma.json'],
     mimeType: 'application/json',
-    feasibility: 'REST API & Schema Normalization',
+    feasibility: 'Figma REST/API JSON interchange',
     capabilities: {
       pages: 'full',
       artboards: 'full',
@@ -64,15 +64,15 @@ export const SOURCE_CAPABILITY_REGISTRY = {
       blurs: 'full'
     },
     limitations: [
-      'Binary .fig files require JSON schema export or Figma REST API access',
+      'Binary .fig, .jam, .deck, .buzz, .site, and .make files require an interchange export or official API',
       'Complex smart-animate transitions approximated with cubic-bezier curves'
     ]
   },
   xd: {
     name: 'Adobe XD',
-    extensions: ['.xd', '.xd.json'],
+    extensions: ['.xd.json'],
     mimeType: 'application/vnd.adobe.xd',
-    feasibility: 'Archive & Interchange Conversion',
+    feasibility: 'Interchange JSON required; native .xd decoding unavailable',
     capabilities: {
       pages: 'full',
       artboards: 'full',
@@ -86,9 +86,50 @@ export const SOURCE_CAPABILITY_REGISTRY = {
       sharedAssets: 'full'
     },
     limitations: [
+      'Binary .xd files are recognized but require an interchange export',
       'Repeat grid instances expanded into grouped flex stacks',
       'Voice triggers flagged as unsupported'
     ]
+  },
+  figjam: {
+    name: 'FigJam',
+    extensions: ['.jam'],
+    mimeType: 'application/octet-stream',
+    feasibility: 'Binary file recognized; export required',
+    capabilities: {},
+    limitations: ['Native .jam decoding is unavailable; export as SVG or JSON interchange.']
+  },
+  figmaSlides: {
+    name: 'Figma Slides',
+    extensions: ['.deck'],
+    mimeType: 'application/octet-stream',
+    feasibility: 'Binary file recognized; export required',
+    capabilities: {},
+    limitations: ['Native .deck decoding is unavailable; export as SVG or JSON interchange.']
+  },
+  figmaBuzz: {
+    name: 'Figma Buzz',
+    extensions: ['.buzz'],
+    mimeType: 'application/octet-stream',
+    feasibility: 'Binary file recognized; export required',
+    capabilities: {},
+    limitations: ['Native .buzz decoding is unavailable; export as SVG or JSON interchange.']
+  },
+  figmaSites: {
+    name: 'Figma Sites',
+    extensions: ['.site'],
+    mimeType: 'application/octet-stream',
+    feasibility: 'Binary file recognized; export required',
+    capabilities: {},
+    limitations: ['Native .site decoding is unavailable; export as SVG or JSON interchange.']
+  },
+  figmaMake: {
+    name: 'Figma Make',
+    extensions: ['.make'],
+    mimeType: 'application/octet-stream',
+    feasibility: 'Binary file recognized; export required',
+    capabilities: {},
+    limitations: ['Native .make decoding is unavailable; export as SVG or JSON interchange.']
   },
   svg: {
     name: 'SVG / Adobe Illustrator Interchange',
@@ -111,6 +152,36 @@ export const SOURCE_CAPABILITY_REGISTRY = {
     limitations: [
       'SVG text with custom font glyphs mapped to nearest available font',
       'No component or prototype metadata present in standard SVG'
+    ]
+  },
+  react: {
+    name: 'React JSX/TSX',
+    extensions: ['.js', '.jsx', '.ts', '.tsx'],
+    mimeType: 'text/plain',
+    feasibility: 'Static JSX and inline-style conversion',
+    capabilities: {
+      hierarchy: 'partial',
+      shapes: 'partial',
+      text: 'partial',
+      components: 'partial',
+      tokens: 'partial'
+    },
+    limitations: [
+      'Source code is not executed; only a static JSX return tree and supported inline styles are converted',
+      'Dynamic expressions, external stylesheets, runtime data, and component implementations are not rendered'
+    ]
+  },
+  tokens: {
+    name: 'Design Token Sources',
+    extensions: ['.json', '.css', '.js', '.jsx', '.ts', '.tsx'],
+    mimeType: 'application/json',
+    feasibility: 'Static token and theme extraction',
+    capabilities: {
+      tokens: 'partial',
+      components: 'partial'
+    },
+    limitations: [
+      'Only statically declared DTCG/JSON, Tailwind, CSS custom properties, and source literals are extracted'
     ]
   },
   penpot: {
@@ -257,6 +328,8 @@ export function createCIRNode(type, overrides = {}) {
     componentRef: overrides.componentRef || null,
     interactions: overrides.interactions || [],
     tokenBindings: overrides.tokenBindings || {},
+    semanticTag: overrides.semanticTag || (type === 'text' ? 'p' : 'div'),
+    accessibilityLabel: overrides.accessibilityLabel || '',
     unsupportedProps: overrides.unsupportedProps || []
   };
 }

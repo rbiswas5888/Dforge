@@ -141,6 +141,33 @@ export class ReactDesignSystemImporter {
   }
 
   extractFromReactSource(sourceText, report) {
+    const tokenKeys = new Set(report.discoveredTokens.map(token => token.name));
+    const addSourceToken = (name, value) => {
+      const tokenName = name.replace(/^--/, '').replace(/([a-z])([A-Z])/g, '$1.$2');
+      if (!tokenName || tokenKeys.has(tokenName)) return;
+      tokenKeys.add(tokenName);
+      const category = this.inferCategory(name, value);
+      report.discoveredTokens.push({
+        name: tokenName,
+        category,
+        value,
+        description: '',
+        type: category
+      });
+    };
+
+    const cssVariablePattern = /--([\w-]+)\s*:\s*([^;}\n]+)/g;
+    let tokenMatch;
+    while ((tokenMatch = cssVariablePattern.exec(sourceText))) {
+      const value = tokenMatch[2].trim().replace(/^(['"])(.*)\1$/, '$2');
+      if (value) addSourceToken(tokenMatch[1], value);
+    }
+
+    const literalTokenPattern = /(?:["']?([\w/-]+)["']?)\s*:\s*(['"])(#[\da-fA-F]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\)|-?\d+(?:\.\d+)?(?:px|rem|em|%)?)\2/g;
+    while ((tokenMatch = literalTokenPattern.exec(sourceText))) {
+      addSourceToken(tokenMatch[1], tokenMatch[3]);
+    }
+
     // Static regex extraction for component functions & prop interfaces
     const compRegex = /(?:export\s+(?:default\s+)?)?(?:function|const)\s+([A-Z][a-zA-Z0-9]+)\s*(?:=|:|\()/g;
     let match;

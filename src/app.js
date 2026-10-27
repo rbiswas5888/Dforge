@@ -2892,19 +2892,21 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       if (file) handleFile(file);
     });
 
-    const handleFile = (file) => {
-      const reader = new FileReader();
-      reader.onload = async (evt) => {
-        try {
-          const raw = evt.target.result;
-          const result = await this.importer.processImport(raw, { fileName: file.name });
-          pendingImportResult = result;
-          renderFidelityPreview(result);
-        } catch (err) {
-          this.showToast(`Could not process ${file.name}: ${err.message}`, 'error');
-        }
-      };
-      reader.readAsText(file);
+    const handleFile = async (file) => {
+      pendingImportResult = null;
+      if (btnCommit) btnCommit.style.display = 'none';
+      try {
+        const raw = /\.(?:sketch|fig|jam|deck|buzz|site|make|xd)$/i.test(file.name)
+          ? await file.arrayBuffer()
+          : await file.text();
+        const result = await this.importer.processImport(raw, { fileName: file.name });
+        pendingImportResult = result;
+        renderFidelityPreview(result);
+      } catch (err) {
+        this.showToast(`Could not process ${file.name}: ${err.message}`, 'error');
+      } finally {
+        if (fileInput) fileInput.value = '';
+      }
     };
 
     const renderFidelityPreview = (result) => {

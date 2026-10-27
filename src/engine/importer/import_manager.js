@@ -8,6 +8,8 @@ import { IMPORT_MODES, SOURCE_CAPABILITY_REGISTRY } from './types.js';
 import { SketchImportAdapter } from './sketch_adapter.js';
 import { FigmaImportAdapter } from './figma_adapter.js';
 import { SvgImportAdapter } from './svg_adapter.js';
+import { ReactSourceImportAdapter } from './react_adapter.js';
+import { readSketchArchive } from './sketch_archive.js';
 import { ImportFidelityEngine } from './fidelity_reporter.js';
 import { createNode, createDefaultTokens, SCHEMA_VERSION } from '../document.js';
 
@@ -17,7 +19,8 @@ export class ImportManager {
     this.adapters = [
       new SketchImportAdapter(),
       new FigmaImportAdapter(),
-      new SvgImportAdapter()
+      new SvgImportAdapter(),
+      new ReactSourceImportAdapter()
     ];
     this.fidelityEngine = new ImportFidelityEngine();
   }
@@ -26,20 +29,29 @@ export class ImportManager {
    * Stage 1: Detect source format from raw input and filename
    */
   detectFormat(input, fileName = '') {
-    const ext = fileName ? fileName.slice(fileName.lastIndexOf('.')).toLowerCase() : '';
+    const name = fileName.toLowerCase();
 
-    if (ext === '.sketch' || ext === '.sketch.json') return 'sketch';
-    if (ext === '.fig' || ext === '.figma.json') return 'figma';
-    if (ext === '.svg') return 'svg';
-    if (ext === '.xd' || ext === '.xd.json') return 'xd';
-    if (ext === '.dforge') return 'dforge';
+    if (name.endsWith('.sketch.json') || name.endsWith('.sketch')) return 'sketch';
+    if (name.endsWith('.figma.json')) return 'figma';
+    if (name.endsWith('.fig')) return 'fig-binary';
+    if (name.endsWith('.jam')) return 'figjam-binary';
+    if (name.endsWith('.deck')) return 'figma-slides-binary';
+    if (name.endsWith('.buzz')) return 'figma-buzz-binary';
+    if (name.endsWith('.site')) return 'figma-sites-binary';
+    if (name.endsWith('.make')) return 'figma-make-binary';
+    if (name.endsWith('.xd.json')) return 'xd-json';
+    if (name.endsWith('.xd')) return 'xd-binary';
+    if (name.endsWith('.svg')) return 'svg';
+    if (name.endsWith('.dforge')) return 'dforge';
+    if (/\.(?:jsx?|tsx?)$/.test(name)) return 'react';
 
     if (typeof input === 'string') {
       const trimmed = input.trim();
       if (trimmed.startsWith('<svg') || trimmed.includes('<svg')) return 'svg';
       try {
         const parsed = JSON.parse(trimmed);
-        return this.detectJsonFormat(parsed);
+        const format = this.detectJsonFormat(parsed);
+        return format === 'unknown' && /(?:react|jsx|tsx)/i.test(trimmed) ? 'react' : format;
       } catch (e) {
         // Not JSON
       }
@@ -55,6 +67,12 @@ export class ImportManager {
     if (obj._class === 'document' || obj._class === 'page') return 'sketch';
     if (obj.document && obj.document.type === 'DOCUMENT') return 'figma';
     if (obj.type === 'CANVAS' || (obj.nodes && typeof obj.nodes === 'object')) return 'figma';
+    const hasDtcgValue = (value, depth = 0) => {
+      if (!value || typeof value !== 'object' || depth > 12) return false;
+      if (Object.prototype.hasOwnProperty.call(value, '$value')) return true;
+      return Object.values(value).some(child => hasDtcgValue(child, depth + 1));
+    };
+    if (hasDtcgValue(obj) || ['colors', 'spacing', 'typography'].some(key => obj[key])) return 'tokens';
     return 'unknown';
   }
 
@@ -62,7 +80,16 @@ export class ImportManager {
    * Stage 2: Capability check
    */
   getCapabilityInfo(formatKey) {
-    return SOURCE_CAPABILITY_REGISTRY[formatKey] || {
+    const formatAliases = {
+      'fig-binary': 'figma',
+      'figjam-binary': 'figjam',
+      'figma-slides-binary': 'figmaSlides',
+      'figma-buzz-binary': 'figmaBuzz',
+      'figma-sites-binary': 'figmaSites',
+      'figma-make-binary': 'figmaMake',
+      'xd-binary': 'xd'
+    };
+    return SOURCE_CAPABILITY_REGISTRY[formatAliases[formatKey] || formatKey] || {
       name: 'Generic / Unknown Format',
       feasibility: 'Experimental',
       capabilities: {},
@@ -76,6 +103,19 @@ export class ImportManager {
   async processImport(rawInput, options = {}) {
     const fileName = options.fileName || 'untitled';
     const detectedFormat = options.format || this.detectFormat(rawInput, fileName);
+
+    const binaryFormatHelp = {
+      'fig-binary': 'Figma .fig files are binary. Export the file as Figma REST/API JSON (.figma.json) to import its editable layers.',
+      'figjam-binary': 'FigJam .jam files are binary and are not currently decoded. Export the board as SVG or supported JSON.',
+      'figma-slides-binary': 'Figma Slides .deck files are binary and are not currently decoded. Export slide content as supported JSON or SVG.',
+      'figma-buzz-binary': 'Figma Buzz .buzz files are binary and are not currently decoded. Export supported JSON or SVG.',
+      'figma-sites-binary': 'Figma Sites .site files are binary and are not currently decoded. Export supported JSON or SVG.',
+      'figma-make-binary': 'Figma Make .make files are binary and are not currently decoded. Export supported JSON or SVG.',
+      'xd-binary': 'Adobe XD .xd files are binary and are not currently decoded. Export a supported JSON or SVG interchange file.',
+      'xd-json': 'Adobe XD JSON interchange is not supported yet. Export the design as SVG or a supported Sketch/Figma JSON interchange file.',
+      tokens: 'This file contains design tokens, not a canvas design. Import it from Design System → Import System to add its tokens to the registry.'
+    };
+    if (binaryFormatHelp[detectedFormat]) throw new Error(binaryFormatHelp[detectedFormat]);
 
     // If native .dforge project file, parse directly
     if (detectedFormat === 'dforge') {
@@ -101,12 +141,15 @@ export class ImportManager {
                     this.adapters.find(a => a.canParse(rawInput));
 
     if (!adapter) {
-      throw new Error(`Unsupported or unrecognized design format "${detectedFormat}". Supported: Sketch (.sketch), Figma JSON (.fig), SVG (.svg), and .dforge.`);
+      throw new Error(`Unsupported or unrecognized design format "${detectedFormat}". Supported imports: Sketch (.sketch/.sketch.json), Figma interchange JSON (.figma.json), SVG, React JSX/TSX, and .dforge.`);
     }
 
     // Stage 3 & 4: Source Parsing & CIR Normalization
     let parsedInput = rawInput;
-    if (typeof rawInput === 'string' && detectedFormat !== 'svg') {
+    if (detectedFormat === 'sketch' && (rawInput instanceof ArrayBuffer || rawInput instanceof Uint8Array)) {
+      parsedInput = await readSketchArchive(rawInput);
+    }
+    if (typeof rawInput === 'string' && !['svg', 'react'].includes(detectedFormat)) {
       try {
         parsedInput = JSON.parse(rawInput);
       } catch (e) {
@@ -146,7 +189,8 @@ export class ImportManager {
       metadata: {
         importedFrom: cirDoc.sourceApplication,
         importedAt: new Date().toISOString(),
-        originalFileName: cirDoc.metadata?.originalFileName || 'imported_file'
+        originalFileName: cirDoc.metadata?.originalFileName || 'imported_file',
+        importWarnings: cirDoc.metadata?.warnings || []
       }
     };
 
@@ -172,6 +216,8 @@ export class ImportManager {
           layout: { ...cirNode.layout },
           style: { ...cirNode.style },
           text: cirNode.text ? { ...cirNode.text } : null,
+          semanticTag: cirNode.semanticTag,
+          accessibilityLabel: cirNode.accessibilityLabel,
           interactions: cirNode.interactions || [],
           tokenBindings: cirNode.tokenBindings || {},
           metadata: {
