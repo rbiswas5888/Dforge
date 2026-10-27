@@ -149,3 +149,14 @@ export class StorageEngine {
   }
 }
 
+export function createDForgeBundle(document) {
+  const engine = new StorageEngine();
+  return engine.createDForgeBundle(document);
+}
+
+export function unpackDForgeBundle(bundleOrJson) {
+  const engine = new StorageEngine();
+  return engine.unpackDForgeBundle(bundleOrJson);
+}
+
+

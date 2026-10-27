@@ -239,18 +239,30 @@ export class DesignForgeAIService {
       return { found: false, message: `Token "${tokenName}" does not exist: No tokens defined in connected document.` };
     }
 
-    const normalizedName = tokenName.replace(/^--token-|^--/, '').toLowerCase();
-    const categories = ['colors', 'spacing', 'radii', 'typography', 'elevation'];
+    const clean = (str) => String(str || '').replace(/^--token-|^--|^token_/, '').replace(/[\s\/-]+/g, '_').toLowerCase();
+    const target = clean(tokenName);
 
-    for (const cat of categories) {
-      const bucket = this.doc.tokens[cat];
-      if (bucket) {
-        if (bucket[tokenName]) {
-          return { found: true, category: cat, name: tokenName, value: bucket[tokenName] };
+    // 1. Array of token collections (canonical document schema format)
+    if (Array.isArray(this.doc.tokens)) {
+      for (const col of this.doc.tokens) {
+        if (Array.isArray(col.tokens)) {
+          for (const t of col.tokens) {
+            if (t.id === tokenName || t.name === tokenName || clean(t.id) === target || clean(t.name) === target) {
+              return { found: true, category: col.name, name: t.name, id: t.id, value: t.value, type: t.type };
+            }
+          }
         }
-        for (const [k, v] of Object.entries(bucket)) {
-          if (k.toLowerCase() === normalizedName) {
-            return { found: true, category: cat, name: k, value: v };
+      }
+    }
+
+    // 2. Object dictionary format
+    if (typeof this.doc.tokens === 'object') {
+      for (const [cat, bucket] of Object.entries(this.doc.tokens)) {
+        if (bucket && typeof bucket === 'object') {
+          for (const [k, v] of Object.entries(bucket)) {
+            if (k === tokenName || clean(k) === target) {
+              return { found: true, category: cat, name: k, value: v };
+            }
           }
         }
       }
