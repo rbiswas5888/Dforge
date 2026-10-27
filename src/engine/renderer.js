@@ -27,6 +27,7 @@ export class CanvasRenderer {
     this.outlineViewOnly = false; // Figma Cmd+Y wireframe mode
     this.showPixelGrid = false;   // Figma Shift+' pixel grid mode
     this.isVectorEditMode = false; // Figma Enter / P vector point editing mode
+    this.mediaCache = new Map();
 
     if (typeof window !== 'undefined') {
       this.setupResizeListener();
@@ -316,6 +317,8 @@ export class CanvasRenderer {
       if (node.style?.fills && node.style.fills.length > 0) {
         for (const fill of node.style.fills) {
           if (fill.visible === false) continue;
+          ctx.save();
+          ctx.globalAlpha *= Math.max(0, Math.min(1, Number(fill.opacity ?? 1)));
           if (fill.type === 'linear-gradient' || fill.type === 'gradient') {
             const grad = ctx.createLinearGradient(bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height);
             const stops = fill.stops || [{ offset: 0, color: fill.color || '#3b82f6' }, { offset: 1, color: '#8b5cf6' }];
@@ -324,10 +327,14 @@ export class CanvasRenderer {
             }
             ctx.fillStyle = grad;
             ctx.fill();
+          } else if (fill.type === 'image' || fill.type === 'video') {
+            ctx.clip();
+            this.drawMediaFill(ctx, fill, bounds);
           } else {
             ctx.fillStyle = fill.color || '#334155';
             ctx.fill();
           }
+          ctx.restore();
         }
       }
     }
@@ -385,6 +392,44 @@ export class CanvasRenderer {
     ctx.font = '500 11px Inter, sans-serif';
     ctx.fillText(node.name || 'Frame', bounds.x, bounds.y - 7);
     ctx.restore();
+  }
+
+  drawMediaFill(ctx, fill, bounds) {
+    if (!fill.url) return;
+    let media = this.mediaCache.get(fill.url);
+    if (!media) {
+      if (fill.type === 'video') {
+        const element = document.createElement('video');
+        element.muted = true;
+        element.loop = true;
+        element.playsInline = true;
+        element.preload = 'auto';
+        element.addEventListener('loadeddata', () => this.render(), { once: true });
+        element.addEventListener('timeupdate', () => this.render());
+        element.addEventListener('error', () => console.warn(`Could not load video fill "${fill.name || 'video'}".`), { once: true });
+        media = { element, ready: false };
+        this.mediaCache.set(fill.url, media);
+        element.src = fill.url;
+        element.play().catch(error => console.warn('Video fill autoplay was blocked:', error));
+      } else {
+        const element = new Image();
+        if (!fill.url.startsWith('data:')) element.crossOrigin = 'anonymous';
+        element.onload = () => {
+          media.ready = true;
+          this.render();
+        };
+        element.onerror = () => console.warn(`Could not load image fill "${fill.name || 'image'}".`);
+        media = { element, ready: false };
+        this.mediaCache.set(fill.url, media);
+        element.src = fill.url;
+      }
+    }
+
+    const element = media.element;
+    const ready = fill.type === 'video'
+      ? element.readyState >= 2
+      : media.ready;
+    if (ready) ctx.drawImage(element, bounds.x, bounds.y, bounds.width, bounds.height);
   }
 
   drawTextNode(ctx, node, bounds) {
@@ -756,8 +801,28 @@ export class CanvasRenderer {
     if (!node || !node.visible || node.locked) return null;
 
     const bounds = computeWorldBounds(page, nodeId);
-    const inside = cx >= bounds.x && cx <= bounds.x + bounds.width &&
-                   cy >= bounds.y && cy <= bounds.y + bounds.height;
+    const headerHit = node.type === 'frame' && !node.parentId &&
+      cx >= bounds.x && cx <= bounds.x + bounds.width &&
+      cy >= bounds.y - 18 && cy < bounds.y;
+    let localX = cx;
+    let localY = cy;
+    if (node.transform?.rotation) {
+      const centerX = bounds.x + bounds.width / 2;
+      const centerY = bounds.y + bounds.height / 2;
+      const angle = -node.transform.rotation * Math.PI / 180;
+      const offsetX = cx - centerX;
+      const offsetY = cy - centerY;
+      localX = centerX + offsetX * Math.cos(angle) - offsetY * Math.sin(angle);
+      localY = centerY + offsetX * Math.sin(angle) + offsetY * Math.cos(angle);
+    }
+    const inBounds = localX >= bounds.x && localX <= bounds.x + bounds.width &&
+      localY >= bounds.y && localY <= bounds.y + bounds.height;
+    const inside = node.type === 'ellipse' && inBounds
+      ? ((localX - (bounds.x + bounds.width / 2)) / (bounds.width / 2)) ** 2 +
+        ((localY - (bounds.y + bounds.height / 2)) / (bounds.height / 2)) ** 2 <= 1
+      : inBounds;
+
+    if (node.type === 'frame' && node.clipContent !== false && !inside && !headerHit) return null;
 
     // Check children first (topmost child takes precedence)
     if (node.childIds && node.childIds.length > 0) {
@@ -767,7 +832,7 @@ export class CanvasRenderer {
       }
     }
 
-    return inside ? node.id : null;
+    return inside || headerHit ? node.id : null;
   }
 
   /**

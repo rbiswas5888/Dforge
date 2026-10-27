@@ -1641,12 +1641,14 @@ Report counts and affected object IDs so users can find issues.
 
 - Standard `.sketch` ZIP archives are parsed from their document and page JSON entries. Unsupported archive variants or compression methods are reported rather than silently treated as valid designs.
 - Figma REST/API interchange JSON (`.figma.json`), SVG, and static React JSX/TSX source have import adapters. React source is parsed as static markup and supported inline styles; uploaded code is never executed.
-- React/design-token analysis accepts JSON, CSS, JS, JSX, TS, and TSX source and extracts statically declared token values.
+- React project folders can be analyzed from selected source files. Canvas conversion chooses a static JSX entry component; design-system import statically analyzes supported JSON, CSS, JS, JSX, TS, and TSX files. npm/CLI commands and uploaded project scripts are not executed.
 - Native Figma-family binaries (`.fig`, `.jam`, `.deck`, `.buzz`, `.site`, `.make`) and Adobe XD `.xd` files are recognized by the upload flow but are not decoded. Users must provide a supported interchange export; file selection does not imply native-format support.
 
 ### 15.4 Export targets
 
 Provide native `.dforge` project save/open, packaged project archive, SVG, PNG, JPEG/WebP, PDF, and code-oriented export where supported. Preserve source assets and internal references in `.dforge`. For React and other code outputs, map design tokens and reusable components to structured source rather than emitting a single opaque screenshot.
+
+The current React export downloads a ZIP archive of the generated project files. Selection SVG/PNG export renders selected scene-graph content rather than a screenshot of the editor viewport. Embedded media is limited to 2 MB per project for reliable local saves. Image and video generation requires a configured media-generation provider; without one, users can upload local media files.
 
 ## 16. Rendering and performance
 

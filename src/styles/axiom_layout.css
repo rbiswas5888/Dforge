@@ -817,6 +817,21 @@ body.theme-high-contrast {
   cursor: pointer;
 }
 
+.fill-paint-card .fill-type-select {
+  min-width: 0;
+  flex: 1;
+}
+
+.fill-paint-card .gradient-stop-input {
+  width: 30px;
+  height: 24px;
+  padding: 1px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xs);
+  background: var(--surface-input);
+  cursor: pointer;
+}
+
 .color-picker-popover {
   position: fixed;
   z-index: 1000;

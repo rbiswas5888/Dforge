@@ -102,6 +102,12 @@ function isValidHexColor(value) {
   return /^#?(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(String(value || '').trim());
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[character]);
+}
+
 export class ColorPickerPopover {
   constructor() {
     this.isOpen = false;
@@ -115,6 +121,7 @@ export class ColorPickerPopover {
     this.onInputCallback = null;
     this.onChangeCallback = null;
     this.documentColors = [];
+    this.designTokens = [];
 
     this.container = null;
     this.sbCanvas = null;
@@ -219,6 +226,14 @@ export class ColorPickerPopover {
             <div class="cp-palette-swatch" data-color="${c}" style="background: ${c};" title="${c}"></div>
           `).join('')}
         </div>
+
+        ${this.designTokens.length ? `
+        <div class="cp-palette-title" style="margin-top: 8px;">Design Tokens</div>
+        <div class="cp-swatches-grid">
+          ${this.designTokens.slice(0, 28).map(token => `
+            <div class="cp-palette-swatch" data-color="${token.value}" style="background: ${token.value};" title="${escapeHtml(token.name)}: ${token.value}"></div>
+          `).join('')}
+        </div>` : ''}
 
         <div class="cp-palette-title" style="margin-top: 8px;">Sketch Gemstones & Minerals</div>
         <div class="cp-swatches-grid">
@@ -598,12 +613,16 @@ export class ColorPickerPopover {
     const onInput = options.onInput || (options.onCommit ? options.onChange : null) || options.onChange;
     const onChange = options.onCommit || options.onChange || options.onInput;
     const documentColors = options.documentColors || options.palette || [];
+    const designTokens = options.designTokens || [];
 
     this.initialColor = initialColor;
     this.setColor(this.initialColor);
     this.onInputCallback = onInput;
     this.onChangeCallback = onChange;
     this.documentColors = documentColors;
+    this.designTokens = designTokens.filter(token =>
+      /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(String(token.value))
+    );
 
     this.render();
 

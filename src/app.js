@@ -22,6 +22,7 @@ import { ReactCompiler } from './engine/compiler.js';
 import { PrototypeEngine } from './engine/prototype.js';
 import { StorageEngine } from './engine/storage.js';
 import { computeWorldBounds, findSnapGuides } from './engine/layout.js';
+import { buildSvgExport, createStoredZip } from './engine/exporters.js';
 import { DesignSystemLinter } from './engine/linter.js';
 import { InspectCodeGenerator } from './engine/inspect_generator.js';
 import { CommandPaletteEngine } from './engine/palette.js';
@@ -301,21 +302,12 @@ export class DesignForgeApp {
           reader.onload = (event) => {
             try {
               const loadedDoc = this.storage.parseDForgeContent(event.target.result);
-              this.doc = loadedDoc;
-              this.engine = new CommandEngine(this.doc);
-              this.renderer.engine = this.engine;
-              this.ai.engine = this.engine;
-              this.bindEngineEvents();
-              this.updateLayersTree();
-              this.updatePagesList();
-              this.updateInspector();
-              this.renderer.zoomToFit();
-              this.updateRulers();
-              this.storage.scheduleAutosave(this.doc);
-              if (eventType !== 'selection-change') this.refreshOpenPrototypePreview();
+              this.replaceDocument(loadedDoc);
               this.showToast(`Project "${loadedDoc.name}" loaded successfully!`, 'success');
             } catch (err) {
               this.showToast(`Failed to load file: ${err.message}`, 'error');
+            } finally {
+              fileInput.value = '';
             }
           };
           reader.readAsText(file);
@@ -1110,6 +1102,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           this.dragState = {
             type: 'resize',
             handle,
+            moved: false,
             nodeId: selectedIds[0],
             startBounds: { ...bounds },
             startTransform: { ...node.transform },
@@ -1132,10 +1125,12 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         }
 
         const node = engine.getNode(hitNodeId);
-        if (node && !node.locked) {
+        const shiftRemovedNode = e.shiftKey && selectedIds.includes(hitNodeId);
+        if (node && !node.locked && !shiftRemovedNode) {
           const movableIds = engine.getSelection().filter(id => !engine.getNode(id)?.locked);
           this.dragState = {
             type: 'move',
+            moved: false,
             startX: canvasCoords.x,
             startY: canvasCoords.y,
             lastX: canvasCoords.x,
@@ -1201,6 +1196,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       } else if (this.dragState.type === 'move') {
         const dx = canvasCoords.x - this.dragState.lastX;
         const dy = canvasCoords.y - this.dragState.lastY;
+        if (dx || dy) this.dragState.moved = true;
 
         for (const id of this.dragState.nodeIds) {
           const n = engine.getNode(id);
@@ -1224,6 +1220,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         const { handle, nodeId, startTransform } = this.dragState;
         const deltaX = (e.clientX - this.dragState.startX) / renderer.zoom;
         const deltaY = (e.clientY - this.dragState.startY) / renderer.zoom;
+        if (deltaX || deltaY) this.dragState.moved = true;
         const node = engine.getNode(nodeId);
 
         let newW = startTransform.width;
@@ -1260,9 +1257,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
       if (this.dragState.type === 'move') {
         renderer.snapGuides = [];
-        engine.commitTransforms(this.dragState.initialTransforms, 'Move objects');
+        if (this.dragState.moved) engine.commitTransforms(this.dragState.initialTransforms, 'Move objects');
       } else if (this.dragState.type === 'resize') {
-        engine.commitTransforms(this.dragState.initialTransforms, 'Resize object');
+        if (this.dragState.moved) engine.commitTransforms(this.dragState.initialTransforms, 'Resize object');
       } else if (this.dragState.type === 'create') {
         const { tool, startX, startY, currentX, currentY } = this.dragState;
         const width = Math.abs(currentX - startX);
@@ -1415,12 +1412,17 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   }
 
   getDocumentColorPalette() {
-    const colors = (this.doc.tokens || []).flatMap(group =>
-      (group.tokens || [])
-        .filter(token => token.type === 'color' && /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(String(token.value)))
-        .map(token => token.value)
-    );
+    const colors = this.getDocumentColorTokens().map(token => token.value);
     return [...new Set(colors)];
+  }
+
+  getDocumentColorTokens() {
+    return (this.doc.tokens || []).flatMap(group =>
+      (group.tokens || []).filter(token =>
+        token.type === 'color' &&
+        /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(String(token.value))
+      ).map(token => ({ name: token.name, value: token.value }))
+    );
   }
 
   openPageColorPicker(targetElement, page) {
@@ -1430,6 +1432,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       targetElement,
       initialColor,
       documentColors: this.getDocumentColorPalette(),
+      designTokens: this.getDocumentColorTokens(),
       onInput: color => {
         page.background = color;
         const input = document.getElementById('propPageBg');
@@ -1463,6 +1466,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       targetElement,
       initialColor,
       documentColors: this.getDocumentColorPalette(),
+      designTokens: this.getDocumentColorTokens(),
       onInput: nextColor => {
         const previewColor = this.normalizeHexColor(nextColor, committedColor);
         options.preview(previewColor);
@@ -1924,18 +1928,55 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           <span>Fill</span>
           <button class="btn-icon-xs" id="btnAddFill" title="Add Fill">+</button>
         </div>
-        ${fills.length ? fills.map((f, idx) => `
-        <div class="props-row" style="margin-bottom: 6px;">
-          <button type="button" class="color-swatch-box paint-swatch" style="background: ${f.color || '#334155'};"
-            id="swatchFill_${idx}" data-index="${idx}" title="Choose fill color" aria-label="Choose fill color"></button>
-          <div class="prop-field">
-            <input type="text" class="prop-input fill-hex-input" data-index="${idx}" value="${f.color || '#334155'}">
-            ${f.tokenName ? `<span class="token-chip-badge" title="Bound to token">${f.tokenName}</span>` : ''}
-          </div>
-          <button class="btn-icon-xs btn-bind-token" data-index="${idx}" title="Bind to Theme Token">❖</button>
-          <button class="btn-icon-xs btn-remove-fill" data-index="${idx}" title="Remove Fill">✕</button>
-        </div>
-        `).join('') : '<div style="font-size: 11px; color: var(--text-dim);">No fill applied</div>'}
+        ${fills.length ? fills.map((f, idx) => {
+          const fillType = f.type === 'gradient' ? 'linear-gradient'
+            : ['solid', 'linear-gradient', 'image', 'video'].includes(f.type) ? f.type : 'solid';
+          const firstStop = f.stops?.[0]?.color || f.color || '#334155';
+          const lastStop = f.stops?.[1]?.color || '#8b5cf6';
+          const swatchStyle = fillType === 'linear-gradient'
+            ? `linear-gradient(135deg, ${this.escapeAttr(firstStop)}, ${this.escapeAttr(lastStop)})`
+            : fillType === 'image' || fillType === 'video' ? '#334155' : this.escapeAttr(f.color || '#334155');
+          return `
+          <div class="fill-paint-card" style="margin-bottom: 8px; padding: 8px; border: 1px solid var(--border-subtle); border-radius: 6px;">
+            <div class="props-row" style="margin-bottom: 6px;">
+              <button type="button" class="color-swatch-box paint-swatch" style="background: ${swatchStyle};"
+                id="swatchFill_${idx}" data-index="${idx}" title="Choose fill color" aria-label="Choose fill color"></button>
+              <select class="prop-select fill-type-select" data-index="${idx}" aria-label="Paint type">
+                <option value="solid" ${fillType === 'solid' ? 'selected' : ''}>Solid</option>
+                <option value="linear-gradient" ${fillType === 'linear-gradient' ? 'selected' : ''}>Linear gradient</option>
+                <option value="image" ${fillType === 'image' ? 'selected' : ''}>Image</option>
+                <option value="video" ${fillType === 'video' ? 'selected' : ''}>Video</option>
+              </select>
+              <button class="btn-icon-xs btn-remove-fill" data-index="${idx}" title="Remove Fill" aria-label="Remove fill">✕</button>
+            </div>
+            ${fillType === 'solid' ? `
+              <div class="props-row">
+                <div class="prop-field"><input type="text" class="prop-input fill-hex-input" data-index="${idx}" value="${this.escapeAttr(f.color || '#334155')}" aria-label="Solid fill color"></div>
+                <button class="btn-icon-xs btn-bind-token" data-index="${idx}" title="Bind to Theme Token">❖</button>
+              </div>
+              ${f.tokenName ? `<span class="token-chip-badge" title="Bound to token">${this.escapeAttr(f.tokenName)}</span>` : ''}
+            ` : ''}
+            ${fillType === 'linear-gradient' ? `
+              <div class="props-row">
+                <label class="prop-field" title="Gradient start"><span class="prop-label">Start</span><input type="color" class="gradient-stop-input" data-index="${idx}" data-stop="0" value="${this.escapeAttr(firstStop)}"></label>
+                <label class="prop-field" title="Gradient end"><span class="prop-label">End</span><input type="color" class="gradient-stop-input" data-index="${idx}" data-stop="1" value="${this.escapeAttr(lastStop)}"></label>
+              </div>
+            ` : ''}
+            ${fillType === 'image' || fillType === 'video' ? `
+              <div class="props-row">
+                <button type="button" class="btn-inspector-action btn-upload-fill" data-index="${idx}">
+                  ${f.url ? 'Replace' : 'Upload'} ${fillType}
+                </button>
+                <input type="file" class="fill-media-input" data-index="${idx}" accept="${fillType}/*" style="display: none;">
+                <span class="fill-media-name" style="font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis;">${this.escapeAttr(f.name || (f.url ? `Attached ${fillType}` : 'No media selected'))}</span>
+              </div>
+              <div class="props-row">
+                <button type="button" class="btn-inspector-action btn-generate-fill" data-type="${fillType}">✦ Generate with AI</button>
+                <span style="font-size: 10px; color: var(--text-muted);" title="Media generation is not connected in this build.">Provider not connected</span>
+              </div>
+            ` : ''}
+          </div>`;
+        }).join('') : '<div style="font-size: 11px; color: var(--text-dim);">No fill applied</div>'}
       </div>
 
       <!-- 6. Strokes Section -->
@@ -2285,11 +2326,103 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         }
       });
     });
+    document.querySelectorAll('.fill-type-select').forEach(select => {
+      select.addEventListener('change', () => {
+        const idx = Number(select.dataset.index);
+        const nextFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+        if (!nextFills[idx]) return;
+        const previous = nextFills[idx];
+        const nextType = select.value;
+        nextFills[idx] = nextType === 'linear-gradient'
+          ? {
+            ...previous,
+            type: nextType,
+            color: previous.color || '#3b82f6',
+            stops: previous.stops?.length
+              ? previous.stops
+              : [{ offset: 0, color: previous.color || '#3b82f6' }, { offset: 1, color: '#8b5cf6' }]
+          }
+          : { ...previous, type: nextType };
+        this.engine.updateNode(node.id, { style: { fills: nextFills } }, 'Change Fill Type');
+      });
+    });
+    document.querySelectorAll('.gradient-stop-input').forEach(input => {
+      input.addEventListener('change', () => {
+        const idx = Number(input.dataset.index);
+        const stopIndex = Number(input.dataset.stop);
+        const nextFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+        const fill = nextFills[idx];
+        if (!fill) return;
+        fill.type = 'linear-gradient';
+        fill.stops = fill.stops?.length
+          ? fill.stops
+          : [{ offset: 0, color: fill.color || '#3b82f6' }, { offset: 1, color: '#8b5cf6' }];
+        fill.stops[stopIndex] = { ...fill.stops[stopIndex], offset: stopIndex, color: input.value };
+        this.engine.updateNode(node.id, { style: { fills: nextFills } }, 'Change Gradient Stop');
+      });
+    });
+    document.querySelectorAll('.btn-upload-fill').forEach(button => {
+      button.addEventListener('click', () => {
+        button.parentElement.querySelector('.fill-media-input')?.click();
+      });
+    });
+    document.querySelectorAll('.fill-media-input').forEach(input => {
+      input.addEventListener('change', async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        const idx = Number(input.dataset.index);
+        const nextFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+        const fill = nextFills[idx];
+        if (!fill) return;
+        const mediaType = fill.type;
+        const validType = mediaType === 'video' ? file.type.startsWith('video/') : file.type.startsWith('image/');
+        if (!validType) {
+          this.showToast(`Choose a valid ${mediaType} file.`, 'error');
+          input.value = '';
+          return;
+        }
+        const existingMediaSize = this.doc.pages.reduce((total, currentPage) =>
+          total + Object.values(currentPage.nodes).reduce((pageTotal, currentNode) =>
+            pageTotal + (currentNode.style?.fills || []).reduce((size, currentFill, fillIndex) => {
+              if (currentPage.id === page.id && currentNode.id === node.id && fillIndex === idx) return size;
+              const data = currentFill.url?.match(/^data:[^,]*;base64,(.*)$/)?.[1];
+              return size + (data ? Math.floor(data.length * 0.75) : 0);
+            }, 0), 0), 0);
+        if (file.size + existingMediaSize > 2 * 1024 * 1024) {
+          this.showToast('Embedded media is limited to 2 MB per project so saved project files remain manageable.', 'error');
+          input.value = '';
+          return;
+        }
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(reader.error || new Error('Could not read the selected media file.'));
+            reader.readAsDataURL(file);
+          });
+          fill.url = dataUrl;
+          fill.name = file.name;
+          fill.mimeType = file.type;
+          fill.opacity = fill.opacity ?? 1;
+          this.engine.updateNode(node.id, { style: { fills: nextFills } }, `Upload ${mediaType}`);
+          this.showToast(`${mediaType === 'video' ? 'Video' : 'Image'} added to fill.`, 'success');
+        } catch (error) {
+          this.showToast(`Could not load media: ${error.message}`, 'error');
+        } finally {
+          input.value = '';
+        }
+      });
+    });
+    document.querySelectorAll('.btn-generate-fill').forEach(button => {
+      button.addEventListener('click', () => {
+        this.showToast(`AI ${button.dataset.type} generation needs an image/video provider connection. Upload a media file to use this fill.`, 'error');
+      });
+    });
     document.querySelectorAll('.paint-swatch:not(.stroke-swatch)').forEach(swatch => {
       swatch.addEventListener('click', (e) => {
         const idx = Number(swatch.dataset.index || 0);
         const fill = node.style?.fills?.[idx];
-        if (!fill || fill.type === 'image' || fill.type === 'gradient') return;
+        if (!fill || fill.type === 'image' || fill.type === 'video' || fill.type === 'gradient' || fill.type === 'linear-gradient') return;
         this.openNodeColorPicker(e.currentTarget, fill.color || '#334155', {
           node,
           description: 'Change Fill Color',
@@ -2863,10 +2996,12 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const modal = document.getElementById('modalImportDesign');
     const dropZone = document.getElementById('importDropZone');
     const fileInput = document.getElementById('externalDesignFileInput');
+    const reactFolderInput = document.getElementById('reactProjectFolderInput');
     const btnCommit = document.getElementById('btnCommitImport');
     let pendingImportResult = null;
 
     dropZone?.addEventListener('click', () => fileInput?.click());
+    document.getElementById('btnImportReactFolder')?.addEventListener('click', () => reactFolderInput?.click());
 
     dropZone?.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -2890,6 +3025,55 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     fileInput?.addEventListener('change', (e) => {
       const file = e.target.files?.[0];
       if (file) handleFile(file);
+    });
+
+    reactFolderInput?.addEventListener('change', async () => {
+      const sourceFiles = Array.from(reactFolderInput.files || [])
+        .filter(file => /\.(?:jsx|tsx|js|ts)$/i.test(file.name))
+        .filter(file => !/(?:^|\/)(?:node_modules|dist|build|\.git|coverage)\//i.test(file.webkitRelativePath || file.name))
+        .sort((a, b) => {
+          const rank = file => /(?:^|\/)src\/App\.(?:tsx|jsx|ts|js)$/i.test(file.webkitRelativePath) ? 0
+            : /(?:^|\/)App\.(?:tsx|jsx|ts|js)$/i.test(file.webkitRelativePath) ? 1
+              : /(?:^|\/)src\/index\.(?:tsx|jsx|ts|js)$/i.test(file.webkitRelativePath) ? 2 : 3;
+          return rank(a) - rank(b) || a.webkitRelativePath.localeCompare(b.webkitRelativePath);
+        });
+      const totalBytes = sourceFiles.reduce((sum, file) => sum + file.size, 0);
+      if (!sourceFiles.length) {
+        this.showToast('No React JavaScript or TypeScript source files were found in that folder.', 'error');
+        reactFolderInput.value = '';
+        return;
+      }
+      if (sourceFiles.length > 300 || totalBytes > 10 * 1024 * 1024) {
+        this.showToast('React folder exceeds the safe static-analysis limit (300 source files or 10 MB).', 'error');
+        reactFolderInput.value = '';
+        return;
+      }
+
+      pendingImportResult = null;
+      if (btnCommit) btnCommit.style.display = 'none';
+      const candidates = sourceFiles.filter(file => /(?:^|\/)App\.(?:tsx|jsx|ts|js)$/i.test(file.webkitRelativePath))
+        .concat(sourceFiles.filter(file => !/(?:^|\/)App\.(?:tsx|jsx|ts|js)$/i.test(file.webkitRelativePath)));
+      const failures = [];
+      try {
+        for (const file of candidates) {
+          try {
+            const result = await this.importer.processImport(await file.text(), {
+              fileName: file.webkitRelativePath || file.name
+            });
+            pendingImportResult = result;
+            renderFidelityPreview(result);
+            this.showToast(`Imported static JSX from ${file.webkitRelativePath || file.name}.`, 'success');
+            return;
+          } catch (error) {
+            failures.push(error.message);
+          }
+        }
+        throw new Error(failures[0] || 'No static JSX component could be converted.');
+      } catch (error) {
+        this.showToast(`Could not import React folder: ${error.message}`, 'error');
+      } finally {
+        reactFolderInput.value = '';
+      }
     });
 
     const handleFile = async (file) => {
@@ -3016,20 +3200,11 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     btnCommit?.addEventListener('click', () => {
       if (pendingImportResult && pendingImportResult.document) {
-        this.doc = pendingImportResult.document;
-        this.engine = new CommandEngine(this.doc);
-        this.renderer.engine = this.engine;
-        this.inspectGen.doc = this.doc;
-        this.prototype.doc = this.doc;
-
-        this.updatePagesList();
-        this.updateLayersTree();
-        this.updateInspector();
-        this.renderer.zoomToFit();
-        this.renderer.render();
+        const format = pendingImportResult.format;
+        this.replaceDocument(pendingImportResult.document);
 
         modal.style.display = 'none';
-        this.showToast(`Imported ${pendingImportResult.format.toUpperCase()} into workspace!`);
+        this.showToast(`Imported ${format.toUpperCase()} into workspace!`);
       }
     });
   }
@@ -3611,18 +3786,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       const result = await this.importer.processImport(rawInput, { fileName });
 
       if (result.success && result.document) {
-        // Load imported document into CommandEngine
-        this.doc = result.document;
-        this.engine = new CommandEngine(this.doc);
-        this.renderer.engine = this.engine;
-        this.inspectGen.doc = this.doc;
-        this.prototype.doc = this.doc;
-
-        this.updatePagesList();
-        this.updateLayersTree();
-        this.updateInspector();
-        this.renderer.zoomToFit();
-        this.renderer.render();
+        this.replaceDocument(result.document);
 
         const score = result.fidelityReport?.overallScore || 95;
         const tier = result.fidelityReport?.fidelityTier || 'High Fidelity';
@@ -3634,6 +3798,38 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       this.showToast(`Import failed: ${err.message}`, 'error');
       throw err;
     }
+  }
+
+  replaceDocument(nextDocument) {
+    this.doc = nextDocument;
+    this.engine = new CommandEngine(this.doc);
+    this.renderer.engine = this.engine;
+    this.ai.engine = this.engine;
+    this.linter.engine = this.engine;
+    this.inspectGen.doc = this.doc;
+    this.prototype.doc = this.doc;
+
+    this.dsRegistry = new DesignSystemRegistry(this.doc, this.storage);
+    this.aiTokenWizard.registry = this.dsRegistry;
+    this.responsiveTokenEngine.registry = this.dsRegistry;
+    this.compVarExtractor.registry = this.dsRegistry;
+    this.compVarExtractor.engine = this.engine;
+    this.reactDsImporter.registry = this.dsRegistry;
+    this.dsUi.registry = this.dsRegistry;
+    this.dsUi.wizard = this.aiTokenWizard;
+    this.dsUi.responsive = this.responsiveTokenEngine;
+    this.dsUi.extractor = this.compVarExtractor;
+    this.dsUi.importer = this.reactDsImporter;
+
+    this.bindEngineEvents();
+    this.updatePagesList();
+    this.updateLayersTree();
+    this.updateInspector();
+    this.renderer.zoomToFit();
+    this.renderer.render();
+    this.updateRulers();
+    this.storage.scheduleAutosave(this.doc);
+    this.refreshOpenPrototypePreview();
   }
 
   saveProject() {
@@ -3650,32 +3846,54 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   }
 
   exportSelectedAsSvg() {
-    const sel = this.engine.getSelection();
-    const page = this.engine.getActivePage();
-    const id = sel.length > 0 ? sel[0] : page.rootIds[0];
-    const node = page.nodes[id];
-    if (!node) return;
-
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${node.transform.width}" height="${node.transform.height}" viewBox="0 0 ${node.transform.width} ${node.transform.height}">
-      <rect width="100%" height="100%" fill="${node.style?.fills?.[0]?.color || '#1e293b'}" rx="${node.style?.cornerRadius || 0}"/>
-      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" font-size="16">${node.name}</text>
-    </svg>`;
-
-    const blob = new Blob([svg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${node.name.toLowerCase().replace(/\s+/g, '-')}.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const sel = this.engine.getSelection();
+      const page = this.engine.getActivePage();
+      const ids = sel.length ? sel : page.rootIds;
+      const svg = buildSvgExport(this.doc, page, ids);
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${this.doc.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-selection.svg`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      this.showToast(`Could not export SVG: ${error.message}`, 'error');
+    }
   }
 
-  exportSelectedAsPng() {
-    const dataUrl = this.canvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `${this.doc.name.toLowerCase().replace(/\s+/g, '-')}-canvas.png`;
-    a.click();
+  async exportSelectedAsPng(scale = 1) {
+    try {
+      const page = this.engine.getActivePage();
+      const ids = this.engine.getSelection().length ? this.engine.getSelection() : page.rootIds;
+      const svg = buildSvgExport(this.doc, page, ids);
+      const svgUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+      try {
+      const image = new Image();
+      image.src = svgUrl;
+      await image.decode();
+      const output = document.createElement('canvas');
+      output.width = Math.ceil(image.naturalWidth * scale);
+      output.height = Math.ceil(image.naturalHeight * scale);
+      const context = output.getContext('2d');
+      if (!context) throw new Error('Could not create an image export surface.');
+      context.scale(scale, scale);
+      context.drawImage(image, 0, 0);
+      const blob = await new Promise(resolve => output.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('PNG rendering failed.');
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${this.doc.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-selection-${scale}x.png`;
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } finally {
+        URL.revokeObjectURL(svgUrl);
+      }
+    } catch (error) {
+      this.showToast(`Could not export PNG: ${error.message}`, 'error');
+    }
   }
 
   // --- Native AI Assistant & Markdown Generation (Section 5 & 6) ---
@@ -3881,30 +4099,36 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     }
 
     const copyBtn = document.getElementById('btnCopyExportCode');
-    if (copyBtn && !copyBtn._hasListener) {
-      copyBtn._hasListener = true;
-      copyBtn.addEventListener('click', () => {
-        if (activeFileName && fileTree[activeFileName]) {
-          navigator.clipboard.writeText(fileTree[activeFileName]);
+    if (copyBtn) {
+      copyBtn.onclick = async () => {
+        const code = fileTree[activeFileName];
+        if (!code) return;
+        try {
+          await navigator.clipboard.writeText(code);
           const orig = copyBtn.textContent;
           copyBtn.textContent = '✓ Copied!';
           setTimeout(() => { copyBtn.textContent = orig; }, 1800);
+        } catch (error) {
+          this.showToast(`Could not copy code: ${error.message}`, 'error');
         }
-      });
+      };
     }
 
     const downloadBtn = document.getElementById('btnDownloadProjectPackage');
-    if (downloadBtn && !downloadBtn._hasListener) {
-      downloadBtn._hasListener = true;
-      downloadBtn.addEventListener('click', () => {
-        const zipBlob = new Blob([JSON.stringify(fileTree, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(zipBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${this.doc.name.toLowerCase().replace(/\s+/g, '-')}-react-export.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-      });
+    if (downloadBtn) {
+      downloadBtn.onclick = () => {
+        try {
+          const zipBlob = createStoredZip(fileTree);
+          const url = URL.createObjectURL(zipBlob);
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = `${this.doc.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-react-export.zip`;
+          anchor.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (error) {
+          this.showToast(`Could not export React project: ${error.message}`, 'error');
+        }
+      };
     }
 
     // Live React Preview Tab

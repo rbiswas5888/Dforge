@@ -61,21 +61,23 @@ export class StorageEngine {
   /**
    * Exports document as a downloadable .dforge JSON file
    */
-  exportDForgeFile(document) {
-    const filename = `${(document.name || 'project').toLowerCase().replace(/\s+/g, '-')}.dforge`;
-    const payload = JSON.stringify(document, null, 2);
+  exportDForgeFile(projectDocument) {
+    const filename = `${(projectDocument.name || 'project').toLowerCase().replace(/\s+/g, '-')}.dforge`;
+    const payload = JSON.stringify(projectDocument, null, 2);
     const blob = new Blob([payload], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
 
-    const a = document.createElement ? window.document.createElement('a') : null;
-    if (a) {
-      a.href = url;
-      a.download = filename;
-      window.document.body.appendChild(a);
-      a.click();
-      window.document.body.removeChild(a);
+    const anchor = globalThis.document?.createElement?.('a');
+    if (!anchor || !globalThis.document.body) {
       URL.revokeObjectURL(url);
+      throw new Error('Project download is unavailable in this environment.');
     }
+    anchor.href = url;
+    anchor.download = filename;
+    globalThis.document.body.appendChild(anchor);
+    anchor.click();
+    globalThis.document.body.removeChild(anchor);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     return filename;
   }
 
@@ -158,5 +160,4 @@ export function unpackDForgeBundle(bundleOrJson) {
   const engine = new StorageEngine();
   return engine.unpackDForgeBundle(bundleOrJson);
 }
-
 

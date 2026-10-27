@@ -23,6 +23,7 @@ export class DesignSystemUIController {
     this.activeProposals = [];
     this.activeCompNode = null;
     this.lastImportReport = null;
+    this.pendingReactSourceFiles = [];
   }
 
   init() {
@@ -237,25 +238,62 @@ export class DesignSystemUIController {
     const btnAnalyzeImp = document.getElementById('btnAnalyzeImportSource');
     const btnCommitImp = document.getElementById('btnCommitImportReact');
     const btnChooseImportFile = document.getElementById('btnChooseImportReactFile');
+    const btnChooseReactFolder = document.getElementById('btnChooseReactFolder');
     const importFileInput = document.getElementById('importReactFileInput');
+    const importFolderInput = document.getElementById('importReactFolderInput');
     const closeImp = () => { if (modalImp) modalImp.style.display = 'none'; };
     if (btnCloseImp) btnCloseImp.addEventListener('click', closeImp);
     if (btnCancelImp) btnCancelImp.addEventListener('click', closeImp);
     if (btnChooseImportFile && importFileInput) {
       btnChooseImportFile.addEventListener('click', () => importFileInput.click());
       importFileInput.addEventListener('change', async () => {
-        const file = importFileInput.files?.[0];
-        if (!file) return;
-        const source = await file.text();
+        const files = Array.from(importFileInput.files || []);
+        if (!files.length) return;
         const input = document.getElementById('importReactSourceInput');
         const status = document.getElementById('importAnalysisStatus');
-        if (input) input.value = source;
-        if (status) status.textContent = `Loaded ${file.name}. Analyze to inspect tokens and components.`;
+        this.pendingReactSourceFiles = files;
+        this.lastImportReport = null;
+        if (input) input.value = files.length === 1 ? await files[0].text() : '';
+        if (status) status.textContent = `Loaded ${files.length} source file${files.length === 1 ? '' : 's'}. Analyze to inspect tokens and components.`;
         if (btnCommitImp) btnCommitImp.style.display = 'none';
         document.getElementById('importReportBox').style.display = 'none';
         importFileInput.value = '';
       });
     }
+
+    if (btnChooseReactFolder && importFolderInput) {
+      btnChooseReactFolder.addEventListener('click', () => importFolderInput.click());
+      importFolderInput.addEventListener('change', () => {
+        const files = Array.from(importFolderInput.files || [])
+          .filter(file => /\.(?:json|css|jsx?|tsx?)$/i.test(file.name))
+          .filter(file => !/(?:^|\/)(?:node_modules|dist|build|\.git|coverage)\//i.test(file.webkitRelativePath || file.name));
+        const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+        const status = document.getElementById('importAnalysisStatus');
+        this.lastImportReport = null;
+        if (files.length > 300 || totalBytes > 10 * 1024 * 1024) {
+          this.pendingReactSourceFiles = [];
+          if (status) status.textContent = 'Folder exceeds the safe analysis limit (300 files or 10 MB).';
+          if (btnCommitImp) btnCommitImp.style.display = 'none';
+          importFolderInput.value = '';
+          return;
+        }
+        this.pendingReactSourceFiles = files;
+        const input = document.getElementById('importReactSourceInput');
+        if (input) input.value = '';
+        if (status) status.textContent = files.length
+          ? `Loaded ${files.length} source files from the folder. Analyze to inspect tokens and components.`
+          : 'No supported token or source files found in that folder.';
+        if (btnCommitImp) btnCommitImp.style.display = 'none';
+        document.getElementById('importReportBox').style.display = 'none';
+        importFolderInput.value = '';
+      });
+    }
+
+    document.getElementById('importReactSourceInput')?.addEventListener('input', () => {
+      this.pendingReactSourceFiles = [];
+      this.lastImportReport = null;
+      if (btnCommitImp) btnCommitImp.style.display = 'none';
+    });
 
     if (btnAnalyzeImp) {
       btnAnalyzeImp.addEventListener('click', async () => {
@@ -263,7 +301,16 @@ export class DesignSystemUIController {
         const status = document.getElementById('importAnalysisStatus');
         if (status) status.textContent = 'Analyzing source constructs...';
 
-        const report = await this.importer.analyzeAndParse(input);
+        let report;
+        try {
+          report = this.pendingReactSourceFiles.length
+            ? await this.analyzeSourceFiles(this.pendingReactSourceFiles)
+            : await this.importer.analyzeAndParse(input);
+        } catch (error) {
+          if (status) status.textContent = `Analysis failed: ${error.message}`;
+          if (btnCommitImp) btnCommitImp.style.display = 'none';
+          return;
+        }
         this.lastImportReport = report;
 
         const reportBox = document.getElementById('importReportBox');
@@ -335,6 +382,36 @@ export class DesignSystemUIController {
         this.renderView(this.activeView);
       });
     }
+  }
+
+  async analyzeSourceFiles(files) {
+    const reports = [];
+    for (const file of files) {
+      reports.push(await this.importer.analyzeAndParse(await file.text(), {
+        sourceName: file.webkitRelativePath || file.name
+      }));
+    }
+    const uniqueBy = (items, keyFor) => {
+      const seen = new Set();
+      return items.filter(item => {
+        const key = keyFor(item);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    };
+    const tokens = reports.flatMap(report => report.discoveredTokens);
+    const components = reports.flatMap(report => report.discoveredComponents);
+    return {
+      sourceName: files.length === 1 ? reports[0].sourceName : 'React project folder',
+      format: files.length === 1 ? reports[0].format : 'project-folder',
+      confidence: Math.round(reports.reduce((sum, report) => sum + report.confidence, 0) / reports.length),
+      fidelityScore: Math.round(reports.reduce((sum, report) => sum + report.fidelityScore, 0) / reports.length),
+      discoveredTokens: uniqueBy(tokens, token => `${token.name}:${JSON.stringify(token.value)}`),
+      discoveredComponents: uniqueBy(components, component => component.name),
+      unsupportedConstructs: uniqueBy(reports.flatMap(report => report.unsupportedConstructs), item => item),
+      warnings: uniqueBy(reports.flatMap(report => report.warnings), item => item)
+    };
   }
 
   openAiTokensModal() {
