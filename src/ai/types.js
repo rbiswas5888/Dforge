@@ -32,6 +32,38 @@ export const PRIVACY_MODES = {
   REDACT_TEXT: 'redact_text'          // Mask sensitive text before sending
 };
 
+/**
+ * Change-Risk Policy Classification (Blueprint Section 14, Agent Master Prompt Section 4)
+ */
+export const RISK_LEVELS = {
+  LOW: 'low',       // Auto-apply when user settings permit
+  MEDIUM: 'medium', // Preview or diff recommended
+  HIGH: 'high'      // Explicit user approval required
+};
+
+/**
+ * Validation Check Statuses (Agent Master Prompt Section 5)
+ */
+export const CHECK_STATUS = {
+  PASSED: 'passed',
+  FAILED: 'failed',
+  NOT_CHECKED: 'not_checked'
+};
+
+/**
+ * Agent Execution States (Agent Master Prompt Section 5)
+ */
+export const EXECUTION_STATUS = {
+  SUCCEEDED: 'succeeded',
+  PARTIAL: 'partial',
+  BLOCKED: 'blocked',
+  FAILED: 'failed',
+  CANCELLED: 'cancelled',
+  PROPOSED: 'proposed',
+  APPROVAL_REQUIRED: 'approval_required'
+};
+
+
 export class DesignForgeAIError extends Error {
   constructor(message, code = 'AI_ERROR', details = null) {
     super(message);

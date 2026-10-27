@@ -94,6 +94,10 @@ export class CubicBezier {
     const t = this.solveCurveX(x, epsilon);
     return this.calcY(t);
   }
+
+  solve(x, epsilon = 1e-6) {
+    return this.evaluate(x, epsilon);
+  }
 }
 
 export const EASING_PRESETS = {

@@ -111,11 +111,12 @@ export class ExpressionEvaluator {
   evaluate(expr, scope = {}) {
     if (!expr || typeof expr !== 'string' || expr.trim() === '') return true;
 
-    // Normalizing human friendly keywords: 'and' -> '&&', 'or' -> '||', 'not' -> '!'
+    // Normalizing human friendly keywords: 'and' -> '&&', 'or' -> '||', 'not' -> '!', and 'if(' -> '__if('
     let normalized = expr.trim()
       .replace(/\band\b/g, '&&')
       .replace(/\bor\b/g, '||')
-      .replace(/\bnot\s+/g, '!');
+      .replace(/\bnot\s+/g, '!')
+      .replace(/\bif\s*\(/g, '__if(');
 
     try {
       const combinedScope = {
@@ -123,8 +124,25 @@ export class ExpressionEvaluator {
         ...scope
       };
 
-      const keys = Object.keys(combinedScope);
-      const values = Object.values(combinedScope);
+      if (combinedScope['if']) {
+        combinedScope['__if'] = combinedScope['if'];
+        delete combinedScope['if'];
+      }
+
+      const reservedWords = new Set([
+        'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger',
+        'default', 'delete', 'do', 'else', 'export', 'extends', 'finally',
+        'for', 'function', 'if', 'import', 'in', 'instanceof', 'new',
+        'return', 'super', 'switch', 'this', 'throw', 'try', 'typeof',
+        'var', 'void', 'while', 'with', 'yield', 'let', 'static', 'enum',
+        'await'
+      ]);
+
+      const validEntries = Object.entries(combinedScope).filter(([k]) => {
+        return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k) && !reservedWords.has(k);
+      });
+      const keys = validEntries.map(([k]) => k);
+      const values = validEntries.map(([, v]) => v);
 
       // Sandboxed function execution without window/document/global access
       const fn = new Function(...keys, `
@@ -137,6 +155,7 @@ export class ExpressionEvaluator {
       return null;
     }
   }
+
 
   /**
    * Evaluates boolean predicate

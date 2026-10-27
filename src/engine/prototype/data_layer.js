@@ -13,50 +13,96 @@ export class PrototypeDataLayer {
   /**
    * Defines or populates an in-memory collection
    */
+  registerCollection(collectionOrId, records = []) {
+    if (typeof collectionOrId === 'object' && collectionOrId !== null) {
+      const id = collectionOrId.id || collectionOrId.name;
+      const coll = {
+        id,
+        name: collectionOrId.name || id,
+        schema: collectionOrId.schema || {},
+        records: Array.isArray(collectionOrId.records) ? [...collectionOrId.records] : []
+      };
+      this.collections.set(id, coll);
+      return coll;
+    }
+    const coll = {
+      id: collectionOrId,
+      name: collectionOrId,
+      records: Array.isArray(records) ? [...records] : []
+    };
+    this.collections.set(collectionOrId, coll);
+    return coll;
+  }
+
   setCollection(name, records = []) {
-    this.collections.set(name, Array.isArray(records) ? [...records] : []);
+    return this.registerCollection(name, records);
   }
 
   getCollection(name) {
-    return this.collections.get(name) || [];
+    const coll = this.collections.get(name);
+    if (!coll) return { id: name, name, records: [] };
+    return coll;
+  }
+
+  findRecords(collectionName, predicate) {
+    const coll = this.getCollection(collectionName);
+    return (coll.records || []).filter(predicate);
+  }
+
+  addRecord(collectionName, record) {
+    const coll = this.getCollection(collectionName);
+    const newRecord = { id: record.id || `rec_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, ...record };
+    coll.records.push(newRecord);
+    return newRecord;
   }
 
   insertRecord(collectionName, record) {
-    const coll = this.getCollection(collectionName);
-    const newRecord = { id: record.id || `rec_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, ...record };
-    coll.push(newRecord);
-    this.collections.set(collectionName, coll);
-    return newRecord;
+    return this.addRecord(collectionName, record);
   }
 
   updateRecord(collectionName, id, patch) {
     const coll = this.getCollection(collectionName);
-    const idx = coll.findIndex(r => r.id === id);
+    const idx = (coll.records || []).findIndex(r => r.id === id);
     if (idx !== -1) {
-      coll[idx] = { ...coll[idx], ...patch };
-      this.collections.set(collectionName, coll);
-      return coll[idx];
+      coll.records[idx] = { ...coll.records[idx], ...patch };
+      return coll.records[idx];
     }
     return null;
   }
 
   deleteRecord(collectionName, id) {
     const coll = this.getCollection(collectionName);
-    const filtered = coll.filter(r => r.id !== id);
-    this.collections.set(collectionName, filtered);
-    return filtered.length < coll.length;
+    const beforeLen = (coll.records || []).length;
+    coll.records = (coll.records || []).filter(r => r.id !== id);
+    return coll.records.length < beforeLen;
   }
 
   /**
    * Registers a mock API endpoint
    */
-  registerEndpoint(method, path, options = {}) {
-    const key = `${method.toUpperCase()}:${path}`;
+  registerEndpoint(methodOrConfig, path, options = {}) {
+    if (typeof methodOrConfig === 'object' && methodOrConfig !== null) {
+      const { method = 'GET', path: epPath, responseStatus = 200, responseData = {} } = methodOrConfig;
+      const key = `${method.toUpperCase()}:${epPath}`;
+      this.endpoints.set(key, {
+        method: method.toUpperCase(),
+        path: epPath,
+        status: responseStatus,
+        data: responseData,
+        latency: methodOrConfig.latency || 0,
+        failureRate: methodOrConfig.failureRate || 0,
+        responseTemplate: responseData
+      });
+      return;
+    }
+    const key = `${methodOrConfig.toUpperCase()}:${path}`;
     this.endpoints.set(key, {
-      method: method.toUpperCase(),
+      method: methodOrConfig.toUpperCase(),
       path,
-      latency: options.latency || 100, // ms
-      failureRate: options.failureRate || 0, // 0 - 1
+      status: options.status || 200,
+      data: options.responseTemplate || options.data || { success: true },
+      latency: options.latency || 0,
+      failureRate: options.failureRate || 0,
       responseTemplate: options.responseTemplate || { success: true }
     });
   }
@@ -67,17 +113,17 @@ export class PrototypeDataLayer {
   async fetchMock(method, path, payload = {}, context = {}) {
     const key = `${method.toUpperCase()}:${path}`;
     const endpoint = this.endpoints.get(key) || {
-      latency: 50,
+      status: 200,
+      data: payload,
+      latency: 0,
       failureRate: 0,
-      responseTemplate: { status: 200, data: payload }
+      responseTemplate: payload
     };
 
-    // Simulate network delay
     if (endpoint.latency > 0) {
       await new Promise(resolve => setTimeout(resolve, Math.min(endpoint.latency, 300)));
     }
 
-    // Check simulated failure rate
     if (endpoint.failureRate > 0 && Math.random() < endpoint.failureRate) {
       return {
         ok: false,
@@ -88,11 +134,11 @@ export class PrototypeDataLayer {
 
     const response = typeof endpoint.responseTemplate === 'function'
       ? endpoint.responseTemplate(payload, context)
-      : JSON.parse(JSON.stringify(endpoint.responseTemplate));
+      : (endpoint.data !== undefined ? endpoint.data : endpoint.responseTemplate);
 
     return {
       ok: true,
-      status: 200,
+      status: endpoint.status || 200,
       data: response
     };
   }

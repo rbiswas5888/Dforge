@@ -68,6 +68,15 @@ export class AnalyticalSpring {
   }
 
   /**
+   * Solve normalized transition progression from 0 to 1 at time t
+   */
+  solve(t) {
+    if (t <= 0) return 0;
+    const { position } = this.evaluate(t, -1, 0);
+    return 1 + position;
+  }
+
+  /**
    * Non-linear rubber-banding resistance calculation:
    * F_resist = -k * x^1.5
    */

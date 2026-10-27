@@ -33,6 +33,96 @@ import { ExpressionEvaluator } from './prototype/expressions.js';
 import { ComponentStateMachine } from './prototype/state_machine.js';
 import { PrototypeDataLayer } from './prototype/data_layer.js';
 
+export class PrototypeVariable {
+  constructor(def = {}) {
+    this.id = def.id || def.name;
+    this.name = def.name || def.id;
+    this.type = def.type || 'string';
+    this.value = def.value !== undefined ? def.value : null;
+    this.isComputed = Boolean(def.isComputed);
+    this.expression = def.expression || null;
+    this.scope = def.scope || 'global';
+  }
+
+  valueOf() {
+    return this.value;
+  }
+
+  [Symbol.toPrimitive](hint) {
+    if (hint === 'number') return Number(this.value);
+    if (hint === 'string') return String(this.value);
+    return this.value;
+  }
+
+  toString() {
+    return String(this.value);
+  }
+}
+
+export class VariablesStore {
+  constructor(engine) {
+    this.engine = engine;
+    this.variablesMap = new Map();
+  }
+
+  createVariable(varDef) {
+    const v = new PrototypeVariable(varDef);
+    this.variablesMap.set(v.id, v);
+    if (v.name) this.variablesMap.set(v.name, v);
+    this.engine.variables.set(v.id, v.value);
+    if (v.name) this.engine.variables.set(v.name, v.value);
+    if (v.isComputed && v.expression) {
+      this.engine.computedVariables.set(v.id, v.expression);
+      if (v.name) this.engine.computedVariables.set(v.name, v.expression);
+    }
+    return v;
+  }
+
+  setVariable(idOrName, value) {
+    const v = this.variablesMap.get(idOrName);
+    if (v) {
+      v.value = value;
+    }
+    this.engine.variables.set(idOrName, value);
+    this.recomputeGraph();
+    return value;
+  }
+
+  getVariable(idOrName) {
+    if (this.variablesMap.has(idOrName)) {
+      return this.variablesMap.get(idOrName);
+    }
+    if (this.engine.variables.has(idOrName)) {
+      const val = this.engine.variables.get(idOrName);
+      const v = new PrototypeVariable({ id: idOrName, value: val });
+      this.variablesMap.set(idOrName, v);
+      return v;
+    }
+    return null;
+  }
+
+  recomputeGraph() {
+    this.engine.recomputeVariables();
+    for (const [id, v] of this.variablesMap.entries()) {
+      if (v.isComputed && v.expression) {
+        v.value = this.engine.variables.get(id);
+      }
+    }
+  }
+
+  getVariablesSnapshot() {
+    const snap = {};
+    for (const [k, v] of this.engine.variables.entries()) {
+      snap[k] = v;
+    }
+    for (const [id, v] of this.variablesMap.entries()) {
+      snap[id] = v.value;
+      if (v.name) snap[v.name] = v.value;
+    }
+    return snap;
+  }
+}
+
 export class PrototypeEngine {
   constructor(document) {
     this.doc = document;
@@ -42,12 +132,14 @@ export class PrototypeEngine {
     this.currentFrameId = null;
     this.navigationHistory = [];
     this.activeOverlays = []; // Stack of { frameId, options }
+    this.overlays = []; // Stack of { overlayFrameId, ... }
     this.instanceVariants = new Map(); // nodeId -> variantId
 
     // 1. Reactive Variables Store (Section 6.2)
     this.variables = new Map(); // varName -> value
     this.variableScopes = new Map(); // varName -> scope ('global' | 'flow' | 'frame' | 'component' | 'session')
     this.computedVariables = new Map(); // varName -> expressionString
+    this.variablesStore = new VariablesStore(this);
 
     // Subsystems
     this.evaluator = new ExpressionEvaluator();
@@ -64,6 +156,9 @@ export class PrototypeEngine {
     this.eventLog = []; // [{ id, timestamp, trigger, sourceNodeId, actions, stateSnapshot }]
     this.snapshots = []; // Historical state snapshots for time-travel
     this.delayedTimers = [];
+
+    // Flows
+    this.flows = this.getFlows();
 
     // Environment Simulation (Section 6.11)
     this.environment = {
@@ -84,6 +179,8 @@ export class PrototypeEngine {
   // =========================================================================
 
   initVariables() {
+    const existingMap = this.variablesStore ? new Map(this.variablesStore.variablesMap) : null;
+
     this.variables.clear();
     this.variableScopes.clear();
     this.computedVariables.clear();
@@ -97,8 +194,24 @@ export class PrototypeEngine {
       }
     }
 
+    if (existingMap) {
+      for (const [id, v] of existingMap.entries()) {
+        this.variables.set(id, v.value);
+        if (v.isComputed && v.expression) {
+          this.computedVariables.set(id, v.expression);
+        }
+      }
+      this.variablesStore.variablesMap = existingMap;
+      this.recomputeVariables();
+    }
+
     // Backwards compatibility alias
     this.prototypeVariables = this.variables;
+  }
+
+
+  createVariable(varDef) {
+    return this.variablesStore.createVariable(varDef);
   }
 
   setVariable(name, value, scope = 'global') {
@@ -106,8 +219,11 @@ export class PrototypeEngine {
     this.variableScopes.set(name, scope);
     this.hfsm.setVariable(name, value);
 
+    const v = this.variablesStore.variablesMap.get(name);
+    if (v) v.value = value;
+
     // Recompute dependent computed variables
-    this.recomputeVariables();
+    this.variablesStore.recomputeGraph();
 
     // Trigger reactive listeners
     this.handleReactiveEvent('variable_changed', { variable: name, value });
@@ -115,10 +231,30 @@ export class PrototypeEngine {
   }
 
   getVariable(name, fallback = null) {
+    const v = this.variablesStore.getVariable(name);
+    if (v) return v;
     if (this.variables.has(name)) {
       return this.variables.get(name);
     }
     return fallback;
+  }
+
+  stepVirtualClock(ms = 0) {
+    this.virtualTimeMs += ms;
+    return this.virtualTimeMs;
+  }
+
+  recordSnapshot(label = 'snapshot') {
+    const snap = {
+      id: `snap_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      label,
+      timestamp: this.virtualTimeMs,
+      currentFrameId: this.currentFrameId,
+      variables: this.getVariablesSnapshot(),
+      overlays: [...this.overlays]
+    };
+    this.snapshots.push(snap);
+    return snap;
   }
 
   defineComputedVariable(name, expression) {
@@ -126,18 +262,28 @@ export class PrototypeEngine {
     this.recomputeVariables();
   }
 
+
   recomputeVariables() {
-    const context = this.getVariablesSnapshot();
-    for (const [name, expr] of this.computedVariables.entries()) {
-      try {
-        const result = this.evaluator.evaluate(expr, context);
-        this.variables.set(name, result);
-        this.hfsm.setVariable(name, result);
-      } catch (err) {
-        console.warn(`Error computing variable ${name}:`, err);
+    for (let pass = 0; pass < 3; pass++) {
+      const context = this.getVariablesSnapshot();
+      let changed = false;
+      for (const [name, expr] of this.computedVariables.entries()) {
+        try {
+          const result = this.evaluator.evaluate(expr, context);
+          if (this.variables.get(name) !== result) {
+            this.variables.set(name, result);
+            this.hfsm.setVariable(name, result);
+            context[name] = result;
+            changed = true;
+          }
+        } catch (err) {
+          console.warn(`Error computing variable ${name}:`, err);
+        }
       }
+      if (!changed) break;
     }
   }
+
 
   getVariablesSnapshot() {
     const snap = {};
@@ -203,13 +349,26 @@ export class PrototypeEngine {
     return flows;
   }
 
+  setFlowStartingPoints(flows) {
+    this.flows = Array.isArray(flows) ? [...flows] : [];
+    return this.flows;
+  }
+
   startFlow(frameId = null) {
     this.cancelDelayedActions();
     this.activeOverlays = [];
+    this.overlays = [];
     this.instanceVariants.clear();
     this.initVariables();
 
     let targetId = frameId;
+    if (targetId && this.flows && this.flows.length > 0) {
+      const matched = this.flows.find(f => f.id === targetId || f.name === targetId);
+      if (matched) {
+        targetId = matched.startingFrameId;
+      }
+    }
+
     if (!targetId) {
       // Find marked flow starting frame or first top-level frame
       for (const page of this.doc.pages || []) {
@@ -226,10 +385,13 @@ export class PrototypeEngine {
         const firstPage = this.doc.pages?.[0];
         targetId = firstPage?.rootIds?.find(id => firstPage.nodes[id]?.type === 'frame') || null;
       }
+      if (!targetId && this.doc?.rootFrameIds?.[0]) {
+        targetId = this.doc.rootFrameIds[0];
+      }
     }
 
     this.currentFrameId = targetId;
-    this.navigationHistory = targetId ? [targetId] : [];
+    this.navigationHistory = [];
     if (targetId) {
       this.handleLifecycleEvent('on_load', targetId);
       this.scheduleDelayActions(targetId);
@@ -238,6 +400,7 @@ export class PrototypeEngine {
     this.logEvent('start_flow', null, [{ action: 'start_flow', targetId }]);
     return targetId;
   }
+
 
   restart() {
     const initialFrame = this.navigationHistory[0] || null;
@@ -386,32 +549,34 @@ export class PrototypeEngine {
     const action = interaction.action || 'navigate';
 
     // 1. Navigation
-    if (action === 'navigate' && interaction.targetId) {
-      const targetFrame = this.findNode(interaction.targetId);
+    const destFrameId = interaction.destinationFrameId || interaction.targetId;
+    if ((action === 'navigate' || action === 'navigate_to') && destFrameId) {
+      const targetFrame = this.findNode(destFrameId);
       if (!targetFrame) {
-        return { success: false, error: `Target frame ${interaction.targetId} not found` };
+        return { success: false, error: `Target frame ${destFrameId} not found` };
       }
       this.cancelDelayedActions();
-      this.currentFrameId = interaction.targetId;
-      this.navigationHistory.push(interaction.targetId);
-      this.scheduleDelayActions(interaction.targetId);
-      this.handleLifecycleEvent('on_load', interaction.targetId);
+      if (this.currentFrameId) {
+        this.navigationHistory.push(this.currentFrameId);
+      }
+      this.currentFrameId = destFrameId;
+      this.scheduleDelayActions(destFrameId);
+      this.handleLifecycleEvent('on_load', destFrameId);
 
       return {
         success: true,
         action: 'navigate',
-        targetId: interaction.targetId,
-        animation: interaction.animation || 'smart-animate',
-        duration: interaction.duration || 300,
+        targetId: destFrameId,
+        animation: interaction.transition || interaction.animation || 'smart-animate',
+        duration: interaction.durationMs || interaction.duration || 300,
         easing: interaction.easing || 'ease-in-out'
       };
     }
 
     // 2. Go Back
     if (action === 'back') {
-      if (this.navigationHistory.length > 1) {
-        this.navigationHistory.pop();
-        const prevId = this.navigationHistory[this.navigationHistory.length - 1];
+      if (this.navigationHistory.length > 0) {
+        const prevId = this.navigationHistory.pop();
         this.cancelDelayedActions();
         this.currentFrameId = prevId;
         this.scheduleDelayActions(prevId);
@@ -438,40 +603,56 @@ export class PrototypeEngine {
 
     // 4. Overlays Stack
     if (action === 'overlay' || action === 'open_overlay') {
-      const targetFrame = this.findNode(interaction.targetId);
+      const targetId = interaction.overlayFrameId || interaction.targetId;
+      const targetFrame = this.findNode(targetId);
       if (!targetFrame) {
-        return { success: false, error: `Overlay target ${interaction.targetId} not found` };
+        return { success: false, error: `Overlay target ${targetId} not found` };
       }
-      const opts = interaction.overlayOptions || {
-        position: 'center',
+      const opts = interaction.overlaySettings || interaction.overlayOptions || {
+        position: 'centered',
         closeOnClickOutside: true,
         closeOnEscape: true,
         dimBackground: true
       };
-      this.activeOverlays.push({ frameId: interaction.targetId, options: opts });
-      return { success: true, action: 'open_overlay', targetId: interaction.targetId, options: opts };
+      const overlayEntry = {
+        overlayFrameId: targetId,
+        targetId,
+        frameId: targetId,
+        options: opts,
+        settings: opts
+      };
+      this.overlays.push(overlayEntry);
+      this.activeOverlays.push(overlayEntry);
+      return { success: true, action: 'open_overlay', targetId, overlay: overlayEntry };
     }
 
-    if (action === 'close_overlay') {
-      if (this.activeOverlays.length > 0) {
-        const closed = this.activeOverlays.pop();
-        return { success: true, action: 'close_overlay', targetId: closed.frameId };
-      }
-      return { success: true, action: 'close_overlay' };
+    if (action === 'close_overlay' || action === 'close') {
+      const closed = this.overlays.pop() || this.activeOverlays.pop();
+      return { success: true, action: 'close_overlay', targetId: closed?.overlayFrameId || closed?.frameId };
     }
 
     if (action === 'swap_overlay') {
+      this.overlays.pop();
       if (this.activeOverlays.length > 0) {
         this.activeOverlays.pop();
       }
-      const opts = interaction.overlayOptions || { position: 'center', dimBackground: true };
-      this.activeOverlays.push({ frameId: interaction.targetId, options: opts });
-      return { success: true, action: 'swap_overlay', targetId: interaction.targetId };
+      const targetId = interaction.overlayFrameId || interaction.targetId;
+      const opts = interaction.overlaySettings || interaction.overlayOptions || { position: 'center', dimBackground: true };
+      const overlayEntry = {
+        overlayFrameId: targetId,
+        targetId,
+        frameId: targetId,
+        options: opts,
+        settings: opts
+      };
+      this.overlays.push(overlayEntry);
+      this.activeOverlays.push(overlayEntry);
+      return { success: true, action: 'swap_overlay', targetId };
     }
 
     // 5. Variables & State Mutations
     if (action === 'set_variable') {
-      const varId = interaction.varId || interaction.variable || interaction.variableUpdate?.varId;
+      const varId = interaction.variableId || interaction.varId || interaction.variable || interaction.name;
       let val = interaction.value !== undefined ? interaction.value : interaction.variableUpdate?.value;
       const expr = interaction.expr || interaction.expression || interaction.variableUpdate?.expr;
 
@@ -479,18 +660,18 @@ export class PrototypeEngine {
         val = this.evaluateExpression(expr, eventData);
       }
       this.setVariable(varId, val);
-      return { success: true, action: 'set_variable', varId, value: val };
+      return { success: true, action: 'set_variable', varId, variableId: varId, value: val };
     }
 
     if (action === 'toggle' || action === 'toggle_variable') {
-      const varId = interaction.varId || interaction.variable;
+      const varId = interaction.variableId || interaction.varId || interaction.variable;
       const current = Boolean(this.getVariable(varId, false));
       this.setVariable(varId, !current);
       return { success: true, action: 'toggle', varId, value: !current };
     }
 
     if (action === 'increment' || action === 'increment_variable') {
-      const varId = interaction.varId || interaction.variable;
+      const varId = interaction.variableId || interaction.varId || interaction.variable;
       const step = Number(interaction.step || 1);
       const current = Number(this.getVariable(varId, 0));
       this.setVariable(varId, current + step);
@@ -524,14 +705,11 @@ export class PrototypeEngine {
 
     // 8. Test Assertion (Section 6.5 & 7.2)
     if (action === 'assert') {
-      const expr = interaction.expression || interaction.predicate;
-      const message = interaction.message || `Assertion failed: ${expr}`;
+      const expr = interaction.condition || interaction.expression || interaction.predicate;
       const passed = this.evaluatePredicate(expr, eventData);
-      if (!passed) {
-        throw new Error(message);
-      }
-      return { success: true, action: 'assert', passed: true, message };
+      return Boolean(passed);
     }
+
 
     // 9. Scroll To & External URL
     if (action === 'scroll_to' && interaction.targetId) {
@@ -680,6 +858,7 @@ export class PrototypeEngine {
   // =========================================================================
 
   findNode(nodeId) {
+    if (this.doc?.nodes?.[nodeId]) return this.doc.nodes[nodeId];
     for (const page of this.doc.pages || []) {
       if (page.nodes?.[nodeId]) return page.nodes[nodeId];
     }
