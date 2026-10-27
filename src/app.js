@@ -1080,8 +1080,21 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
       // 2. Shape Creation Tools
       if (this.currentTool !== 'select') {
-        this.handleShapeCreation(this.currentTool, canvasCoords);
-        this.setTool('select');
+        this.dragState = {
+          type: 'create',
+          tool: this.currentTool,
+          startX: canvasCoords.x,
+          startY: canvasCoords.y,
+          currentX: canvasCoords.x,
+          currentY: canvasCoords.y
+        };
+        renderer.creationPreview = {
+          tool: this.currentTool,
+          x: canvasCoords.x,
+          y: canvasCoords.y,
+          width: 0,
+          height: 0
+        };
         return;
       }
 
@@ -1173,7 +1186,18 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         return;
       }
 
-      if (this.dragState.type === 'move') {
+      if (this.dragState.type === 'create') {
+        this.dragState.currentX = canvasCoords.x;
+        this.dragState.currentY = canvasCoords.y;
+        renderer.creationPreview = {
+          tool: this.dragState.tool,
+          x: Math.min(this.dragState.startX, canvasCoords.x),
+          y: Math.min(this.dragState.startY, canvasCoords.y),
+          width: Math.abs(canvasCoords.x - this.dragState.startX),
+          height: Math.abs(canvasCoords.y - this.dragState.startY)
+        };
+        renderer.render();
+      } else if (this.dragState.type === 'move') {
         const dx = canvasCoords.x - this.dragState.lastX;
         const dy = canvasCoords.y - this.dragState.lastY;
 
@@ -1238,6 +1262,20 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         engine.commitTransforms(this.dragState.initialTransforms, 'Move objects');
       } else if (this.dragState.type === 'resize') {
         engine.commitTransforms(this.dragState.initialTransforms, 'Resize object');
+      } else if (this.dragState.type === 'create') {
+        const { tool, startX, startY, currentX, currentY } = this.dragState;
+        const width = Math.abs(currentX - startX);
+        const height = Math.abs(currentY - startY);
+        const dragged = width >= 2 || height >= 2;
+        const bounds = dragged ? {
+          x: Math.min(startX, currentX),
+          y: Math.min(startY, currentY),
+          width,
+          height
+        } : null;
+        renderer.creationPreview = null;
+        this.handleShapeCreation(tool, { x: startX, y: startY }, bounds);
+        this.setTool('select');
       } else if (this.dragState.type === 'marquee') {
         renderer.marquee = null;
         renderer.render();
@@ -1278,33 +1316,45 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     });
   }
 
-  handleShapeCreation(tool, coords) {
+  handleShapeCreation(tool, coords, bounds = null) {
     let node;
-    const x = Math.round(coords.x);
-    const y = Math.round(coords.y);
+    const x = Math.round(bounds?.x ?? coords.x);
+    const y = Math.round(bounds?.y ?? coords.y);
+    const width = Math.max(2, Math.round(bounds?.width || 0));
+    const height = Math.max(2, Math.round(bounds?.height || 0));
+    const transform = (defaultWidth, defaultHeight) => ({
+      x,
+      y,
+      width: bounds ? width : defaultWidth,
+      height: bounds ? height : defaultHeight
+    });
 
     if (tool === 'frame') {
-      node = createNode('frame', { name: 'New Frame', transform: { x, y, width: 360, height: 240 } });
+      node = createNode('frame', { name: 'New Frame', transform: transform(360, 240) });
+    } else if (tool === 'section') {
+      node = createNode('section', { name: 'Section', transform: transform(360, 240) });
+    } else if (tool === 'slice') {
+      node = createNode('slice', { name: 'Slice', transform: transform(120, 80) });
     } else if (tool === 'rectangle') {
-      node = createNode('rectangle', { name: 'Rectangle', transform: { x, y, width: 120, height: 80 } });
+      node = createNode('rectangle', { name: 'Rectangle', transform: transform(120, 80) });
     } else if (tool === 'ellipse') {
-      node = createNode('ellipse', { name: 'Circle', transform: { x, y, width: 80, height: 80 } });
+      node = createNode('ellipse', { name: 'Circle', transform: transform(80, 80) });
     } else if (tool === 'line') {
-      node = createNode('line', { name: 'Line', transform: { x, y, width: 140, height: 2 } });
+      node = createNode('line', { name: 'Line', transform: transform(140, 2) });
     } else if (tool === 'star') {
-      node = createNode('star', { name: 'Star', transform: { x, y, width: 64, height: 64 } });
+      node = createNode('star', { name: 'Star', transform: transform(64, 64) });
     } else if (tool === 'polygon') {
-      node = createNode('polygon', { name: 'Polygon', transform: { x, y, width: 72, height: 72 } });
+      node = createNode('polygon', { name: 'Polygon', transform: transform(72, 72) });
     } else if (tool === 'image') {
-      node = createNode('image', { name: 'Image Box', transform: { x, y, width: 240, height: 160 } });
+      node = createNode('image', { name: 'Image Box', transform: transform(240, 160) });
     } else if (tool === 'text') {
       node = createNode('text', {
         name: 'Heading',
-        transform: { x, y, width: 200, height: 32 },
+        transform: transform(200, 32),
         text: { content: 'New Text Block', fontSize: 18, fontWeight: '600' }
       });
     } else if (tool === 'button') {
-      node = createNode('button', { name: 'Button / Primary', transform: { x, y, width: 140, height: 44 } });
+      node = createNode('button', { name: 'Button / Primary', transform: transform(140, 44) });
       const txt = createNode('text', {
         parentId: node.id,
         name: 'Button Label',
@@ -3158,7 +3208,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       const paddingLeft = 12 + depth * 14;
 
       html += `
-        <div class="layer-item ${isSelected ? 'selected' : ''}" data-node-id="${node.id}" style="padding-left: ${paddingLeft}px;">
+        <div class="layer-item ${isSelected ? 'selected' : ''}" data-node-id="${node.id}" draggable="true" style="padding-left: ${paddingLeft}px;">
           <span class="layer-icon">${icon}</span>
           <span class="layer-name" title="${node.name}">${node.name}</span>
           <div class="layer-actions">
@@ -3182,7 +3232,49 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     list.innerHTML = html || '<div style="padding: 16px; color: var(--text-dim); font-size: 11px;">No matching layers found.</div>';
 
     // Click listeners on layers items
+    let draggedLayerId = null;
     list.querySelectorAll('.layer-item').forEach(item => {
+      item.addEventListener('dragstart', event => {
+        if (event.target.closest('.layer-btn')) {
+          event.preventDefault();
+          return;
+        }
+        draggedLayerId = item.dataset.nodeId;
+        event.dataTransfer?.setData('text/plain', draggedLayerId);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+        item.classList.add('dragging');
+      });
+
+      item.addEventListener('dragover', event => {
+        const draggedNode = this.engine.getActivePage().nodes[draggedLayerId];
+        const targetNode = this.engine.getActivePage().nodes[item.dataset.nodeId];
+        if (!draggedNode || !targetNode || draggedNode.parentId !== targetNode.parentId || draggedNode.id === targetNode.id) return;
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+        const bounds = item.getBoundingClientRect();
+        const position = event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after';
+        item.dataset.dropPosition = position;
+      });
+
+      item.addEventListener('dragleave', event => {
+        if (!item.contains(event.relatedTarget)) {
+          delete item.dataset.dropPosition;
+        }
+      });
+
+      item.addEventListener('drop', event => {
+        event.preventDefault();
+        const position = item.dataset.dropPosition || 'before';
+        delete item.dataset.dropPosition;
+        if (draggedLayerId) this.engine.reorderNodeTo(draggedLayerId, item.dataset.nodeId, position);
+      });
+
+      item.addEventListener('dragend', () => {
+        draggedLayerId = null;
+        item.classList.remove('dragging');
+        list.querySelectorAll('.layer-item[data-drop-position]').forEach(target => delete target.dataset.dropPosition);
+      });
+
       item.addEventListener('click', (e) => {
         const id = item.dataset.nodeId;
         if (e.target.classList.contains('toggle-vis')) {

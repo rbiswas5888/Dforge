@@ -390,6 +390,33 @@ body, html {
   font-weight: 500;
 }
 
+.layer-item[draggable="true"] {
+  position: relative;
+}
+
+.layer-item.dragging {
+  opacity: 0.45;
+}
+
+.layer-item[data-drop-position="before"]::before,
+.layer-item[data-drop-position="after"]::after {
+  position: absolute;
+  right: 6px;
+  left: 6px;
+  height: 2px;
+  background: var(--accent-blue);
+  content: "";
+  pointer-events: none;
+}
+
+.layer-item[data-drop-position="before"]::before {
+  top: 0;
+}
+
+.layer-item[data-drop-position="after"]::after {
+  bottom: 0;
+}
+
 .layer-icon {
   font-size: 12px;
   opacity: 0.8;
@@ -2049,4 +2076,3 @@ body, html {
 .linter-issue-card.warning {
   border-left-color: #10b981;
 }
-

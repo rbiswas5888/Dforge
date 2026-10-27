@@ -462,6 +462,45 @@ export class CommandEngine {
             l.push(...prevList);
             return null;
           }
+
+          reorderNodeTo(nodeId, targetId, position = 'before') {
+            const page = this.getActivePage();
+            const node = page?.nodes?.[nodeId];
+            const target = page?.nodes?.[targetId];
+            if (!node || !target || nodeId === targetId || node.parentId !== target.parentId) return false;
+
+            const list = node.parentId && page.nodes[node.parentId]
+              ? page.nodes[node.parentId].childIds
+              : page.rootIds;
+            const fromIndex = list.indexOf(nodeId);
+            const targetIndex = list.indexOf(targetId);
+            if (fromIndex === -1 || targetIndex === -1) return false;
+
+            const next = [...list];
+            next.splice(fromIndex, 1);
+            const adjustedTargetIndex = next.indexOf(targetId);
+            next.splice(adjustedTargetIndex + (position === 'after' ? 1 : 0), 0, nodeId);
+            if (next.every((id, index) => id === list[index])) return false;
+
+            const applyOrder = (order, description) => ({
+              type: 'reorder-node',
+              description,
+              execute: (engine) => {
+                const currentPage = engine.doc.pages.find(item => item.id === this.activePageId);
+                const currentNode = currentPage?.nodes?.[nodeId];
+                if (!currentPage || !currentNode) return null;
+                const currentList = currentNode.parentId && currentPage.nodes[currentNode.parentId]
+                  ? currentPage.nodes[currentNode.parentId].childIds
+                  : currentPage.rootIds;
+                const previousOrder = [...currentList];
+                currentList.splice(0, currentList.length, ...order);
+                return applyOrder(previousOrder, `Undo ${description}`);
+              }
+            });
+
+            this.execute(applyOrder(next, `Reorder ${node.name}`));
+            return true;
+          }
         };
       }
     });
@@ -1013,4 +1052,3 @@ export class CommandEngine {
     this.notify('document-change', { themeMode: mode });
   }
 }
-

@@ -98,6 +98,10 @@ export function hsvToRgb(h, s, v) {
   };
 }
 
+function isValidHexColor(value) {
+  return /^#?(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(String(value || '').trim());
+}
+
 export class ColorPickerPopover {
   constructor() {
     this.isOpen = false;
@@ -459,8 +463,13 @@ export class ColorPickerPopover {
     // 4. Hex Input manual typing
     const hexInp = document.getElementById('cpHexInput');
     if (hexInp) {
-      hexInp.onchange = (e) => {
+      const applyHex = (e, commit) => {
         const val = e.target.value.trim();
+        if (!isValidHexColor(val)) {
+          hexInp.setAttribute('aria-invalid', 'true');
+          return;
+        }
+        hexInp.removeAttribute('aria-invalid');
         const rgb = hexToRgb(val);
         const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
         this.h = hsv.h;
@@ -469,40 +478,48 @@ export class ColorPickerPopover {
         this.a = rgb.a !== undefined ? rgb.a : 1;
         this.drawSBCanvas();
         this.notifyInput();
-        this.notifyChange();
+        if (commit) this.notifyChange();
       };
+      hexInp.oninput = e => applyHex(e, false);
+      hexInp.onchange = e => applyHex(e, true);
     }
 
     // 5. Opacity Input
     const opInp = document.getElementById('cpOpacityInput');
     if (opInp) {
-      opInp.onchange = (e) => {
-        const val = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 100));
+      const applyOpacity = (e, commit) => {
+        const parsed = Number.parseInt(e.target.value, 10);
+        if (!Number.isFinite(parsed)) return;
+        const val = Math.max(0, Math.min(100, parsed));
         this.a = val / 100;
         this.notifyInput();
-        this.notifyChange();
+        if (commit) this.notifyChange();
       };
+      opInp.oninput = e => applyOpacity(e, false);
+      opInp.onchange = e => applyOpacity(e, true);
     }
 
     // 6. RGB Inputs
     const rInp = document.getElementById('cpRInput');
     const gInp = document.getElementById('cpGInput');
     const bInp = document.getElementById('cpBInput');
-    const onRgbChange = () => {
-      const r = Math.max(0, Math.min(255, parseInt(rInp.value, 10) || 0));
-      const g = Math.max(0, Math.min(255, parseInt(gInp.value, 10) || 0));
-      const b = Math.max(0, Math.min(255, parseInt(bInp.value, 10) || 0));
+    const onRgbInput = (commit = false) => {
+      const values = [rInp, gInp, bInp].map(input => Number.parseInt(input.value, 10));
+      if (values.some(value => !Number.isFinite(value))) return;
+      const [r, g, b] = values.map(value => Math.max(0, Math.min(255, value)));
       const hsv = rgbToHsv(r, g, b);
       this.h = hsv.h;
       this.s = hsv.s;
       this.v = hsv.v;
       this.drawSBCanvas();
       this.notifyInput();
-      this.notifyChange();
+      if (commit) this.notifyChange();
     };
-    if (rInp) rInp.onchange = onRgbChange;
-    if (gInp) gInp.onchange = onRgbChange;
-    if (bInp) bInp.onchange = onRgbChange;
+    for (const input of [rInp, gInp, bInp]) {
+      if (!input) continue;
+      input.oninput = () => onRgbInput();
+      input.onchange = () => onRgbInput(true);
+    }
 
     // 7. Swatches Click
     this.container.querySelectorAll('.cp-palette-swatch').forEach(sw => {

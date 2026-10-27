@@ -22,6 +22,7 @@ export class CanvasRenderer {
     this.hoveredNodeId = null;
     this.snapGuides = [];
     this.marquee = null; // { startX, startY, currentX, currentY }
+    this.creationPreview = null;
     this.dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
     this.outlineViewOnly = false; // Figma Cmd+Y wireframe mode
     this.showPixelGrid = false;   // Figma Shift+' pixel grid mode
@@ -121,7 +122,7 @@ export class CanvasRenderer {
     const isHighContrast = (this.engine.doc?.themeMode === 'high-contrast') || 
       (typeof document !== 'undefined' && document.body.classList.contains('theme-high-contrast'));
 
-    ctx.fillStyle = isHighContrast ? '#000000' : (isLight ? '#E4E4E7' : '#0D0D0F');
+    ctx.fillStyle = page.background || (isHighContrast ? '#000000' : (isLight ? '#E4E4E7' : '#0D0D0F'));
     ctx.fillRect(0, 0, viewW, viewH);
 
     // 2. Draw Subtle Infinite Dot Grid
@@ -156,12 +157,41 @@ export class CanvasRenderer {
     // 8. Render Collaborative / Review Comments
     this.drawComments(ctx);
 
-    // 9. Draw Marquee Box if active
+    // 9. Draw live shape creation preview
+    if (this.creationPreview) {
+      this.drawCreationPreview(ctx);
+    }
+
+    // 10. Draw Marquee Box if active
     if (this.marquee) {
       this.drawMarquee(ctx);
     }
 
     ctx.restore();
+    ctx.restore();
+  }
+
+  drawCreationPreview(ctx) {
+    const { x, y, width, height } = this.creationPreview;
+    ctx.save();
+    ctx.strokeStyle = '#6366F1';
+    ctx.fillStyle = 'rgba(99, 102, 241, 0.12)';
+    ctx.lineWidth = Math.max(1, 1 / this.zoom);
+    ctx.setLineDash([4 / this.zoom, 3 / this.zoom]);
+    if (this.creationPreview.tool === 'ellipse') {
+      ctx.beginPath();
+      ctx.ellipse(x + width / 2, y + height / 2, width / 2, height / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    } else if (this.creationPreview.tool === 'line') {
+      ctx.beginPath();
+      ctx.moveTo(x, y + height / 2);
+      ctx.lineTo(x + width, y + height / 2);
+      ctx.stroke();
+    } else {
+      ctx.fillRect(x, y, width, height);
+      ctx.strokeRect(x, y, width, height);
+    }
     ctx.restore();
   }
 
@@ -822,4 +852,3 @@ export class CanvasRenderer {
     return null;
   }
 }
-
