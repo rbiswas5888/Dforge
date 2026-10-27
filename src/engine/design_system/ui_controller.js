@@ -333,11 +333,19 @@ export class DesignSystemUIController {
     if (btnCommitImp) {
       btnCommitImp.addEventListener('click', () => {
         if (this.lastImportReport) {
-          this.importer.commitImport(this.lastImportReport, 'merge');
-          closeImp();
-          this.updateHeaderInfo();
-          this.renderView(this.activeView);
-          if (this.app.renderer) this.app.renderer.render();
+          const status = document.getElementById('importAnalysisStatus');
+          try {
+            const result = this.importer.commitImportedSystem(this.lastImportReport);
+            closeImp();
+            this.updateHeaderInfo();
+            this.renderView(this.activeView);
+            if (this.app.renderer) this.app.renderer.render();
+            this.app.showToast(
+              `Imported ${result.importedTokensCount} token(s) and ${result.importedComponentsCount} component(s).`
+            );
+          } catch (error) {
+            if (status) status.textContent = `Import failed: ${error.message}`;
+          }
         }
       });
     }

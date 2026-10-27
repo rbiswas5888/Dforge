@@ -509,6 +509,7 @@ export class DesignForgeApp {
 
       this.renderer.render();
     };
+    this.rightSidebarModeSwitcher = setSidebarMode;
 
     btnDesign?.addEventListener('click', () => setSidebarMode('design'));
     btnProto?.addEventListener('click', () => setSidebarMode('prototype'));
@@ -3618,8 +3619,15 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
   // --- Figma Functional Map Modes & Interactions (MD/figma-design-page-functional-map.md) ---
 
-  toggleDevMode() {
-    this.isDevMode = !this.isDevMode;
+  switchRightTab(mode) {
+    if (typeof this.rightSidebarModeSwitcher !== 'function') {
+      throw new Error('Right sidebar is not initialized.');
+    }
+    this.rightSidebarModeSwitcher(mode);
+  }
+
+  toggleDevMode(force) {
+    this.isDevMode = typeof force === 'boolean' ? force : !this.isDevMode;
     const badge = document.getElementById('devModeBadge');
     const devBtn = document.getElementById('btnDevModeToggle');
 

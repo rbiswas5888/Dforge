@@ -167,6 +167,48 @@ assert.strictEqual(dtcgReport.discoveredTokens[0].value, '#6366f1');
 const commitReact = reactImporter.commitImportedSystem(dtcgReport, 'Tailwind W3C DTCG Tokens');
 assert.strictEqual(commitReact.success, true);
 assert.strictEqual(commitReact.importedTokensCount, 3);
+assert.strictEqual(registry.getAllTokens().length, Object.keys(registry.system.tokens).length);
+assert.strictEqual(registry.getAllVariables().length, Object.keys(registry.system.variables).length);
+assert.strictEqual(registry.getAllComponents().length, Object.keys(registry.system.components).length);
+assert.strictEqual(registry.getAllStyles().length, Object.keys(registry.system.styles).length);
+assert.ok(Array.isArray(registry.getDependents(brandPrimary.id)));
+
+const importedComponentReport = {
+  discoveredTokens: [{
+    category: TOKEN_CATEGORIES.COLOR,
+    name: 'color.brand.primary',
+    value: '#123456',
+    description: 'Imported primary color'
+  }],
+  discoveredComponents: [{
+    name: 'Imported Button',
+    category: 'React',
+    properties: [{ name: 'label', type: 'text' }]
+  }]
+};
+reactImporter.commitImportedSystem(importedComponentReport, 'Imported React System');
+const tokenCountAfterImport = registry.getAllTokens().length;
+const componentCountAfterImport = registry.getAllComponents().length;
+const repeatedImport = reactImporter.commitImportedSystem(importedComponentReport, 'Imported React System');
+assert.strictEqual(registry.getAllTokens().length, tokenCountAfterImport, 'Repeated import must update tokens instead of duplicating them');
+assert.strictEqual(registry.getAllComponents().length, componentCountAfterImport, 'Repeated import must update components instead of duplicating them');
+assert.strictEqual(repeatedImport.collectionId, registry.system.collections.find(collection => collection.name === 'Imported React System').id);
+
+let autosaveCount = 0;
+const starterDoc = createInitialDocument('Design System Starter Test');
+const starterRegistry = new DesignSystemRegistry(starterDoc, {
+  scheduleAutosave(savedDoc) {
+    autosaveCount += 1;
+    assert.strictEqual(savedDoc, starterDoc);
+  }
+});
+starterRegistry.initializeWithStarter('material', 'Material Starter');
+assert.strictEqual(starterRegistry.system.name, 'Material Starter');
+assert.ok(starterRegistry.getAllTokens().some(token => token.name === 'Color / Primary' && token.value === '#6750a4'));
+assert.ok(autosaveCount > 0, 'Starter creation must persist through the StorageEngine autosave API');
+const starterTokenCount = starterRegistry.getAllTokens().length;
+starterRegistry.initializeWithStarter('material', 'Material Starter');
+assert.strictEqual(starterRegistry.getAllTokens().length, starterTokenCount, 'Repeated starter initialization must not duplicate seed tokens');
 console.log('   ✓ DTCG token schema parsed and transactionally registered into Design System Registry.');
 
 // 7. Versioning & Releases (Section 17)

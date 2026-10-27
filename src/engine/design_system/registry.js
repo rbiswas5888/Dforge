@@ -51,7 +51,8 @@ export class DesignSystemRegistry {
       DESIGN_SYSTEM_STARTERS.MINIMAL,
       DESIGN_SYSTEM_STARTERS.ENTERPRISE,
       DESIGN_SYSTEM_STARTERS.FINTECH,
-      DESIGN_SYSTEM_STARTERS.ECOMMERCE
+      DESIGN_SYSTEM_STARTERS.ECOMMERCE,
+      DESIGN_SYSTEM_STARTERS.MATERIAL
     ]);
     if (!validStarters.has(starterKey)) {
       throw new Error(`Unknown design system starter: ${starter}`);
@@ -72,7 +73,8 @@ export class DesignSystemRegistry {
         minimal: [['Color / Primary', '#2563eb'], ['Color / Surface', '#ffffff'], ['Color / Text', '#0f172a']],
         enterprise: [['Color / Primary', '#1d4ed8'], ['Color / Surface', '#f8fafc'], ['Color / Text', '#0f172a']],
         fintech: [['Color / Primary', '#0f766e'], ['Color / Surface', '#f8fafc'], ['Color / Text', '#0f172a']],
-        ecommerce: [['Color / Primary', '#db2777'], ['Color / Surface', '#fff7ed'], ['Color / Text', '#1f2937']]
+        ecommerce: [['Color / Primary', '#db2777'], ['Color / Surface', '#fff7ed'], ['Color / Text', '#1f2937']],
+        material: [['Color / Primary', '#6750a4'], ['Color / Surface', '#fffbfe'], ['Color / Text', '#1d1b20']]
       }[starterKey] || [];
       for (const [tokenName, value] of seedColors) {
         if (!this.getAllTokens().some(token => token.name.toLowerCase() === tokenName.toLowerCase())) {
