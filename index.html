@@ -1078,13 +1078,13 @@
           </div>
     <!-- External Design Import Engine Modal (MD/Design.md) -->
     <div class="modal-overlay" id="modalImportDesign" style="display: none; position: fixed; inset: 0; background: rgba(5,7,15,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center;">
-      <div style="width: 680px; max-width: 95vw; background: #0f172a; border: 1px solid #334155; border-radius: 14px; box-shadow: 0 25px 60px rgba(0,0,0,0.7); overflow: hidden; display: flex; flex-direction: column;">
-        <div style="padding: 18px 24px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; background: #141e33;">
+      <div style="width: 680px; max-width: 95vw; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 14px; box-shadow: 0 25px 60px rgba(0,0,0,0.4); overflow: hidden; display: flex; flex-direction: column;">
+        <div style="padding: 18px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface);">
           <div style="display: flex; align-items: center; gap: 10px;">
             <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(192,132,252,0.15); border: 1px solid #c084fc; display: flex; align-items: center; justify-content: center; font-size: 16px;">📥</div>
             <div>
-              <div style="font-size: 15px; font-weight: 700; color: #f8fafc;">External Design Import Engine</div>
-              <div style="font-size: 11px; color: #94a3b8;">Conforms to MD/Design.md — Sketch, Figma, SVG, Adobe XD & .dforge</div>
+              <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">External Design Import Engine</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Conforms to MD/Design.md — Sketch, Figma, SVG, Adobe XD & .dforge</div>
             </div>
           </div>
           <button class="menu-dropdown-btn-sm" id="btnCloseImportModal" onclick="document.getElementById('modalImportDesign').style.display='none'">✕</button>
@@ -1092,16 +1092,16 @@
 
         <div style="padding: 24px; display: flex; flex-direction: column; gap: 18px; max-height: 75vh; overflow-y: auto;">
           <!-- Dropzone -->
-          <div id="importDropZone" style="border: 2px dashed #3b82f6; border-radius: 12px; padding: 28px 20px; text-align: center; background: rgba(30, 41, 59, 0.4); cursor: pointer; transition: all 0.2s ease;">
+          <div id="importDropZone" style="border: 2px dashed var(--brand-accent); border-radius: 12px; padding: 28px 20px; text-align: center; background: var(--bg-hover); cursor: pointer; transition: all 0.2s ease;">
             <div style="font-size: 32px; margin-bottom: 8px;">📁</div>
-            <div style="font-size: 14px; font-weight: 600; color: #f8fafc; margin-bottom: 4px;">Drag & drop your design file here, or click to browse</div>
-            <div style="font-size: 11px; color: #94a3b8;">Supports .sketch, .sketch.json, .fig, .figma.json, .svg, .xd, and .dforge</div>
+            <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">Drag & drop your design file here, or click to browse</div>
+            <div style="font-size: 11px; color: var(--text-muted);">Supports .sketch, .sketch.json, .fig, .figma.json, .svg, .xd, and .dforge</div>
             <input type="file" id="externalDesignFileInput" style="display: none;" accept=".sketch,.json,.svg,.xd,.dforge">
           </div>
 
           <!-- Quick Demo Presets -->
           <div>
-            <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 8px;">Or Try Sample Design Files</div>
+            <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-bottom: 8px;">Or Try Sample Design Files</div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button class="menu-dropdown-btn" id="btnSampleSketch" style="font-size: 11px; border: 1px solid rgba(245,158,11,0.3); color: #fbbf24;">💎 Sketch Mobile App Flow</button>
               <button class="menu-dropdown-btn" id="btnSampleFigma" style="font-size: 11px; border: 1px solid rgba(192,132,252,0.3); color: #c084fc;">🎨 Figma Cloud SaaS Dashboard</button>
@@ -1110,38 +1110,38 @@
           </div>
 
           <!-- Live Fidelity Preview Report Card -->
-          <div id="importFidelityCard" style="display: none; background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px;">
+          <div id="importFidelityCard" style="display: none; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 16px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 13px; font-weight: 700; color: #f8fafc;">Import Fidelity Diagnostics</span>
+                <span style="font-size: 13px; font-weight: 700; color: var(--text-main);">Import Fidelity Diagnostics</span>
                 <span id="importFidelityBadge" style="font-size: 11px; padding: 2px 8px; border-radius: 9999px; background: rgba(16,185,129,0.15); color: #34d399; font-weight: 700;">100% High Fidelity</span>
               </div>
-              <span id="importSourceTag" style="font-size: 11px; color: #94a3b8; font-family: monospace;">SKETCH</span>
+              <span id="importSourceTag" style="font-size: 11px; color: var(--text-muted); font-family: monospace;">SKETCH</span>
             </div>
             
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; background: #0f172a; padding: 10px; border-radius: 8px;">
-              <div style="text-align: center;"><div style="font-size: 11px; color: #64748b;">Pages</div><div id="statImportPages" style="font-size: 14px; font-weight: 700; color: #f8fafc;">1</div></div>
-              <div style="text-align: center;"><div style="font-size: 11px; color: #64748b;">Layers</div><div id="statImportNodes" style="font-size: 14px; font-weight: 700; color: #f8fafc;">18</div></div>
-              <div style="text-align: center;"><div style="font-size: 11px; color: #64748b;">Components</div><div id="statImportComponents" style="font-size: 14px; font-weight: 700; color: #38bdf8;">3</div></div>
-              <div style="text-align: center;"><div style="font-size: 11px; color: #64748b;">Interactions</div><div id="statImportInteractions" style="font-size: 14px; font-weight: 700; color: #c084fc;">2</div></div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; background: var(--bg-input); padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+              <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-dim);">Pages</div><div id="statImportPages" style="font-size: 14px; font-weight: 700; color: var(--text-main);">1</div></div>
+              <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-dim);">Layers</div><div id="statImportNodes" style="font-size: 14px; font-weight: 700; color: var(--text-main);">18</div></div>
+              <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-dim);">Components</div><div id="statImportComponents" style="font-size: 14px; font-weight: 700; color: #38bdf8;">3</div></div>
+              <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-dim);">Interactions</div><div id="statImportInteractions" style="font-size: 14px; font-weight: 700; color: #c084fc;">2</div></div>
             </div>
 
-            <div id="importPreservedList" style="font-size: 11px; color: #94a3b8; line-height: 1.6;"></div>
+            <div id="importPreservedList" style="font-size: 11px; color: var(--text-muted); line-height: 1.6;"></div>
           </div>
         </div>
 
-        <div style="padding: 16px 24px; border-top: 1px solid #1e293b; background: #141e33; display: flex; justify-content: flex-end; gap: 10px;">
+        <div style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); background: var(--bg-surface); display: flex; justify-content: flex-end; gap: 10px;">
           <button class="mcp-btn-secondary" onclick="document.getElementById('modalImportDesign').style.display='none'">Cancel</button>
-          <button class="mcp-btn-primary" id="btnCommitImport" style="display: none; background: #3b82f6;">Commit Import →</button>
+          <button class="mcp-btn-primary" id="btnCommitImport" style="display: none; background: var(--brand-action);">Commit Import →</button>
         </div>
       </div>
     </div>
 
     <!-- Bulk Rename Modal (MD/figma-design-page-functional-map.md Cmd+R) -->
     <div class="modal-overlay" id="modalBulkRename" style="display: none; position: fixed; inset: 0; background: rgba(5,7,15,0.8); backdrop-filter: blur(6px); z-index: 9999; align-items: center; justify-content: center;">
-      <div style="width: 440px; max-width: 90vw; background: #0f172a; border: 1px solid #334155; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); overflow: hidden;">
-        <div style="padding: 16px 20px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between;">
-          <span style="font-size: 14px; font-weight: 700; color: #f8fafc;">Rename Layers (⌘R)</span>
+      <div style="width: 440px; max-width: 90vw; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); overflow: hidden;">
+        <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface);">
+          <span style="font-size: 14px; font-weight: 700; color: var(--text-main);">Rename Layers (⌘R)</span>
           <button class="menu-dropdown-btn-sm" onclick="document.getElementById('modalBulkRename').style.display='none'">✕</button>
         </div>
         <form id="formBulkRename" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
@@ -1505,6 +1505,66 @@
         </div>
       </div>
     </div>
+
+    <!-- 8. Figma Universal Prompt Modal (Web Figma Experience) -->
+    <div class="figma-modal-backdrop" id="figmaPromptModal">
+      <div class="figma-prompt-dialog" role="dialog" aria-modal="true">
+        <div class="figma-prompt-header">
+          <div class="figma-prompt-title-row">
+            <div class="figma-prompt-icon-badge" id="figmaPromptIcon">✏️</div>
+            <div class="figma-prompt-title" id="figmaPromptTitle">Input Required</div>
+          </div>
+          <button class="figma-prompt-close" id="btnFigmaPromptClose" title="Cancel (Esc)">✕</button>
+        </div>
+        <div class="figma-prompt-body">
+          <div class="figma-prompt-subtitle" id="figmaPromptSubtitle">Please enter a value:</div>
+          <div class="figma-prompt-input-container">
+            <input type="text" class="figma-prompt-input" id="figmaPromptTextInput" style="display: block;" autocomplete="off" />
+            <textarea class="figma-prompt-textarea" id="figmaPromptTextArea" style="display: none;"></textarea>
+            <div class="figma-prompt-error" id="figmaPromptError"></div>
+          </div>
+          <div class="figma-prompt-presets" id="figmaPromptPresetsContainer" style="display: none;">
+            <span class="figma-preset-label">Presets:</span>
+            <div id="figmaPromptPresetsList" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+          </div>
+        </div>
+        <div class="figma-prompt-footer">
+          <button class="figma-btn-cancel" id="btnFigmaPromptCancel">Cancel</button>
+          <button class="figma-btn-primary" id="btnFigmaPromptConfirm">
+            <span id="figmaPromptConfirmIcon">✓</span>
+            <span id="figmaPromptConfirmLabel">Apply</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. Figma AI Floating Prompt Bar (Figma First Draft & Canvas AI) -->
+    <div class="figma-ai-floating-bar" id="figmaAiFloatingBar">
+      <div class="figma-ai-bar-top">
+        <div class="figma-ai-spark-badge">✦</div>
+        <input type="text" class="figma-ai-bar-input" id="figmaAiBarInput" placeholder="Prompt Figma AI to generate or modify designs... (e.g. 'Build a crypto landing page hero')" autocomplete="off" />
+        <div class="figma-ai-bar-actions">
+          <span class="figma-ai-model-pill">🦙 Llama 3.1 Local</span>
+          <button class="figma-btn-primary" id="btnFigmaAiSubmit" style="padding: 6px 14px; font-size: 11px;">
+            <span>⚡ Generate</span>
+          </button>
+          <button class="figma-prompt-close" id="btnFigmaAiClose" title="Close (Esc)">✕</button>
+        </div>
+      </div>
+      <div class="figma-ai-bar-bottom">
+        <div class="figma-ai-presets-row">
+          <span class="figma-preset-label">Ideas:</span>
+          <button class="figma-ai-chip" data-ai-preset="Create modern SaaS pricing table with 3 tiered plans (Starter, Pro, Enterprise) and feature checkmarks">💳 SaaS Pricing Table</button>
+          <button class="figma-ai-chip" data-ai-preset="Create mobile fintech wallet screen with balance card, send/receive action buttons, and recent transactions list">📱 Mobile Wallet</button>
+          <button class="figma-ai-chip" data-ai-preset="Create analytics KPI metrics dashboard with 4 stats cards, progress bars, and high-trust status pills">📊 KPI Dashboard</button>
+          <button class="figma-ai-chip" data-ai-preset="Create user sign-in and registration card with email input, password field, social login buttons, and primary action">🔐 Auth & Sign-In</button>
+          <button class="figma-ai-chip" data-ai-preset="Create e-commerce product showcase card with badge, rating stars, price tag, and add-to-cart button">🛒 Product Card</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. Figma Toast Notification Container -->
+    <div class="figma-toast-container" id="figmaToastContainer"></div>
   </div>
 
   <script type="module" src="src/app.js"></script>

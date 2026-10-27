@@ -150,6 +150,15 @@ export class DesignForgeApp {
     // Initialize Axiom Layout Design System (Section 3 & 8)
     this.initAxiomLayout();
 
+    // Initialize Figma Universal Modal & Prompt System
+    this.initFigmaModals();
+
+    // Restore saved theme preference (Axiom Dark, Light, High-Contrast)
+    const savedTheme = (typeof localStorage !== 'undefined' ? localStorage.getItem('designforge_theme') : null);
+    if (savedTheme) {
+      this.toggleTheme(savedTheme);
+    }
+
     // Top Bar Mode Switcher
     const modeTabs = document.querySelectorAll('.mode-tab');
     modeTabs.forEach(tab => {
@@ -219,7 +228,7 @@ export class DesignForgeApp {
     // Top Action Buttons
     document.getElementById('btnShare')?.addEventListener('click', () => {
       navigator.clipboard.writeText(window.location.href);
-      alert('Project link copied to clipboard!');
+      this.showToast('Project link copied to clipboard!', 'success');
     });
     document.getElementById('btnPlayProtoTop')?.addEventListener('click', () => this.openPrototypeModal());
     document.getElementById('btnExportReactTop')?.addEventListener('click', () => this.openExportModal());
@@ -254,9 +263,9 @@ export class DesignForgeApp {
               this.updateInspector();
               this.renderer.zoomToFit();
               this.storage.scheduleAutosave(this.doc);
-              alert(`Project "${loadedDoc.name}" loaded successfully!`);
+              this.showToast(`Project "${loadedDoc.name}" loaded successfully!`, 'success');
             } catch (err) {
-              alert(`Failed to load file: ${err.message}`);
+              this.showToast(`Failed to load file: ${err.message}`, 'error');
             }
           };
           reader.readAsText(file);
@@ -539,7 +548,14 @@ export class DesignForgeApp {
         const text = await navigator.clipboard.readText();
         if (text) document.getElementById('aiMarkdownInput').value = text;
       } catch (err) {
-        const manual = prompt('Paste your Markdown specification here:');
+        const manual = await this.showPromptModal({
+          title: 'Paste Markdown Specification',
+          subtitle: 'Paste your markdown design blueprint or layout spec below:',
+          multiline: true,
+          icon: '📝',
+          placeholder: '# Design Specification\n## Frame: Dashboard...',
+          confirmText: 'Insert Spec'
+        });
         if (manual) document.getElementById('aiMarkdownInput').value = manual;
       }
     });
@@ -738,10 +754,24 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     });
 
     // Add Token button
-    document.getElementById('btnAddTokenBtn')?.addEventListener('click', () => {
-      const name = prompt('Enter Token Name (e.g. Brand / Violet):');
+    document.getElementById('btnAddTokenBtn')?.addEventListener('click', async () => {
+      const name = await this.showPromptModal({
+        title: 'Add Design Token',
+        subtitle: 'Enter token name (e.g. Color / Brand Primary or Spacing / 16):',
+        defaultValue: 'Brand / Primary',
+        icon: '❖',
+        presets: ['Brand / Primary', 'Brand / Accent', 'Surface / Raised', 'Text / Primary'],
+        confirmText: 'Next →'
+      });
       if (!name) return;
-      const value = prompt('Enter Token Value (Hex color or pixel number):', '#a855f7');
+      const value = await this.showPromptModal({
+        title: 'Define Token Value',
+        subtitle: 'Enter hex color (#6366F1) or pixel dimension value:',
+        defaultValue: '#6366F1',
+        icon: '🎨',
+        presets: ['#6366F1', '#4F46E5', '#38BDF8', '#10B981', '16px', '24px'],
+        confirmText: 'Save Token'
+      });
       if (!value) return;
 
       const group = this.doc.tokens[0];
@@ -754,20 +784,13 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         });
         this.renderTokensList();
         this.storage.scheduleAutosave(this.doc);
+        this.showToast(`Token "${name}" added`, 'success');
       }
     });
 
     // Add Page button
-    document.getElementById('btnAddNewPage')?.addEventListener('click', () => {
-      const name = prompt('Enter New Page Name:');
-      if (name && name.trim()) {
-        const newPage = addPageToDoc(this.doc, name.trim());
-        this.engine.setActivePage(newPage.id);
-        this.updatePagesList();
-        this.updateLayersTree();
-        this.renderer.zoomToFit();
-        this.storage.scheduleAutosave(this.doc);
-      }
+    document.getElementById('btnAddNewPage')?.addEventListener('click', async () => {
+      await this.addNewPage();
     });
   }
 
@@ -825,12 +848,24 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     });
 
     container.querySelectorAll('.btn-page-ren').forEach(b => {
-      b.addEventListener('click', () => {
+      b.addEventListener('click', async () => {
         const page = this.doc.pages.find(p => p.id === b.dataset.id);
-        const name = prompt('Rename Page:', page.name);
+        if (!page) return;
+        const name = await this.showPromptModal({
+          title: 'Rename Page',
+          subtitle: 'Enter a new title for this page:',
+          defaultValue: page.name,
+          icon: '✏️',
+          confirmText: 'Rename Page'
+        });
         if (name && name.trim()) {
-          renamePageInDoc(this.doc, b.dataset.id, name);
+          renamePageInDoc(this.doc, b.dataset.id, name.trim());
           this.updatePagesList();
+          const pLabel = document.getElementById('currentPageLabel');
+          if (pLabel && this.engine.getActivePage()?.id === b.dataset.id) {
+            pLabel.textContent = name.trim();
+          }
+          this.showToast(`Page renamed to "${name.trim()}"`, 'success');
         }
       });
     });
@@ -912,7 +947,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       }
     });
 
-    canvas.addEventListener('mousedown', (e) => {
+    canvas.addEventListener('mousedown', async (e) => {
       if (e.button === 2) return; // Right-click handled by contextmenu
 
       const isMiddle = e.button === 1;
@@ -929,7 +964,14 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       // 1. Check Comment tool
       if (this.currentTool === 'comment') {
         const author = 'Product Designer';
-        const text = prompt('Enter your design review comment:');
+        const text = await this.showPromptModal({
+          title: 'Add Design Review Comment',
+          subtitle: `Drop pin at (${Math.round(canvasCoords.x)}, ${Math.round(canvasCoords.y)})`,
+          multiline: true,
+          icon: '💬',
+          placeholder: 'Type your feedback, question, or design approval note...',
+          confirmText: 'Post Pin'
+        });
         if (text && text.trim()) {
           addCommentToDoc(this.doc, {
             x: Math.round(canvasCoords.x),
@@ -940,6 +982,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           });
           renderer.render();
           this.storage.scheduleAutosave(this.doc);
+          this.showToast('Comment pin placed', 'success');
         }
         this.setTool('select');
         return;
@@ -1145,14 +1188,21 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     });
 
     // Double click to inline edit text
-    canvas.addEventListener('dblclick', (e) => {
+    canvas.addEventListener('dblclick', async (e) => {
       const coords = renderer.screenToCanvas(e.clientX, e.clientY);
       const hitId = renderer.hitTest(coords.x, coords.y);
       if (hitId) {
         const node = engine.getNode(hitId);
         if (node && node.type === 'text') {
           const currentText = node.text?.content || '';
-          const newText = prompt('Edit text content:', currentText);
+          const newText = await this.showPromptModal({
+            title: 'Edit Text Content',
+            subtitle: 'Update copy for selected text layer:',
+            defaultValue: currentText,
+            multiline: true,
+            icon: '🔤',
+            confirmText: 'Apply Text'
+          });
           if (newText !== null && newText !== currentText) {
             engine.updateNode(hitId, { text: { content: newText } }, 'Edit text');
           }
@@ -1414,8 +1464,15 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       document.getElementById('btnInspBpDesktop')?.addEventListener('click', () => this.switchBreakpoint('desktop'));
       document.getElementById('btnInspBpTablet')?.addEventListener('click', () => this.switchBreakpoint('tablet'));
       document.getElementById('btnInspBpMobile')?.addEventListener('click', () => this.switchBreakpoint('mobile'));
-      document.getElementById('btnInspAddToken')?.addEventListener('click', () => {
-        const val = prompt('Enter new color hex (e.g. #06b6d4):');
+      document.getElementById('btnInspAddToken')?.addEventListener('click', async () => {
+        const val = await this.showPromptModal({
+          title: 'Add Color Token',
+          subtitle: 'Enter color hex value or select a preset swatch:',
+          defaultValue: '#6366F1',
+          presets: ['#6366F1', '#4F46E5', '#38BDF8', '#10B981', '#F59E0B', '#EF4444', '#FFFFFF', '#0F172A'],
+          icon: '🎨',
+          confirmText: 'Add Token'
+        });
         if (val) {
           this.engine.doc.tokens[0].tokens.push({
             id: `token_${Date.now()}`,
@@ -1424,6 +1481,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             value: val
           });
           this.updateInspector();
+          this.showToast(`Token for ${val} added`, 'success');
         }
       });
       return;
@@ -2010,21 +2068,28 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       });
     });
     document.querySelectorAll('.btn-bind-token').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const idx = parseInt(btn.dataset.index, 10);
         const colorTokens = this.linter.getAllTokens().filter(t => t.type === 'color');
-        const tokenListStr = colorTokens.map((t, i) => `${i + 1}. ${t.name} (${t.value})`).join('\n');
-        const chosen = prompt(`Select Design Token to bind:\n${tokenListStr}\nEnter number:`);
+        const chosen = await this.showPromptModal({
+          title: 'Bind Fill to Design Token',
+          subtitle: 'Select from available design tokens or type token name:',
+          defaultValue: colorTokens[0]?.name || '',
+          presets: colorTokens.map(t => t.name),
+          icon: '❖',
+          confirmText: 'Bind Token'
+        });
         if (chosen) {
-          const tIdx = parseInt(chosen, 10) - 1;
-          if (colorTokens[tIdx]) {
-            const tok = colorTokens[tIdx];
+          const tok = colorTokens.find(t => t.name.toLowerCase() === chosen.toLowerCase() || chosen.includes(t.name)) || 
+                      colorTokens[parseInt(chosen, 10) - 1];
+          if (tok) {
             const curFills = JSON.parse(JSON.stringify(s.fills || []));
             if (curFills[idx]) {
               curFills[idx].color = tok.value;
               curFills[idx].tokenId = tok.id;
               curFills[idx].tokenName = tok.name;
               this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Bind Fill to Token');
+              this.showToast(`Bound fill to "${tok.name}"`, 'success');
             }
           }
         }
@@ -2106,15 +2171,23 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     // 9. Recolor Hex
     document.querySelectorAll('.btn-recolor-hex').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const targetHex = btn.dataset.hex;
-        const newHex = prompt(`Replace color ${targetHex} with:`, targetHex);
+        const newHex = await this.showPromptModal({
+          title: 'Recolor Selection',
+          subtitle: `Replace color ${targetHex} with new hex:`,
+          defaultValue: targetHex,
+          presets: ['#6366F1', '#4F46E5', '#38BDF8', '#10B981', '#F59E0B', '#EF4444', '#FFFFFF', '#0F172A'],
+          icon: '🎨',
+          confirmText: 'Replace Color'
+        });
         if (newHex && newHex !== targetHex) {
           const curFills = JSON.parse(JSON.stringify(s.fills || []));
           for (const f of curFills) {
-            if (f.color?.toLowerCase() === targetHex) f.color = newHex;
+            if (f.color?.toLowerCase() === targetHex.toLowerCase()) f.color = newHex;
           }
           this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Recolor Selection');
+          this.showToast(`Recolored ${targetHex} ➔ ${newHex}`, 'success');
         }
       });
     });
@@ -2468,7 +2541,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     btnAutoBind?.addEventListener('click', () => {
       const { issues } = this.linter.lint();
       const fixed = this.linter.autoBindAll(issues);
-      alert(`⚡ Successfully auto-bound ${fixed} properties to Design Tokens!`);
+      this.showToast(`⚡ Successfully auto-bound ${fixed} properties to Design Tokens!`, 'success');
       this.renderLinterResults();
       this.renderAll();
     });
@@ -2516,7 +2589,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           pendingImportResult = result;
           renderFidelityPreview(result);
         } catch (err) {
-          alert(`Could not process ${file.name}: ${err.message}`);
+          this.showToast(`Could not process ${file.name}: ${err.message}`, 'error');
         }
       };
       reader.readAsText(file);
@@ -2870,13 +2943,20 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       });
 
       // Double click to rename
-      item.addEventListener('dblclick', (e) => {
+      item.addEventListener('dblclick', async (e) => {
         const id = item.dataset.nodeId;
         const node = this.engine.getNode(id);
         if (node) {
-          const newName = prompt('Rename layer:', node.name);
+          const newName = await this.showPromptModal({
+            title: 'Rename Layer',
+            subtitle: 'Enter a new name for this layer:',
+            defaultValue: node.name,
+            icon: '✏️',
+            confirmText: 'Rename'
+          });
           if (newName && newName.trim()) {
             this.engine.updateNode(id, { name: newName.trim() }, 'Rename layer');
+            this.updateLayersTree();
           }
         }
       });
@@ -3123,9 +3203,18 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         input.select();
       }
     } else {
-      // Fallback prompt
-      const pattern = prompt(`Rename ${sel.length} layer(s). Use '$n' for sequential numbers (e.g. Card / $n):`, `Card / $n`);
-      if (pattern) this.applyBulkRename(pattern);
+      // Fallback prompt using Figma modal
+      (async () => {
+        const pattern = await this.showPromptModal({
+          title: 'Batch Rename Layers',
+          subtitle: `Renaming ${sel.length} layer(s). Use '$n' for sequential numbers:`,
+          defaultValue: 'Card / $n',
+          presets: ['Card / $n', 'Item $n', 'Row $n', 'Column $N'],
+          icon: '🔤',
+          confirmText: 'Rename Layers'
+        });
+        if (pattern) this.applyBulkRename(pattern);
+      })();
     }
   }
 
@@ -3186,7 +3275,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       }
     } catch (err) {
       console.error('Import error:', err);
-      alert(`Import failed: ${err.message}`);
+      this.showToast(`Import failed: ${err.message}`, 'error');
       throw err;
     }
   }
@@ -3574,7 +3663,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   booleanSelected(op) {
     const sel = this.engine.getSelection();
     if (sel.length < 2) {
-      alert('Select 2 or more shape layers to perform a boolean operation.');
+      this.showToast('Select 2 or more shape layers to perform a boolean operation.', 'warning');
       return;
     }
     this.engine.booleanGroup(sel, op);
@@ -3597,22 +3686,282 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     this.renderer.render();
   }
 
-  toggleTheme() {
+  toggleTheme(forcedTheme) {
     const themes = ['axiom-dark', 'axiom-light', 'high-contrast'];
-    const current = (typeof localStorage !== 'undefined' ? localStorage.getItem('designforge_theme') : null) || (this.doc.themeMode === 'light' ? 'axiom-light' : 'axiom-dark');
-    const idx = themes.indexOf(current);
-    const next = themes[(idx + 1) % themes.length];
+    let next;
+    if (forcedTheme && themes.includes(forcedTheme)) {
+      next = forcedTheme;
+    } else {
+      const current = (typeof localStorage !== 'undefined' ? localStorage.getItem('designforge_theme') : null) || (this.doc.themeMode === 'light' ? 'axiom-light' : 'axiom-dark');
+      const idx = themes.indexOf(current);
+      next = themes[(idx + 1) % themes.length];
+    }
     
     if (typeof document !== 'undefined') {
-      document.body.className = `theme-${next}`;
+      document.body.classList.remove('theme-axiom-dark', 'theme-axiom-light', 'theme-high-contrast', 'theme-dark', 'theme-light');
+      document.body.classList.add(`theme-${next}`);
+      if (next === 'axiom-light') document.body.classList.add('theme-light');
+      if (next === 'axiom-dark') document.body.classList.add('theme-dark');
       if (typeof localStorage !== 'undefined') localStorage.setItem('designforge_theme', next);
     }
-    this.doc.themeMode = next === 'axiom-light' ? 'light' : 'dark';
+    this.doc.themeMode = next === 'axiom-light' ? 'light' : (next === 'high-contrast' ? 'high-contrast' : 'dark');
     this.engine.setThemeMode(this.doc.themeMode);
 
     const btn = document.getElementById('btnToggleTheme');
-    if (btn) btn.textContent = next === 'axiom-light' ? '☀️' : (next === 'high-contrast' ? '👁' : '🌙');
+    if (btn) {
+      btn.textContent = next === 'axiom-light' ? '☀️' : (next === 'high-contrast' ? '👁' : '🌙');
+      btn.title = `Theme: ${next.replace('-', ' ').toUpperCase()} (Click to cycle themes)`;
+    }
     this.renderer.render();
+  }
+
+  async addNewPage(pageName) {
+    let name = pageName;
+    if (!name) {
+      name = await this.showPromptModal({
+        title: 'Add New Page',
+        subtitle: 'Enter name for the new document page:',
+        defaultValue: `Page ${this.doc.pages.length + 1}`,
+        icon: '📄',
+        confirmText: 'Create Page'
+      });
+    }
+    if (!name || !name.trim()) return null;
+    const newPage = addPageToDoc(this.doc, name.trim());
+    this.engine.setActivePage(newPage.id);
+    this.updatePagesList();
+    this.updateLayersTree();
+    this.renderer.zoomToFit();
+    this.storage.scheduleAutosave(this.doc);
+    const pLabel = document.getElementById('currentPageLabel');
+    if (pLabel) pLabel.textContent = newPage.name;
+    this.showToast(`Page "${newPage.name}" created`, 'success', 2000);
+    return newPage;
+  }
+
+  // --- Figma Web Application Prompt & Modal System ---
+  initFigmaModals() {
+    if (typeof document === 'undefined') return;
+
+    // 1. Universal Prompt Modal Event Listeners
+    const modalBackdrop = document.getElementById('figmaPromptModal');
+    const closeBtn = document.getElementById('btnFigmaPromptClose');
+    const cancelBtn = document.getElementById('btnFigmaPromptCancel');
+    const confirmBtn = document.getElementById('btnFigmaPromptConfirm');
+    const textInput = document.getElementById('figmaPromptTextInput');
+    const textArea = document.getElementById('figmaPromptTextArea');
+
+    const closeModal = (resolvedVal = null) => {
+      if (modalBackdrop) modalBackdrop.classList.remove('active');
+      if (this._promptModalResolver) {
+        this._promptModalResolver(resolvedVal);
+        this._promptModalResolver = null;
+      }
+    };
+
+    closeBtn?.addEventListener('click', () => closeModal(null));
+    cancelBtn?.addEventListener('click', () => closeModal(null));
+    modalBackdrop?.addEventListener('click', (e) => {
+      if (e.target === modalBackdrop) closeModal(null);
+    });
+
+    const submitPrompt = () => {
+      const activeInput = textArea?.style.display !== 'none' ? textArea : textInput;
+      const val = activeInput?.value?.trim() ?? '';
+      closeModal(val);
+    };
+
+    confirmBtn?.addEventListener('click', submitPrompt);
+
+    textInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitPrompt();
+      } else if (e.key === 'Escape') {
+        closeModal(null);
+      }
+    });
+
+    textArea?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        submitPrompt();
+      } else if (e.key === 'Escape') {
+        closeModal(null);
+      }
+    });
+
+    // 2. Figma AI Floating Prompt Bar
+    const aiBar = document.getElementById('figmaAiFloatingBar');
+    const aiInput = document.getElementById('figmaAiBarInput');
+    const aiSubmitBtn = document.getElementById('btnFigmaAiSubmit');
+    const aiCloseBtn = document.getElementById('btnFigmaAiClose');
+
+    const closeAiBar = () => {
+      if (aiBar) aiBar.classList.remove('active');
+    };
+
+    const submitAiPrompt = async () => {
+      const promptText = aiInput?.value?.trim();
+      if (!promptText) return;
+      closeAiBar();
+      this.showToast(`✦ Figma AI: Generating "${promptText.slice(0, 32)}..."`, 'info', 3000);
+      
+      const aiPromptInp = document.getElementById('aiPromptInput');
+      if (aiPromptInp) aiPromptInp.value = promptText;
+      this.switchToAiTab();
+      await this.handleAiGenerate(promptText);
+    };
+
+    aiSubmitBtn?.addEventListener('click', submitAiPrompt);
+    aiCloseBtn?.addEventListener('click', closeAiBar);
+    aiInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitAiPrompt();
+      } else if (e.key === 'Escape') {
+        closeAiBar();
+      }
+    });
+
+    // Preset chips
+    document.querySelectorAll('.figma-ai-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const text = chip.dataset.aiPreset;
+        if (aiInput && text) {
+          aiInput.value = text;
+          aiInput.focus();
+        }
+      });
+    });
+
+    // Trigger button in Command Bar & Command Palette
+    document.getElementById('btnOpenFigmaAiPrompt')?.addEventListener('click', () => {
+      this.openFigmaAiPromptBar();
+    });
+    document.getElementById('btnOpenCommandPalette')?.addEventListener('click', () => {
+      this.openFigmaAiPromptBar();
+    });
+
+    // Keyboard Shortcuts: ⌘J / Ctrl+J or ⌘K / Ctrl+K opens Figma AI Prompt Bar
+    window.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'j' || e.key === 'J' || e.key === 'k' || e.key === 'K')) {
+        // Do not intercept browser inputs unless not typing
+        const tag = document.activeElement?.tagName?.toLowerCase();
+        if (tag !== 'input' && tag !== 'textarea') {
+          e.preventDefault();
+          this.openFigmaAiPromptBar();
+        }
+      }
+    });
+  }
+
+  openFigmaAiPromptBar(prefill = '') {
+    const aiBar = document.getElementById('figmaAiFloatingBar');
+    const aiInput = document.getElementById('figmaAiBarInput');
+    if (!aiBar || !aiInput) return;
+    if (prefill) aiInput.value = prefill;
+    aiBar.classList.add('active');
+    setTimeout(() => {
+      aiInput.focus();
+      aiInput.select();
+    }, 50);
+  }
+
+  showPromptModal(options = {}) {
+    return new Promise((resolve) => {
+      if (typeof document === 'undefined') return resolve(null);
+      this._promptModalResolver = resolve;
+
+      const modalBackdrop = document.getElementById('figmaPromptModal');
+      const titleEl = document.getElementById('figmaPromptTitle');
+      const subtitleEl = document.getElementById('figmaPromptSubtitle');
+      const iconEl = document.getElementById('figmaPromptIcon');
+      const textInput = document.getElementById('figmaPromptTextInput');
+      const textArea = document.getElementById('figmaPromptTextArea');
+      const confirmLabel = document.getElementById('figmaPromptConfirmLabel');
+      const presetsContainer = document.getElementById('figmaPromptPresetsContainer');
+      const presetsList = document.getElementById('figmaPromptPresetsList');
+
+      if (titleEl) titleEl.textContent = options.title || 'Input Required';
+      if (subtitleEl) subtitleEl.textContent = options.subtitle || 'Please enter a value:';
+      if (iconEl) iconEl.textContent = options.icon || '✏️';
+      if (confirmLabel) confirmLabel.textContent = options.confirmText || 'Apply';
+
+      const isMultiline = Boolean(options.multiline);
+      if (textInput) {
+        textInput.style.display = isMultiline ? 'none' : 'block';
+        textInput.value = options.defaultValue || '';
+        textInput.placeholder = options.placeholder || '';
+      }
+      if (textArea) {
+        textArea.style.display = isMultiline ? 'block' : 'none';
+        textArea.value = options.defaultValue || '';
+        textArea.placeholder = options.placeholder || '';
+      }
+
+      // Presets
+      if (presetsContainer && presetsList) {
+        if (Array.isArray(options.presets) && options.presets.length > 0) {
+          presetsContainer.style.display = 'flex';
+          presetsList.innerHTML = options.presets.map(p => `<button class="figma-preset-chip" type="button">${p}</button>`).join('');
+          presetsList.querySelectorAll('.figma-preset-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+              const activeInput = isMultiline ? textArea : textInput;
+              if (activeInput) {
+                activeInput.value = chip.textContent;
+                activeInput.focus();
+              }
+            });
+          });
+        } else {
+          presetsContainer.style.display = 'none';
+          presetsList.innerHTML = '';
+        }
+      }
+
+      if (modalBackdrop) modalBackdrop.classList.add('active');
+
+      setTimeout(() => {
+        const activeInput = isMultiline ? textArea : textInput;
+        if (activeInput) {
+          activeInput.focus();
+          if (activeInput.select) activeInput.select();
+        }
+      }, 50);
+    });
+  }
+
+  showToast(message, type = 'info', duration = 3000) {
+    if (typeof document === 'undefined') return;
+    const container = document.getElementById('figmaToastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `figma-toast toast-${type}`;
+    const icon = type === 'success' ? '✓' : (type === 'error' ? '✕' : (type === 'warning' ? '⚠️' : '⚡'));
+
+    toast.innerHTML = `
+      <span class="figma-toast-icon">${icon}</span>
+      <span class="figma-toast-msg">${message}</span>
+      <button class="figma-toast-close" title="Dismiss">✕</button>
+    `;
+
+    toast.querySelector('.figma-toast-close')?.addEventListener('click', () => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(10px) scale(0.95)';
+      setTimeout(() => toast.remove(), 200);
+    });
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      if (toast.parentElement) {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px) scale(0.95)';
+        setTimeout(() => toast.remove(), 200);
+      }
+    }, duration);
   }
 
   // --- Axiom Layout Controller (Section 3, 5, 6, 8, 11) ---

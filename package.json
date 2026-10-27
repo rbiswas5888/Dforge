@@ -14,7 +14,8 @@
     "test:prototype": "node tests/test_prototyping_logic_engine.js",
     "test:preview": "node tests/test_mobile_preview.js",
     "test:axiom": "node tests/test_axiom_layout.js",
+    "test:modals": "node tests/test_figma_modals_and_themes.js",
     "test:launch": "node tests/test_launch_acceptance_suite.js",
-    "test:all": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_figma_functional_map.js && node tests/test_master_implementation.js && node tests/test_v2_features.js && node tests/test_prototyping_logic_engine.js && node tests/test_mobile_preview.js && node tests/test_axiom_layout.js && node tests/test_ai_engine.js && node tests/test_compiler.js && node tests/test_editor_upgrades.js && node tests/test_mcp_ecosystem.js && node tests/test_design_system.js && node tests/test_launch_acceptance_suite.js"
+    "test:all": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_figma_functional_map.js && node tests/test_master_implementation.js && node tests/test_v2_features.js && node tests/test_prototyping_logic_engine.js && node tests/test_mobile_preview.js && node tests/test_axiom_layout.js && node tests/test_figma_modals_and_themes.js && node tests/test_ai_engine.js && node tests/test_compiler.js && node tests/test_editor_upgrades.js && node tests/test_mcp_ecosystem.js && node tests/test_design_system.js && node tests/test_launch_acceptance_suite.js"
   }
 }
