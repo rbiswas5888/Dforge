@@ -13,6 +13,7 @@ import {
   ComponentVariableExtractor,
   ReactDesignSystemImporter,
   addRneuiComponentToRegistry,
+  createDesignSystem,
   TOKEN_CATEGORIES,
   VARIABLE_TYPES,
   THEME_MODES
@@ -28,6 +29,27 @@ const registry = new DesignSystemRegistry(doc);
 
 assert.ok(registry.system.id, 'Registry must have a stable unique ID');
 assert.ok(registry.system.collections.length > 0, 'Registry must have migrated initial collections');
+
+const legacyDesignDoc = createInitialDocument('Legacy Design System Migration Test');
+legacyDesignDoc.tokens = [{
+  id: 'legacy-colors',
+  name: 'Legacy Colors',
+  tokens: [{ id: 'legacy-brand', name: 'Brand / Primary', type: 'color', value: '#2563eb' }]
+}];
+legacyDesignDoc.designSystem = createDesignSystem('Existing Design System', {
+  collections: [],
+  tokens: {},
+  variables: {},
+  components: {},
+  styles: {},
+  assets: {}
+});
+const migratedRegistry = new DesignSystemRegistry(legacyDesignDoc);
+assert.strictEqual(migratedRegistry.getAllTokens().length, 1, 'Existing empty systems must absorb legacy document tokens');
+assert.strictEqual(migratedRegistry.getAllTokens()[0].id, 'legacy-brand');
+const migratedTokenCount = migratedRegistry.getAllTokens().length;
+new DesignSystemRegistry(legacyDesignDoc);
+assert.strictEqual(migratedRegistry.getAllTokens().length, migratedTokenCount, 'Legacy token migration must be idempotent');
 
 // Add a new token
 const brandPrimary = registry.addToken(TOKEN_CATEGORIES.COLOR, 'color.brand.core', '#2563eb', {
@@ -203,8 +225,9 @@ const starterRegistry = new DesignSystemRegistry(starterDoc, {
     assert.strictEqual(savedDoc, starterDoc);
   }
 });
-starterRegistry.initializeWithStarter('material', 'Material Starter');
+starterRegistry.initializeWithStarter('material', 'Material Starter', 'Material 3 foundation tokens');
 assert.strictEqual(starterRegistry.system.name, 'Material Starter');
+assert.strictEqual(starterRegistry.system.description, 'Material 3 foundation tokens');
 assert.ok(starterRegistry.getAllTokens().some(token => token.name === 'Color / Primary' && token.value === '#6750a4'));
 assert.ok(autosaveCount > 0, 'Starter creation must persist through the StorageEngine autosave API');
 const starterTokenCount = starterRegistry.getAllTokens().length;

@@ -4358,7 +4358,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const textArea = document.getElementById('figmaPromptTextArea');
 
     const closeModal = (resolvedVal = null) => {
-      if (modalBackdrop) modalBackdrop.classList.remove('active');
+      if (modalBackdrop) {
+        modalBackdrop.classList.remove('active');
+        modalBackdrop.setAttribute('aria-hidden', 'true');
+      }
       if (this._promptModalResolver) {
         this._promptModalResolver(resolvedVal);
         this._promptModalResolver = null;
@@ -4526,7 +4529,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         }
       }
 
-      if (modalBackdrop) modalBackdrop.classList.add('active');
+      if (modalBackdrop) {
+        modalBackdrop.classList.add('active');
+        modalBackdrop.setAttribute('aria-hidden', 'false');
+      }
 
       setTimeout(() => {
         const activeInput = isMultiline ? textArea : textInput;

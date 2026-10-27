@@ -44,7 +44,7 @@ export class DesignSystemRegistry {
     return this.findTokenDependents(tokenId);
   }
 
-  initializeWithStarter(starter, name) {
+  initializeWithStarter(starter, name, description) {
     const starterKey = String(starter || DESIGN_SYSTEM_STARTERS.MINIMAL).toLowerCase();
     const validStarters = new Set([
       DESIGN_SYSTEM_STARTERS.BLANK,
@@ -59,6 +59,9 @@ export class DesignSystemRegistry {
     }
 
     this.system.name = String(name || 'New Design System').trim() || 'New Design System';
+    if (description !== undefined) {
+      this.system.description = String(description).trim();
+    }
     this.system.status = 'draft';
     this.system.updatedAt = new Date().toISOString();
     if (starterKey !== DESIGN_SYSTEM_STARTERS.BLANK) {
@@ -93,7 +96,17 @@ export class DesignSystemRegistry {
   loadOrCreateSystem() {
     // If document already embeds a design system model, load it
     if (this.doc && this.doc.designSystem) {
-      return this.doc.designSystem;
+      const ds = this.doc.designSystem;
+      ds.collections ||= [];
+      ds.tokens ||= {};
+      ds.variables ||= {};
+      ds.components ||= {};
+      ds.styles ||= {};
+      ds.assets ||= {};
+      ds.history ||= [];
+      ds.importJobs ||= [];
+      this.migrateLegacyDocTokens(ds);
+      return ds;
     }
 
     // Initialize clean default system with existing document tokens migrated

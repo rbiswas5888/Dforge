@@ -53,7 +53,7 @@ const rendererCode = fs.readFileSync(rendererPath, 'utf8');
 
 assert(rendererCode.includes('theme-axiom-light') && rendererCode.includes('theme-light'), 'Renderer must detect light mode');
 assert(rendererCode.includes('theme-high-contrast'), 'Renderer must detect high contrast mode');
-assert(rendererCode.includes('ctx.fillStyle = isHighContrast ? \'#000000\' : (isLight ? \'#E4E4E7\' : \'#0D0D0F\');'), 'Canvas background must adapt to theme');
+assert(rendererCode.includes('ctx.fillStyle = page.background || (isHighContrast ? \'#000000\' : (isLight ? \'#E4E4E7\' : \'#0D0D0F\'));'), 'Canvas background must preserve page overrides and adapt to theme');
 
 // 5. Verify Controller methods in app.js
 console.log('  ✓ 5. Validating Controller wiring in src/app.js...');

@@ -363,12 +363,17 @@ export class DesignSystemUIController {
     if (btnConfirmCreate) {
       btnConfirmCreate.addEventListener('click', () => {
         const name = document.getElementById('createDsName')?.value || 'New Design System';
+        const description = document.getElementById('createDsDesc')?.value || '';
         const starter = document.querySelector('input[name="dsStarterRadio"]:checked')?.value || 'minimal';
-        this.registry.initializeWithStarter(starter, name);
-        closeCreate();
-        this.updateHeaderInfo();
-        this.renderView('overview');
-        if (this.app.renderer) this.app.renderer.render();
+        try {
+          this.registry.initializeWithStarter(starter, name, description);
+          closeCreate();
+          this.updateHeaderInfo();
+          this.renderView('overview');
+          if (this.app.renderer) this.app.renderer.render();
+        } catch (error) {
+          this.app.showToast(`Could not create design system: ${error.message}`);
+        }
       });
     }
 

@@ -50,10 +50,12 @@ export class McpHubController {
       if (modal) modal.style.display = 'flex';
     });
 
-    document.getElementById('btnCloseAddServerModal')?.addEventListener('click', () => {
+    const closeAddServerModal = () => {
       const modal = document.getElementById('modalAddMcpServer');
       if (modal) modal.style.display = 'none';
-    });
+    };
+    document.getElementById('btnCloseAddServerModal')?.addEventListener('click', closeAddServerModal);
+    document.getElementById('btnCancelAddServer')?.addEventListener('click', closeAddServerModal);
 
     document.getElementById('formAddMcpServer')?.addEventListener('submit', async (e) => {
       e.preventDefault();

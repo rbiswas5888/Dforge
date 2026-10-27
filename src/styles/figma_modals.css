@@ -23,7 +23,12 @@
   transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.figma-modal-backdrop[aria-hidden="true"] {
+  display: none;
+}
+
 .figma-modal-backdrop.active {
+  display: flex;
   opacity: 1;
   pointer-events: auto;
 }

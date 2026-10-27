@@ -1003,6 +1003,7 @@
           </div>
         </div>
       </div>
+    </div>
       <!-- Modal: Learn & Tutorials Center (Section 15 & 16) -->
       <div class="modal-backdrop" id="modalLearnCenter" style="display: none;">
         <div class="modal-window" style="width: 880px; height: 650px;">
@@ -1230,6 +1231,13 @@
               <input type="text" id="addServerCommand" class="mcp-search-input"
                 style="width: 100%; box-sizing: border-box;" placeholder="node /path/to/server.js" />
             </div>
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+              <button type="button" class="mcp-btn-secondary" id="btnCancelAddServer">Cancel</button>
+              <button type="submit" class="mcp-btn-primary">Connect Server</button>
+            </div>
+          </form>
+        </div>
+      </div>
             <!-- External Design Import Engine Modal (MD/Design.md) -->
             <div class="modal-overlay" id="modalImportDesign"
               style="display: none; position: fixed; inset: 0; background: rgba(5,7,15,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center;">
@@ -1746,6 +1754,8 @@
                         High-Trust</label>
                       <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="ecommerce">
                         E-Commerce Vibrant</label>
+                      <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="material">
+                        Material Design 3</label>
                       <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="blank"> Blank
                         System</label>
                     </div>
@@ -1828,7 +1838,7 @@
             </div>
 
             <!-- 8. Figma Universal Prompt Modal (Web Figma Experience) -->
-            <div class="figma-modal-backdrop" id="figmaPromptModal">
+            <div class="figma-modal-backdrop" id="figmaPromptModal" aria-hidden="true">
               <div class="figma-prompt-dialog" role="dialog" aria-modal="true">
                 <div class="figma-prompt-header">
                   <div class="figma-prompt-title-row">
