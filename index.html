@@ -1,22 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DesignForge AI — Professional AI-Native Design Platform & React Compiler</title>
-  <meta name="description" content="Professional Figma-grade AI-native design platform with infinite canvas, contextual properties, native AI assistant, markdown parser, and deterministic React compiler.">
-  
+  <meta name="description"
+    content="Professional Figma-grade AI-native design platform with infinite canvas, contextual properties, native AI assistant, markdown parser, and deterministic React compiler.">
+
   <!-- Modern Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet">
+
   <link rel="stylesheet" href="src/styles/designforge.css">
   <link rel="stylesheet" href="src/styles/mcp.css">
   <link rel="stylesheet" href="src/styles/design_system.css">
   <link rel="stylesheet" href="src/styles/axiom_layout.css">
   <link rel="stylesheet" href="src/styles/figma_modals.css">
 </head>
+
 <body class="theme-axiom-dark">
   <div class="app-container">
     <!-- Top Application Bar (A. Global Command Bar - Section 3.1 & 3.3) -->
@@ -26,7 +31,7 @@
           <div class="brand-logo axiom-spark-icon">⚡</div>
           <span>DesignForge <span style="color: var(--brand-accent-soft); font-weight: 500;">AI</span></span>
         </div>
-        
+
         <!-- Application Desktop Menus -->
         <nav class="app-menu-bar">
           <div class="menu-item" data-menu="file">
@@ -139,7 +144,8 @@
           </div>
         </nav>
 
-        <input type="text" class="project-title-input" id="projectTitleInput" value="Fintech Experience Platform" title="Rename project">
+        <input type="text" class="project-title-input" id="projectTitleInput" value="Fintech Experience Platform"
+          title="Rename project">
       </div>
 
       <div class="top-bar-center">
@@ -157,11 +163,13 @@
           <span id="saveStatusText">Saved locally</span>
         </div>
 
-        <button class="menu-dropdown-btn" id="btnOpenCommandPalette" title="Open Command Palette (⌘K)" style="font-size: 11px; display: flex; align-items: center; gap: 6px; padding: 4px 8px;">
+        <button class="menu-dropdown-btn" id="btnOpenCommandPalette" title="Open Command Palette (⌘K)"
+          style="font-size: 11px; display: flex; align-items: center; gap: 6px; padding: 4px 8px;">
           <span style="color: var(--accent-blue); font-weight: 700;">⌘K</span>
           <span style="color: var(--text-dim);">Find anything...</span>
         </button>
-        <button class="btn-ai-sparkle" id="btnOpenFigmaAiPrompt" title="Prompt Figma AI to Design (⌘J)" style="font-size: 11px; padding: 4px 10px;">✦ Prompt AI</button>
+        <button class="btn-ai-sparkle" id="btnOpenFigmaAiPrompt" title="Prompt Figma AI to Design (⌘J)"
+          style="font-size: 11px; padding: 4px 10px;">✦ Prompt AI</button>
 
         <!-- Responsive Breakpoints Switcher (Section 2.1 & 7) -->
         <div class="breakpoint-selector" id="topBreakpointBar" title="Preview responsive breakpoints">
@@ -172,7 +180,7 @@
 
         <button class="btn-icon" id="btnUndo" title="Undo (⌘Z)">↺</button>
         <button class="btn-icon" id="btnRedo" title="Redo (⌘⇧Z)">↻</button>
-        
+
         <div class="shelf-divider" style="height: 16px;"></div>
 
         <div class="zoom-pill">
@@ -182,16 +190,34 @@
           <button class="btn-icon-sm" id="btnZoomFit" title="Zoom to Fit (⇧1)">⊡</button>
         </div>
 
-        <button class="btn-icon" id="btnToggleTheme" title="Toggle Light / Dark / High-Contrast Mode" style="font-size: 13px;">🌙</button>
-        <button class="menu-dropdown-btn" id="btnImportDesignTop" title="Import Design from Sketch, Figma, SVG, XD (⌘⌥I)" style="color: #c084fc; border: 1px solid rgba(192,132,252,0.4); font-size: 11px; font-weight: 600;">📥 Import</button>
-        <button class="menu-dropdown-btn" id="btnMobilePreviewQr" title="Mobile Live Preview & QR Usability Player (Blueprint Section 11)" style="color: #38bdf8; border: 1px solid rgba(56,189,248,0.4); font-size: 11px; font-weight: 600;">📱 Mobile Preview</button>
-        <button class="menu-dropdown-btn" id="btnDevModeToggle" title="Toggle Dev Mode (⇧D)" style="color: #10b981; border: 1px solid rgba(16,185,129,0.4); font-size: 11px; font-weight: 600;">🛠 Dev Mode</button>
-        <div id="devModeBadge" style="display: none; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; font-size: 10px; font-weight: 700;">DEV MODE</div>
-        <button class="menu-dropdown-btn" id="btnOpenMcpHub" title="Model Context Protocol (MCP) Hub & Tool Gateway (⌘⌥M)" style="color: #38bdf8; border: 1px solid rgba(56,189,248,0.4); font-size: 11px; font-weight: 600;">⚡ MCP Hub</button>
-        <button class="menu-dropdown-btn" id="btnOpenLearnCenter" title="Learn & Tutorials Center (Section 15 & 16)" style="color: #a855f7; border: 1px solid rgba(168,85,247,0.3); font-size: 11px;">📚 Learn</button>
-        <button class="menu-dropdown-btn" id="btnOpenLinter" title="Design System Linter (⌥L)" style="color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); font-size: 11px;">⚡ Linter</button>
-        <button class="menu-dropdown-btn" id="btnShareModal" title="Share & Collaborate" style="font-size: 11px;">👥 Share</button>
-        <button class="menu-dropdown-btn" id="btnPlayProtoTop" title="Play Prototype (⌥⌘P)" style="color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); font-size: 11px;">▶ Play</button>
+        <button class="btn-icon" id="btnToggleTheme" title="Toggle Light / Dark / High-Contrast Mode"
+          style="font-size: 13px;">🌙</button>
+        <button class="menu-dropdown-btn" id="btnImportDesignTop"
+          title="Import Design from Sketch, Figma, SVG, XD (⌘⌥I)"
+          style="color: #c084fc; border: 1px solid rgba(192,132,252,0.4); font-size: 11px; font-weight: 600;">📥
+          Import</button>
+        <button class="menu-dropdown-btn" id="btnMobilePreviewQr"
+          title="Mobile Live Preview & QR Usability Player (Blueprint Section 11)"
+          style="color: #38bdf8; border: 1px solid rgba(56,189,248,0.4); font-size: 11px; font-weight: 600;">📱 Mobile
+          Preview</button>
+        <button class="menu-dropdown-btn" id="btnDevModeToggle" title="Toggle Dev Mode (⇧D)"
+          style="color: #10b981; border: 1px solid rgba(16,185,129,0.4); font-size: 11px; font-weight: 600;">🛠 Dev
+          Mode</button>
+        <div id="devModeBadge"
+          style="display: none; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; font-size: 10px; font-weight: 700;">
+          DEV MODE</div>
+        <button class="menu-dropdown-btn" id="btnOpenMcpHub"
+          title="Model Context Protocol (MCP) Hub & Tool Gateway (⌘⌥M)"
+          style="color: #38bdf8; border: 1px solid rgba(56,189,248,0.4); font-size: 11px; font-weight: 600;">⚡ MCP
+          Hub</button>
+        <button class="menu-dropdown-btn" id="btnOpenLearnCenter" title="Learn & Tutorials Center (Section 15 & 16)"
+          style="color: #a855f7; border: 1px solid rgba(168,85,247,0.3); font-size: 11px;">📚 Learn</button>
+        <button class="menu-dropdown-btn" id="btnOpenLinter" title="Design System Linter (⌥L)"
+          style="color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); font-size: 11px;">⚡ Linter</button>
+        <button class="menu-dropdown-btn" id="btnShareModal" title="Share & Collaborate" style="font-size: 11px;">👥
+          Share</button>
+        <button class="menu-dropdown-btn" id="btnPlayProtoTop" title="Play Prototype (⌥⌘P)"
+          style="color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); font-size: 11px;">▶ Play</button>
         <button class="btn-primary" id="btnExportReactTop" title="Compile to Production React (⌘⇧E)">⚡ Export</button>
       </div>
     </header>
@@ -200,11 +226,16 @@
     <main class="main-workspace axiom-workspace-body">
       <!-- E. Axiom Vertical Mode Rail (48px wide) (Section 3.4) -->
       <nav class="mode-rail" id="axiomModeRail">
-        <button class="mode-rail-btn active" data-mode="design" data-title="Design Mode" title="Design Mode (1)">🎨</button>
-        <button class="mode-rail-btn" data-mode="prototype" data-title="Prototype Mode" title="Prototype Mode (2)">⚡</button>
-        <button class="mode-rail-btn" data-mode="system" data-title="Design System Mode" title="Design System Mode (3)">❖</button>
-        <button class="mode-rail-btn" data-mode="dev" data-title="Developer Handoff Mode" title="Developer Mode (4)">🛠</button>
-        <button class="mode-rail-btn" data-mode="comments" data-title="Comments & Review" title="Comments Mode (5)">💬</button>
+        <button class="mode-rail-btn active" data-mode="design" data-title="Design Mode"
+          title="Design Mode (1)">🎨</button>
+        <button class="mode-rail-btn" data-mode="prototype" data-title="Prototype Mode"
+          title="Prototype Mode (2)">⚡</button>
+        <button class="mode-rail-btn" data-mode="system" data-title="Design System Mode"
+          title="Design System Mode (3)">❖</button>
+        <button class="mode-rail-btn" data-mode="dev" data-title="Developer Handoff Mode"
+          title="Developer Mode (4)">🛠</button>
+        <button class="mode-rail-btn" data-mode="comments" data-title="Comments & Review"
+          title="Comments Mode (5)">💬</button>
         <button class="mode-rail-btn" data-mode="ai" data-title="AI Assistant" title="AI Assistant (6)">✦</button>
       </nav>
 
@@ -280,8 +311,10 @@
         <!-- 3. Pages Tab -->
         <div class="sidebar-content" id="tabPages" style="display: none; padding: 12px;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-            <span style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Document Pages</span>
-            <button class="menu-dropdown-btn" id="btnAddNewPage" style="font-size: 11px; color: var(--accent-blue);">+ Add Page</button>
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Document
+              Pages</span>
+            <button class="menu-dropdown-btn" id="btnAddNewPage" style="font-size: 11px; color: var(--accent-blue);">+
+              Add Page</button>
           </div>
           <div id="pagesListContainer" class="pages-list-container"></div>
         </div>
@@ -299,51 +332,93 @@
         <!-- Bottom Floating Tool Shelf -->
         <nav class="tool-shelf">
           <button class="tool-btn active" data-tool="select" title="Move / Select (V)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+            </svg>
           </button>
           <button class="tool-btn" data-tool="scale" title="Scale Proportionally (K)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+            </svg>
           </button>
           <button class="tool-btn" data-tool="hand" title="Hand / Pan Canvas (H or hold Space)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v7"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 11V6a2 2 0 0 0-4 0v5" />
+              <path d="M14 10V4a2 2 0 0 0-4 0v7" />
+              <path d="M10 10.5V6a2 2 0 0 0-4 0v8" />
+              <path
+                d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+            </svg>
           </button>
           <div class="shelf-divider"></div>
           <button class="tool-btn" data-tool="frame" title="Frame (F)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18M17 3v18M3 7h18M3 17h18"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M7 3v18M17 3v18M3 7h18M3 17h18" />
+            </svg>
           </button>
           <button class="tool-btn" data-tool="section" title="Section Tool (⇧S)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/><path d="M3 9h18"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3" />
+              <path d="M3 9h18" />
+            </svg>
           </button>
           <button class="tool-btn" data-tool="slice" title="Slice / Export Region (S)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2v20M17 2v20M2 7h20M2 17h20"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M7 2v20M17 2v20M2 7h20M2 17h20" />
+            </svg>
           </button>
           <button class="tool-btn" data-tool="rectangle" title="Rectangle (R)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+            </svg>
           </button>
           <button class="tool-btn" data-tool="ellipse" title="Ellipse (O)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+            </svg>
           </button>
           <button class="tool-btn" data-tool="line" title="Line (L)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="19" x2="19" y2="5" />
+            </svg>
           </button>
           <button class="tool-btn" data-tool="pen" title="Pen / Vector Path Tool (P)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><circle cx="11" cy="11" r="2"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m12 19 7-7 3 3-7 7-3-3z" />
+              <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+              <circle cx="11" cy="11" r="2" />
+            </svg>
           </button>
           <button class="tool-btn" data-tool="star" title="Star Shape">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon
+                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
           </button>
           <button class="tool-btn" data-tool="polygon" title="Polygon / Triangle Shape">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 3 22 21 2 21 12 3"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 3 22 21 2 21 12 3" />
+            </svg>
           </button>
           <button class="tool-btn" data-tool="text" title="Text (T)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 7 4 4 20 4 20 7" />
+              <line x1="9" x2="15" y1="20" y2="20" />
+              <line x1="12" x2="12" y1="4" y2="20" />
+            </svg>
           </button>
           <button class="tool-btn" data-tool="comment" title="Add Review Comment (C)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
           </button>
           <div class="shelf-divider"></div>
           <button class="tool-btn" data-tool="ai" title="AI Design Assistant (⌘⇧K)" style="color: #c084fc;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+            </svg>
           </button>
         </nav>
 
@@ -355,7 +430,8 @@
           </div>
           <p class="comment-popup-body" id="commentContentText"></p>
           <div class="comment-popup-footer">
-            <button class="menu-dropdown-btn" id="btnResolveComment" style="color: #10b981; font-size: 11px;">✓ Mark Resolved</button>
+            <button class="menu-dropdown-btn" id="btnResolveComment" style="color: #10b981; font-size: 11px;">✓ Mark
+              Resolved</button>
           </div>
         </div>
 
@@ -453,13 +529,15 @@
               <button class="ds-action-btn ai" id="btnDsAiGenerateTokens" title="AI Generate Tokens Wizard (Section 9)">
                 <span>✨ AI Generate Tokens</span>
               </button>
-              <button class="ds-action-btn" id="btnDsResponsiveTokens" title="Responsive Token Adaptations (Section 10)">
+              <button class="ds-action-btn" id="btnDsResponsiveTokens"
+                title="Responsive Token Adaptations (Section 10)">
                 <span>📱 Responsive Tokens</span>
               </button>
               <button class="ds-action-btn" id="btnDsImportReact" title="Import React / DTCG System (Section 13)">
                 <span>📥 Import System</span>
               </button>
-              <button class="ds-action-btn" id="btnDsCreateScratch" title="Create Design System from Scratch (Section 12)">
+              <button class="ds-action-btn" id="btnDsCreateScratch"
+                title="Create Design System from Scratch (Section 12)">
                 <span>➕ New System</span>
               </button>
               <button class="ds-action-btn primary" id="btnDsPublish" title="Publish Version Release (Section 17)">
@@ -514,7 +592,8 @@
         <div class="inspector-panel" id="panelPrototype" style="display: none; padding: 12px;">
           <div class="inspector-subhead" style="margin-bottom: 12px;">
             <span>Prototype Interactions</span>
-            <button class="btn-icon-xs" id="btnAddInteractionBtn" title="Add interaction" style="color: #38bdf8;">+ Add</button>
+            <button class="btn-icon-xs" id="btnAddInteractionBtn" title="Add interaction" style="color: #38bdf8;">+
+              Add</button>
           </div>
           <div id="prototypePanelContent">
             <!-- Rendered dynamically by app.js based on selection -->
@@ -536,7 +615,8 @@
           <div id="inspectBoxModelWidget" style="margin-top: 10px;"></div>
           <div id="inspectTokenUsageSection" style="margin-top: 10px;"></div>
           <div class="inspect-code-container" style="margin-top: 10px;">
-            <pre id="inspectCodeOutput" style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #38bdf8; overflow-x: auto; margin: 0;"></pre>
+            <pre id="inspectCodeOutput"
+              style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #38bdf8; overflow-x: auto; margin: 0;"></pre>
           </div>
         </div>
 
@@ -565,10 +645,12 @@
           </div>
 
           <!-- Provider & Privacy Configuration Drawer (Collapsible) -->
-          <div id="aiSettingsPanel" style="display: none; padding: 12px; background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle); font-size: 11px;">
+          <div id="aiSettingsPanel"
+            style="display: none; padding: 12px; background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle); font-size: 11px;">
             <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
               <div>
-                <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Inference Provider</label>
+                <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Inference
+                  Provider</label>
                 <select class="prop-select" id="aiProviderSelect" style="width: 100%;">
                   <option value="ollama" selected>🦙 Ollama Local (Llama 3.1) — Recommended</option>
                   <option value="local">⚡ Built-in Synth Engine (Zero-Latency Offline)</option>
@@ -577,7 +659,8 @@
                 </select>
               </div>
               <div>
-                <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Privacy Mode</label>
+                <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Privacy
+                  Mode</label>
                 <select class="prop-select" id="aiPrivacySelect" style="width: 100%;">
                   <option value="local_only">Local-Only Mode (Never Send Outside)</option>
                   <option value="allow_hosted">Allow Hosted Inference</option>
@@ -586,12 +669,16 @@
               </div>
             </div>
             <div id="aiKeyFields" style="display: none; flex-direction: column; gap: 8px;">
-              <input type="password" class="prop-input" id="aiApiKeyInput" placeholder="API Key (sk-...)" style="background: var(--bg-input); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); width: 100%;">
-              <input type="text" class="prop-input" id="aiEndpointInput" placeholder="Endpoint URL" style="background: var(--bg-input); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); width: 100%;">
+              <input type="password" class="prop-input" id="aiApiKeyInput" placeholder="API Key (sk-...)"
+                style="background: var(--bg-input); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); width: 100%;">
+              <input type="text" class="prop-input" id="aiEndpointInput" placeholder="Endpoint URL"
+                style="background: var(--bg-input); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); width: 100%;">
             </div>
             <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between;">
-              <button class="btn-inspector-action" id="btnTestAiConnection" style="padding: 4px 10px; font-size: 11px;">🦙 Test Llama 3.1 Connection</button>
-              <span id="aiModelBadge" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.15); color: #38bdf8;">llama3.1:latest</span>
+              <button class="btn-inspector-action" id="btnTestAiConnection"
+                style="padding: 4px 10px; font-size: 11px;">🦙 Test Llama 3.1 Connection</button>
+              <span id="aiModelBadge"
+                style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.15); color: #38bdf8;">llama3.1:latest</span>
             </div>
             <div id="aiConnectionStatus" style="font-size: 11px; margin-top: 6px; color: var(--text-dim);"></div>
           </div>
@@ -613,8 +700,9 @@
 
           <!-- Container A: Natural Language Prompt -->
           <div id="aiPromptModeContainer" class="ai-input-subcontainer">
-            <textarea class="ai-textarea-input" id="aiPromptInput" placeholder="Ask AI to design, edit or modify... e.g. 'Add a modern SaaS pricing table with 3 tiers' or 'Make selected card a vertical stack with 16px gap'"></textarea>
-            
+            <textarea class="ai-textarea-input" id="aiPromptInput"
+              placeholder="Ask AI to design, edit or modify... e.g. 'Add a modern SaaS pricing table with 3 tiers' or 'Make selected card a vertical stack with 16px gap'"></textarea>
+
             <div class="ai-quick-pills">
               <span class="ai-pill">SaaS pricing table with 3 tiers</span>
               <span class="ai-pill">Hero landing section with CTA</span>
@@ -632,13 +720,16 @@
               <button class="menu-dropdown-btn-sm" id="btnLoadSampleSpec" style="color: #c084fc;">✨ Sample Spec</button>
               <input type="file" id="mdFileInput" accept=".md,.markdown,.txt" style="display: none;">
             </div>
-            <textarea class="ai-textarea-input md-mode" id="aiMarkdownInput" placeholder="# Dashboard Design&#10;&#10;## Objective&#10;Create a modern enterprise analytics dashboard.&#10;&#10;## Layout&#10;- Desktop frame: 1440 x 1024&#10;- Left navigation: 240px wide&#10;- Top header: 72px high&#10;&#10;## Components&#10;- Navigation sidebar&#10;- Search header&#10;- KPI cards&#10;- Analytics chart&#10;- Recent activity table&#10;&#10;## Design System&#10;- Font: Inter&#10;- Border radius: 8px&#10;- Primary color: #2563EB"></textarea>
+            <textarea class="ai-textarea-input md-mode" id="aiMarkdownInput"
+              placeholder="# Dashboard Design&#10;&#10;## Objective&#10;Create a modern enterprise analytics dashboard.&#10;&#10;## Layout&#10;- Desktop frame: 1440 x 1024&#10;- Left navigation: 240px wide&#10;- Top header: 72px high&#10;&#10;## Components&#10;- Navigation sidebar&#10;- Search header&#10;- KPI cards&#10;- Analytics chart&#10;- Recent activity table&#10;&#10;## Design System&#10;- Font: Inter&#10;- Border radius: 8px&#10;- Primary color: #2563EB"></textarea>
           </div>
 
           <!-- In-flight progress indicator -->
-          <div id="aiProgressBar" style="display: none; padding: 8px 12px; background: rgba(139, 92, 246, 0.12); border-radius: 6px; margin: 8px 12px; font-size: 11px; color: #c084fc; display: flex; align-items: center; justify-content: space-between;">
+          <div id="aiProgressBar"
+            style="display: none; padding: 8px 12px; background: rgba(139, 92, 246, 0.12); border-radius: 6px; margin: 8px 12px; font-size: 11px; color: #c084fc; display: flex; align-items: center; justify-content: space-between;">
             <span id="aiProgressText">Synthesizing design operations...</span>
-            <button class="menu-dropdown-btn-sm" id="btnCancelAi" style="color: #ef4444; border: 1px solid rgba(239,68,68,0.4);">Cancel</button>
+            <button class="menu-dropdown-btn-sm" id="btnCancelAi"
+              style="color: #ef4444; border: 1px solid rgba(239,68,68,0.4);">Cancel</button>
           </div>
 
           <!-- Diff / Plan Preview Container -->
@@ -646,14 +737,18 @@
 
           <!-- Action Buttons Bar -->
           <div class="ai-actions-bar">
-            <button class="btn-inspector-action" id="btnUndoAiChanges" style="flex: 1; font-size: 11px;">↺ Undo AI</button>
+            <button class="btn-inspector-action" id="btnUndoAiChanges" style="flex: 1; font-size: 11px;">↺ Undo
+              AI</button>
             <button class="btn-primary" id="btnAiGenerate" style="flex: 2; background: #8b5cf6;">Generate Plan</button>
-            <button class="btn-primary" id="btnAiApply" style="display: none; flex: 2; background: #10b981;">Apply to Canvas</button>
+            <button class="btn-primary" id="btnAiApply" style="display: none; flex: 2; background: #10b981;">Apply to
+              Canvas</button>
           </div>
 
           <!-- Design Intelligence Audit Button -->
           <div style="padding: 0 12px 12px;">
-            <button class="btn-inspector-action" id="btnAuditDesign" style="color: #38bdf8; border-color: rgba(56,189,248,0.3); font-size: 11px;">🔍 Audit Design (WCAG & Spacing)</button>
+            <button class="btn-inspector-action" id="btnAuditDesign"
+              style="color: #38bdf8; border-color: rgba(56,189,248,0.3); font-size: 11px;">🔍 Audit Design (WCAG &
+              Spacing)</button>
           </div>
 
           <!-- Conversation History Stream -->
@@ -681,10 +776,13 @@
         <!-- 1. Timeline Tab -->
         <div id="drawerTabTimeline" class="drawer-pane">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <span style="font-size: 12px; font-weight: 600; color: var(--text-primary);">Prototype Flow Transitions & Spring Timelines</span>
-            <button class="menu-dropdown-btn-sm" id="btnPlayDrawerTimeline" style="color: var(--brand-accent);">▶ Simulate Active Flow</button>
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-primary);">Prototype Flow Transitions &
+              Spring Timelines</span>
+            <button class="menu-dropdown-btn-sm" id="btnPlayDrawerTimeline" style="color: var(--brand-accent);">▶
+              Simulate Active Flow</button>
           </div>
-          <div id="drawerTimelineGraph" style="font-size: 11px; color: var(--text-muted); padding: 8px; background: var(--surface-input); border-radius: 6px;">
+          <div id="drawerTimelineGraph"
+            style="font-size: 11px; color: var(--text-muted); padding: 8px; background: var(--surface-input); border-radius: 6px;">
             Active flow: Fintech Treasury User Onboarding • Analytical Springs: Stiff (240ms, damping: 0.82)
           </div>
         </div>
@@ -706,7 +804,8 @@
 
         <!-- 5. Console Tab -->
         <div id="drawerTabConsole" class="drawer-pane" style="display: none;">
-          <pre id="drawerConsoleLog" style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; margin: 0; line-height: 1.5;">[Axiom Engine] Document loaded: ForgePay AI — Treasury Platform&#10;[Axiom Engine] Design tokens synced: 21 tokens active&#10;[Axiom Engine] Canvas resolution: High-DPI ready&#10;[Axiom Engine] Ready for interaction.</pre>
+          <pre id="drawerConsoleLog"
+            style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; margin: 0; line-height: 1.5;">[Axiom Engine] Document loaded: ForgePay AI — Treasury Platform&#10;[Axiom Engine] Design tokens synced: 21 tokens active&#10;[Axiom Engine] Canvas resolution: High-DPI ready&#10;[Axiom Engine] Ready for interaction.</pre>
         </div>
 
         <!-- 6. AI Activity Tab -->
@@ -725,12 +824,14 @@
         <span id="statusSelectionSummary">Selected: None • Canvas</span>
       </div>
       <div class="status-bar-section">
-        <button class="status-bar-btn" id="btnToggleBottomDrawer" title="Toggle Bottom Drawer (Timeline, Variables, Issues)">
+        <button class="status-bar-btn" id="btnToggleBottomDrawer"
+          title="Toggle Bottom Drawer (Timeline, Variables, Issues)">
           ⌃ Drawer: Variables & Issues
         </button>
         <span id="statusZoomLevel">85%</span>
         <span class="sync-indicator" style="padding: 1px 6px; font-size: 10px;">● Saved locally</span>
-        <span id="statusIssuesCount" style="color: var(--status-warning); cursor: pointer;" title="Open Linter Issues">⚡ 0 issues</span>
+        <span id="statusIssuesCount" style="color: var(--status-warning); cursor: pointer;" title="Open Linter Issues">⚡
+          0 issues</span>
       </div>
     </footer>
 
@@ -749,8 +850,12 @@
               <option value="react-cssmodules">React + CSS Modules</option>
               <option value="react-tailwind">React + Tailwind CSS</option>
             </select>
-            <button class="menu-dropdown-btn" id="btnCopyExportCode" title="Copy active file content" style="font-size: 11px;">📋 Copy Code</button>
-            <button class="menu-dropdown-btn" id="btnDownloadProjectPackage" title="Download standalone Vite project package" style="font-size: 11px; color: #38bdf8; border: 1px solid rgba(56,189,248,0.3);">📦 Download Project</button>
+            <button class="menu-dropdown-btn" id="btnCopyExportCode" title="Copy active file content"
+              style="font-size: 11px;">📋 Copy Code</button>
+            <button class="menu-dropdown-btn" id="btnDownloadProjectPackage"
+              title="Download standalone Vite project package"
+              style="font-size: 11px; color: #38bdf8; border: 1px solid rgba(56,189,248,0.3);">📦 Download
+              Project</button>
             <button class="btn-icon" id="btnCloseExportModal">✕</button>
           </div>
         </div>
@@ -808,11 +913,13 @@
     <input type="file" id="dforgeFileInput" accept=".dforge,.json" style="display: none;">
 
     <!-- Modal: Command Palette (Cmd/Ctrl+K) [Section A2] -->
-    <div class="modal-backdrop" id="commandPaletteModal" style="display: none; align-items: flex-start; padding-top: 15vh;">
+    <div class="modal-backdrop" id="commandPaletteModal"
+      style="display: none; align-items: flex-start; padding-top: 15vh;">
       <div class="command-palette-window">
         <div class="palette-input-row">
           <span style="color: var(--accent-blue); font-size: 16px;">🔍</span>
-          <input type="text" class="palette-search-input" id="paletteSearchInput" placeholder="Type a command, layer name, page, or action..." autocomplete="off">
+          <input type="text" class="palette-search-input" id="paletteSearchInput"
+            placeholder="Type a command, layer name, page, or action..." autocomplete="off">
           <span class="palette-esc-badge">ESC</span>
         </div>
         <div class="palette-results-list" id="paletteResultsList"></div>
@@ -833,12 +940,14 @@
             <span>Continuous Design System Linter & Token Binder</span>
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <button class="btn-primary" id="btnAutoBindAllTokens" style="font-size: 11px; background: #10b981;">✓ Auto-Bind All to Tokens</button>
+            <button class="btn-primary" id="btnAutoBindAllTokens" style="font-size: 11px; background: #10b981;">✓
+              Auto-Bind All to Tokens</button>
             <button class="btn-icon" id="btnCloseLinterModal">✕</button>
           </div>
         </div>
         <div class="modal-body" style="padding: 16px; flex-direction: column; overflow-y: auto;">
-          <div id="linterSummaryBanner" style="padding: 12px 16px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+          <div id="linterSummaryBanner"
+            style="padding: 12px 16px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; gap: 16px; font-size: 12px;">
               <span>Total Drift Issues: <strong id="lintTotalCount" style="color: #f59e0b;">0</strong></span>
               <span>Exact Matches: <strong id="lintExactCount" style="color: #10b981;">0</strong></span>
@@ -863,535 +972,685 @@
         </div>
         <div class="modal-body" style="padding: 16px; flex-direction: column; overflow-y: auto;">
           <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-            Audits generated layers against requirements in the input Markdown specification and highlights resolutions for implicit constraints.
+            Audits generated layers against requirements in the input Markdown specification and highlights resolutions
+            for implicit constraints.
           </div>
           <div style="margin-bottom: 16px;">
             <div class="section-title" style="color: #10b981; margin-bottom: 8px;">✓ Requirement Coverage Matrix</div>
             <div id="specCoverageList" style="display: flex; flex-direction: column; gap: 8px;"></div>
           </div>
           <div>
-            <div class="section-title" style="color: #f59e0b; margin-bottom: 8px;">⚠️ Ambiguity Resolutions & Assumptions</div>
+            <div class="section-title" style="color: #f59e0b; margin-bottom: 8px;">⚠️ Ambiguity Resolutions &
+              Assumptions</div>
             <div id="specAmbiguityList" style="display: flex; flex-direction: column; gap: 8px;"></div>
           </div>
         </div>
       </div>
-    <!-- Modal: Learn & Tutorials Center (Section 15 & 16) -->
-    <div class="modal-backdrop" id="modalLearnCenter" style="display: none;">
-      <div class="modal-window" style="width: 880px; height: 650px;">
-        <div class="modal-header">
-          <div class="modal-title">
-            <span>📚</span>
-            <span>Learn & Resources Center — Courses, Tutorials & Exercises</span>
-          </div>
-          <button class="btn-icon" id="btnCloseLearnCenterModal">✕</button>
-        </div>
-        <div class="modal-body" style="padding: 16px; flex-direction: column; overflow-y: auto;">
-          <!-- Progress tracker summary -->
-          <div style="padding: 12px 16px; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 8px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
-            <div style="font-size: 12px;">
-              <span>Overall Learning Progress: <strong id="learnProgressPercent" style="color: #c084fc;">0%</strong></span>
-              <div style="width: 240px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 6px; overflow: hidden;">
-                <div id="learnProgressBar" style="width: 0%; height: 100%; background: #a855f7; transition: width 0.3s ease;"></div>
-              </div>
+      <!-- Modal: Learn & Tutorials Center (Section 15 & 16) -->
+      <div class="modal-backdrop" id="modalLearnCenter" style="display: none;">
+        <div class="modal-window" style="width: 880px; height: 650px;">
+          <div class="modal-header">
+            <div class="modal-title">
+              <span>📚</span>
+              <span>Learn & Resources Center — Courses, Tutorials & Exercises</span>
             </div>
-            <button class="btn-primary" id="btnStartTourFromLearn" style="font-size: 11px; background: #8b5cf6;">🚀 Start Guided Tour</button>
+            <button class="btn-icon" id="btnCloseLearnCenterModal">✕</button>
           </div>
-
-          <!-- Tabs inside Learn Center -->
-          <div class="sidebar-tabs" style="margin-bottom: 16px; background: rgba(255,255,255,0.04); border-radius: 6px;">
-            <button class="sidebar-tab-btn active" id="learnTabBtnVideos">YouTube Video Courses</button>
-            <button class="sidebar-tab-btn" id="learnTabBtnExercises">Practice Exercises</button>
-            <button class="sidebar-tab-btn" id="learnTabBtnDocs">Official Documentation</button>
-          </div>
-
-          <!-- 1. Video Courses View -->
-          <div id="learnViewVideos" style="display: flex; flex-direction: column; gap: 12px;"></div>
-
-          <!-- 2. Practice Exercises View -->
-          <div id="learnViewExercises" style="display: none; flex-direction: column; gap: 12px;"></div>
-
-          <!-- 3. Official Documentation View -->
-          <div id="learnViewDocs" style="display: none; flex-direction: column; gap: 10px;"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal: Share & Multi-user Collaboration (Section 18) -->
-    <div class="modal-backdrop" id="modalShare" style="display: none;">
-      <div class="modal-window" style="width: 540px; height: 420px;">
-        <div class="modal-header">
-          <div class="modal-title">
-            <span>👥</span>
-            <span>Share & Collaborate</span>
-          </div>
-          <button class="btn-icon" id="btnCloseShareModal">✕</button>
-        </div>
-        <div class="modal-body" style="padding: 20px; flex-direction: column; gap: 16px;">
-          <div>
-            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Shareable Project Link</label>
-            <div style="display: flex; gap: 8px;">
-              <input type="text" id="shareLinkInput" class="property-input" readonly value="http://127.0.0.1:3000/#project=fintech-experience" style="flex: 1;">
-              <button class="btn-primary" id="btnCopyShareLink" style="font-size: 11px;">Copy Link</button>
+          <div class="modal-body" style="padding: 16px; flex-direction: column; overflow-y: auto;">
+            <!-- Progress tracker summary -->
+            <div
+              style="padding: 12px 16px; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 8px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+              <div style="font-size: 12px;">
+                <span>Overall Learning Progress: <strong id="learnProgressPercent"
+                    style="color: #c084fc;">0%</strong></span>
+                <div
+                  style="width: 240px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 6px; overflow: hidden;">
+                  <div id="learnProgressBar"
+                    style="width: 0%; height: 100%; background: #a855f7; transition: width 0.3s ease;"></div>
+                </div>
+              </div>
+              <button class="btn-primary" id="btnStartTourFromLearn" style="font-size: 11px; background: #8b5cf6;">🚀
+                Start Guided Tour</button>
             </div>
-          </div>
 
-          <div>
-            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Link Permissions</label>
-            <select id="sharePermissionSelect" class="property-select" style="width: 100%;">
-              <option value="editor">Anyone with link can edit (Editor)</option>
-              <option value="viewer">Anyone with link can view and comment (Viewer)</option>
-            </select>
-          </div>
-
-          <div>
-            <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">Active Collaborators (Presence)</div>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></span>
-                  <span style="font-size: 12px; font-weight: 500;">You (Owner)</span>
-                </div>
-                <span style="font-size: 11px; color: var(--text-muted);">Editor</span>
-              </div>
-              <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #38bdf8;"></span>
-                  <span style="font-size: 12px; font-weight: 500;">Sarah Chen (UX Research)</span>
-                </div>
-                <span style="font-size: 11px; color: var(--text-muted);">Reviewer</span>
-              </div>
-              <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b;"></span>
-                  <span style="font-size: 12px; font-weight: 500;">Alex Rivera (Lead Engineer)</span>
-                </div>
-                <span style="font-size: 11px; color: var(--text-muted);">Dev Mode</span>
-              </div>
+            <!-- Tabs inside Learn Center -->
+            <div class="sidebar-tabs"
+              style="margin-bottom: 16px; background: rgba(255,255,255,0.04); border-radius: 6px;">
+              <button class="sidebar-tab-btn active" id="learnTabBtnVideos">YouTube Video Courses</button>
+              <button class="sidebar-tab-btn" id="learnTabBtnExercises">Practice Exercises</button>
+              <button class="sidebar-tab-btn" id="learnTabBtnDocs">Official Documentation</button>
             </div>
+
+            <!-- 1. Video Courses View -->
+            <div id="learnViewVideos" style="display: flex; flex-direction: column; gap: 12px;"></div>
+
+            <!-- 2. Practice Exercises View -->
+            <div id="learnViewExercises" style="display: none; flex-direction: column; gap: 12px;"></div>
+
+            <!-- 3. Official Documentation View -->
+            <div id="learnViewDocs" style="display: none; flex-direction: column; gap: 10px;"></div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- MCP Hub Modal Dialog (Section 3) -->
-    <div class="mcp-hub-modal" id="modalMcpHub">
-      <div class="mcp-hub-dialog">
-        <div class="mcp-hub-header">
-          <div class="mcp-hub-title">
-            <span style="color: #38bdf8;">⚡</span>
-            <span>Model Context Protocol (MCP) Ecosystem Hub</span>
-            <span class="mcp-badge badge-neutral">Protocol v2024-11-05</span>
-          </div>
-          <div style="display: flex; gap: 8px;">
-            <button class="mcp-btn-primary" id="btnOpenAddServerModal">+ Add Server</button>
-            <button class="menu-dropdown-btn-sm" id="btnCloseMcpHub" style="font-size: 14px;">✕</button>
-          </div>
-        </div>
-
-        <nav class="mcp-hub-nav">
-          <button class="mcp-nav-btn active" data-section="overview">📊 Overview</button>
-          <button class="mcp-nav-btn" data-section="servers">🖥️ Servers</button>
-          <button class="mcp-nav-btn" data-section="tools">🛠️ Tool Catalog</button>
-          <button class="mcp-nav-btn" data-section="resources">📁 Resources</button>
-          <button class="mcp-nav-btn" data-section="prompts">💬 Prompts</button>
-          <button class="mcp-nav-btn" data-section="permissions">🛡️ Permissions</button>
-          <button class="mcp-nav-btn" data-section="logs">📋 Audit Logs</button>
-          <button class="mcp-nav-btn" data-section="workflows">⚡ Workflows</button>
-        </nav>
-
-        <div class="mcp-hub-body">
-          <!-- 3.1 Overview Pane -->
-          <div class="mcp-view-pane" id="mcpPane_overview">
-            <div id="mcpOverviewContent"></div>
-          </div>
-
-          <!-- 3.2 Servers Pane -->
-          <div class="mcp-view-pane" id="mcpPane_servers" style="display: none;">
-            <div id="mcpServersList"></div>
-          </div>
-
-          <!-- 3.3 Tool Catalog Pane -->
-          <div class="mcp-view-pane" id="mcpPane_tools" style="display: none;">
-            <div id="mcpToolsCatalogContent"></div>
-          </div>
-
-          <!-- 3.4 Resources Pane -->
-          <div class="mcp-view-pane" id="mcpPane_resources" style="display: none;">
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
-              <button class="mcp-btn-secondary" id="btnRefreshMcpResources">↻ Refresh Resources</button>
+      <!-- Modal: Share & Multi-user Collaboration (Section 18) -->
+      <div class="modal-backdrop" id="modalShare" style="display: none;">
+        <div class="modal-window" style="width: 540px; height: 420px;">
+          <div class="modal-header">
+            <div class="modal-title">
+              <span>👥</span>
+              <span>Share & Collaborate</span>
             </div>
-            <div id="mcpResourcesList"></div>
+            <button class="btn-icon" id="btnCloseShareModal">✕</button>
           </div>
-
-          <!-- 3.5 Prompts Pane -->
-          <div class="mcp-view-pane" id="mcpPane_prompts" style="display: none;">
-            <div id="mcpPromptsList"></div>
-          </div>
-
-          <!-- 3.6 Permissions Pane -->
-          <div class="mcp-view-pane" id="mcpPane_permissions" style="display: none;">
-            <div id="mcpPermissionsContent"></div>
-          </div>
-
-          <!-- 3.7 Activity Logs Pane -->
-          <div class="mcp-view-pane" id="mcpPane_logs" style="display: none;">
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
-              <button class="mcp-btn-secondary" id="btnClearMcpLogs" style="color: #f43f5e;">Clear Audit Logs</button>
-            </div>
-            <div id="mcpAuditLogsList"></div>
-          </div>
-
-          <!-- 3.8 Workflows Pane -->
-          <div class="mcp-view-pane" id="mcpPane_workflows" style="display: none;">
-            <div id="mcpWorkflowsContent"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Add MCP Server Form Modal -->
-    <div class="mcp-hub-modal" id="modalAddMcpServer" style="z-index: 10001;">
-      <div class="mcp-hub-dialog" style="width: 520px; height: auto; max-height: 85vh;">
-        <div class="mcp-hub-header">
-          <span style="font-weight: 700; font-size: 14px;">Connect New MCP Server</span>
-          <button class="menu-dropdown-btn-sm" id="btnCloseAddServerModal">✕</button>
-        </div>
-        <form id="formAddMcpServer" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
-          <div>
-            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Server Display Name</label>
-            <input type="text" id="addServerName" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" placeholder="e.g. Remote AI Design Partner" required />
-          </div>
-          <div>
-            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Transport Protocol</label>
-            <select id="addServerTransportType" class="mcp-select" style="width: 100%; box-sizing: border-box;">
-              <option value="http-stream">Streamable HTTP (Remote / HTTPS)</option>
-              <option value="stdio">Stdio Process (Local executable)</option>
-            </select>
-          </div>
-          <div id="addServerHttpFields">
-            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Endpoint URL</label>
-            <input type="url" id="addServerEndpoint" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" placeholder="https://api.example.com/mcp" />
-          </div>
-          <div id="addServerStdioFields" style="display: none;">
-            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Executable Command / Binary</label>
-            <input type="text" id="addServerCommand" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" placeholder="node /path/to/server.js" />
-          </div>
-    <!-- External Design Import Engine Modal (MD/Design.md) -->
-    <div class="modal-overlay" id="modalImportDesign" style="display: none; position: fixed; inset: 0; background: rgba(5,7,15,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center;">
-      <div style="width: 680px; max-width: 95vw; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 14px; box-shadow: 0 25px 60px rgba(0,0,0,0.4); overflow: hidden; display: flex; flex-direction: column;">
-        <div style="padding: 18px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface);">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(192,132,252,0.15); border: 1px solid #c084fc; display: flex; align-items: center; justify-content: center; font-size: 16px;">📥</div>
+          <div class="modal-body" style="padding: 20px; flex-direction: column; gap: 16px;">
             <div>
-              <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">External Design Import Engine</div>
-              <div style="font-size: 11px; color: var(--text-muted);">Conforms to MD/Design.md — Sketch, Figma, SVG, Adobe XD & .dforge</div>
-            </div>
-          </div>
-          <button class="menu-dropdown-btn-sm" id="btnCloseImportModal" onclick="document.getElementById('modalImportDesign').style.display='none'">✕</button>
-        </div>
-
-        <div style="padding: 24px; display: flex; flex-direction: column; gap: 18px; max-height: 75vh; overflow-y: auto;">
-          <!-- Dropzone -->
-          <div id="importDropZone" style="border: 2px dashed var(--brand-accent); border-radius: 12px; padding: 28px 20px; text-align: center; background: var(--bg-hover); cursor: pointer; transition: all 0.2s ease;">
-            <div style="font-size: 32px; margin-bottom: 8px;">📁</div>
-            <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">Drag & drop your design file here, or click to browse</div>
-            <div style="font-size: 11px; color: var(--text-muted);">Supports .sketch, .sketch.json, .fig, .figma.json, .svg, .xd, and .dforge</div>
-            <input type="file" id="externalDesignFileInput" style="display: none;" accept=".sketch,.json,.svg,.xd,.dforge">
-          </div>
-
-          <!-- Quick Demo Presets -->
-          <div>
-            <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-bottom: 8px;">Or Try Sample Design Files</div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button class="menu-dropdown-btn" id="btnSampleSketch" style="font-size: 11px; border: 1px solid rgba(245,158,11,0.3); color: #fbbf24;">💎 Sketch Mobile App Flow</button>
-              <button class="menu-dropdown-btn" id="btnSampleFigma" style="font-size: 11px; border: 1px solid rgba(192,132,252,0.3); color: #c084fc;">🎨 Figma Cloud SaaS Dashboard</button>
-              <button class="menu-dropdown-btn" id="btnSampleSvg" style="font-size: 11px; border: 1px solid rgba(56,189,248,0.3); color: #38bdf8;">📐 Illustrator SVG Vector Art</button>
-            </div>
-          </div>
-
-          <!-- Live Fidelity Preview Report Card -->
-          <div id="importFidelityCard" style="display: none; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 16px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 13px; font-weight: 700; color: var(--text-main);">Import Fidelity Diagnostics</span>
-                <span id="importFidelityBadge" style="font-size: 11px; padding: 2px 8px; border-radius: 9999px; background: rgba(16,185,129,0.15); color: #34d399; font-weight: 700;">100% High Fidelity</span>
-              </div>
-              <span id="importSourceTag" style="font-size: 11px; color: var(--text-muted); font-family: monospace;">SKETCH</span>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; background: var(--bg-input); padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-              <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-dim);">Pages</div><div id="statImportPages" style="font-size: 14px; font-weight: 700; color: var(--text-main);">1</div></div>
-              <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-dim);">Layers</div><div id="statImportNodes" style="font-size: 14px; font-weight: 700; color: var(--text-main);">18</div></div>
-              <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-dim);">Components</div><div id="statImportComponents" style="font-size: 14px; font-weight: 700; color: #38bdf8;">3</div></div>
-              <div style="text-align: center;"><div style="font-size: 11px; color: var(--text-dim);">Interactions</div><div id="statImportInteractions" style="font-size: 14px; font-weight: 700; color: #c084fc;">2</div></div>
-            </div>
-
-            <div id="importPreservedList" style="font-size: 11px; color: var(--text-muted); line-height: 1.6;"></div>
-          </div>
-        </div>
-
-        <div style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); background: var(--bg-surface); display: flex; justify-content: flex-end; gap: 10px;">
-          <button class="mcp-btn-secondary" onclick="document.getElementById('modalImportDesign').style.display='none'">Cancel</button>
-          <button class="mcp-btn-primary" id="btnCommitImport" style="display: none; background: var(--brand-action);">Commit Import →</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bulk Rename Modal (MD/figma-design-page-functional-map.md Cmd+R) -->
-    <div class="modal-overlay" id="modalBulkRename" style="display: none; position: fixed; inset: 0; background: rgba(5,7,15,0.8); backdrop-filter: blur(6px); z-index: 9999; align-items: center; justify-content: center;">
-      <div style="width: 440px; max-width: 90vw; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); overflow: hidden;">
-        <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface);">
-          <span style="font-size: 14px; font-weight: 700; color: var(--text-main);">Rename Layers (⌘R)</span>
-          <button class="menu-dropdown-btn-sm" onclick="document.getElementById('modalBulkRename').style.display='none'">✕</button>
-        </div>
-        <form id="formBulkRename" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
-          <div>
-            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Name Pattern (use $n for sequential numbers)</label>
-            <input type="text" id="bulkRenamePattern" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" placeholder="e.g. Card / $n or Row #$N" value="Card / $n" required />
-          </div>
-          <div>
-            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Find in Name (Optional)</label>
-            <input type="text" id="bulkRenameFind" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" placeholder="e.g. Rectangle" />
-          </div>
-          <div>
-            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Replace with (Optional)</label>
-            <input type="text" id="bulkRenameReplace" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" placeholder="e.g. Card Background" />
-          </div>
-          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
-            <button type="button" class="mcp-btn-secondary" onclick="document.getElementById('modalBulkRename').style.display='none'">Cancel</button>
-            <button type="submit" class="mcp-btn-primary">Rename Layers</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Floating Interactive Onboarding Tour Callout Card (Section 15.2) -->
-    <div id="tourCalloutCard" style="display: none; position: fixed; z-index: 10000; bottom: 80px; right: 380px; width: 340px; background: #1e293b; border: 1px solid #3b82f6; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); padding: 16px; color: #f8fafc;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-        <span id="tourStepTitle" style="font-size: 13px; font-weight: 700; color: #38bdf8;">1. Infinite Canvas</span>
-        <button id="btnCloseTour" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px;">✕</button>
-      </div>
-      <p id="tourStepContent" style="font-size: 12px; line-height: 1.5; color: #cbd5e1; margin-bottom: 14px;"></p>
-      <div style="display: flex; align-items: center; justify-content: space-between;">
-        <span id="tourStepCounter" style="font-size: 11px; color: #64748b;">Step 1 of 6</span>
-        <div style="display: flex; gap: 8px;">
-          <button class="menu-dropdown-btn-sm" id="btnTourPrev" style="font-size: 11px;">Back</button>
-          <button class="btn-primary" id="btnTourNext" style="font-size: 11px; padding: 4px 10px;">Next →</button>
-        </div>
-      </div>
-    </div>
-    <!-- Modals for Unified Design System (Sections 9, 10, 11, 12, 13, 17) -->
-
-    <!-- 1. AI Generate Tokens Guided Wizard (Section 9) -->
-    <div class="ds-modal-backdrop" id="modalAiGenerateTokens" style="display: none;">
-      <div class="ds-modal-box" style="max-width: 860px;">
-        <div class="ds-modal-header">
-          <div class="ds-modal-title">
-            <span style="color: #8b5cf6;">✨</span>
-            <span>AI Generate Tokens Guided Wizard</span>
-          </div>
-          <button class="menu-dropdown-btn-sm" id="btnCloseModalAiTokens">✕</button>
-        </div>
-        <div class="ds-modal-body">
-          <div id="aiTokensStep1">
-            <div style="font-size: 13px; font-weight: 700; color: #f8fafc; margin-bottom: 12px;">Step 1: System Context & Brand Parameters</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
-              <div>
-                <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">System Name</label>
-                <input type="text" id="aiTokensSystemName" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" value="Fintech Experience Design System">
-              </div>
-              <div>
-                <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Brand Name (Optional)</label>
-                <input type="text" id="aiTokensBrandName" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" value="NovaBank">
-              </div>
-              <div>
-                <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Industry / Use Case</label>
-                <select id="aiTokensIndustry" class="mcp-search-input" style="width: 100%; box-sizing: border-box;">
-                  <option value="fintech" selected>Fintech & Banking</option>
-                  <option value="saas">B2B SaaS</option>
-                  <option value="ecommerce">E-Commerce & Retail</option>
-                  <option value="enterprise">Enterprise Systems</option>
-                  <option value="healthcare">Healthcare</option>
-                  <option value="technical">Developer & Technical Tools</option>
-                </select>
-              </div>
-              <div>
-                <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Design Direction</label>
-                <select id="aiTokensDirection" class="mcp-search-input" style="width: 100%; box-sizing: border-box;">
-                  <option value="minimal" selected>Minimal & Modern</option>
-                  <option value="corporate">Corporate & Structured</option>
-                  <option value="expressive">Expressive & High-Impact</option>
-                  <option value="playful">Playful & Friendly</option>
-                  <option value="luxury">Luxury & Editorial</option>
-                  <option value="technical">Technical & Dense</option>
-                </select>
-              </div>
-            </div>
-
-            <div style="margin-bottom: 16px;">
-              <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Primary Brand Color</label>
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <input type="color" id="aiTokensBrandColorPicker" value="#2563eb" style="width: 36px; height: 36px; border-radius: 6px; border: 1px solid #334155; cursor: pointer; background: transparent;">
-                <input type="text" id="aiTokensBrandColorHex" class="mcp-search-input" style="width: 120px;" value="#2563eb">
-                <span style="font-size: 11px; color: #64748b;">Seed for primary, secondary, and neutral scales</span>
-              </div>
-            </div>
-
-            <div style="font-size: 13px; font-weight: 700; color: #f8fafc; margin-bottom: 8px;">Step 2: Token Categories to Generate</div>
-            <div class="ds-category-grid" id="aiTokensCategoryGrid">
-              <label class="ds-category-card selected"><input type="checkbox" value="color" checked> 🎨 Color & Palettes</label>
-              <label class="ds-category-card selected"><input type="checkbox" value="typography" checked> 🔤 Typography & Scales</label>
-              <label class="ds-category-card selected"><input type="checkbox" value="spacing" checked> 📏 Spacing & Density</label>
-              <label class="ds-category-card selected"><input type="checkbox" value="sizing" checked> 📐 Sizing & Containers</label>
-              <label class="ds-category-card selected"><input type="checkbox" value="borders" checked> 🔲 Borders & Radii</label>
-              <label class="ds-category-card selected"><input type="checkbox" value="shadows" checked> 🌓 Shadows & Elevation</label>
-              <label class="ds-category-card selected"><input type="checkbox" value="motion" checked> ⚡ Motion & Easing</label>
-              <label class="ds-category-card selected"><input type="checkbox" value="opacity" checked> 👁 Opacity & Effects</label>
-              <label class="ds-category-card selected"><input type="checkbox" value="zindex" checked> 📚 Z-Index Layering</label>
-              <label class="ds-category-card selected"><input type="checkbox" value="dataviz" checked> 📊 Data Visualization</label>
-              <label class="ds-category-card selected"><input type="checkbox" value="accessibility" checked> ♿ Accessibility & Focus</label>
-            </div>
-          </div>
-
-          <!-- Proposal Review Step -->
-          <div id="aiTokensStep2" style="display: none;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-              <div>
-                <span style="font-size: 13px; font-weight: 700; color: #f8fafc;">Step 3: Review Structured Proposals</span>
-                <p style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Review, edit, or reject tokens before committing. Published tokens will not be silently overwritten.</p>
-              </div>
+              <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Shareable Project
+                Link</label>
               <div style="display: flex; gap: 8px;">
-                <button class="menu-dropdown-btn-sm" id="btnAiTokensSelectAll">Select All</button>
-                <button class="menu-dropdown-btn-sm" id="btnAiTokensDeselectAll">Deselect All</button>
+                <input type="text" id="shareLinkInput" class="property-input" readonly
+                  value="http://127.0.0.1:3000/#project=fintech-experience" style="flex: 1;">
+                <button class="btn-primary" id="btnCopyShareLink" style="font-size: 11px;">Copy Link</button>
               </div>
             </div>
-            <div style="max-height: 380px; overflow-y: auto; border: 1px solid #334155; border-radius: 8px;">
-              <table class="ds-proposal-table" id="aiTokensProposalsTable">
-                <thead>
-                  <tr>
-                    <th style="width: 32px;"><input type="checkbox" id="aiTokensCheckAll" checked></th>
-                    <th>Token Name</th>
-                    <th>Category</th>
-                    <th>Type</th>
-                    <th>Value / Mapping</th>
-                    <th>Action</th>
-                    <th>Reason</th>
-                  </tr>
-                </thead>
-                <tbody id="aiTokensProposalsBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        <div class="ds-modal-footer">
-          <button class="ds-action-btn" id="btnAiTokensBack" style="display: none;">← Back</button>
-          <button class="ds-action-btn" id="btnAiTokensCancel">Cancel</button>
-          <button class="ds-action-btn ai" id="btnAiTokensGenerate">⚡ Generate Proposals</button>
-          <button class="ds-action-btn primary" id="btnAiTokensCommit" style="display: none;">✓ Commit Approved Tokens</button>
-        </div>
-      </div>
-    </div>
 
-    <!-- 2. Responsive Token Adaptations Modal (Section 10) -->
-    <div class="ds-modal-backdrop" id="modalResponsiveTokens" style="display: none;">
-      <div class="ds-modal-box" style="max-width: 800px;">
-        <div class="ds-modal-header">
-          <div class="ds-modal-title">
-            <span style="color: #38bdf8;">📱</span>
-            <span>Responsive Token Adaptation Engine</span>
-          </div>
-          <button class="menu-dropdown-btn-sm" id="btnCloseModalResponsive">✕</button>
-        </div>
-        <div class="ds-modal-body">
-          <p style="font-size: 12px; color: #94a3b8; margin-bottom: 16px;">
-            Derive tablet (max-width: 1024px) and mobile (max-width: 767px) token overrides from the desktop source collection. Preserves base desktop values while generating standard responsive CSS media queries.
-          </p>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
             <div>
-              <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Target Viewport Adaptations</label>
-              <select id="responsiveTargetsSelect" class="mcp-search-input" style="width: 100%; box-sizing: border-box;">
-                <option value="both" selected>Both Tablet & Mobile</option>
-                <option value="tablet">Tablet Only (768px - 1024px)</option>
-                <option value="mobile">Mobile Only (≤767px)</option>
+              <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Link
+                Permissions</label>
+              <select id="sharePermissionSelect" class="property-select" style="width: 100%;">
+                <option value="editor">Anyone with link can edit (Editor)</option>
+                <option value="viewer">Anyone with link can view and comment (Viewer)</option>
               </select>
             </div>
+
             <div>
-              <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Categories to Adapt</label>
-              <div style="display: flex; gap: 10px; margin-top: 6px;">
-                <label style="font-size: 11px; color: #cbd5e1;"><input type="checkbox" id="respCatSpacing" checked> Spacing</label>
-                <label style="font-size: 11px; color: #cbd5e1;"><input type="checkbox" id="respCatTypography" checked> Typography</label>
-                <label style="font-size: 11px; color: #cbd5e1;"><input type="checkbox" id="respCatSizing" checked> Sizing</label>
+              <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">Active Collaborators (Presence)</div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div
+                  style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span
+                      style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></span>
+                    <span style="font-size: 12px; font-weight: 500;">You (Owner)</span>
+                  </div>
+                  <span style="font-size: 11px; color: var(--text-muted);">Editor</span>
+                </div>
+                <div
+                  style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span
+                      style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #38bdf8;"></span>
+                    <span style="font-size: 12px; font-weight: 500;">Sarah Chen (UX Research)</span>
+                  </div>
+                  <span style="font-size: 11px; color: var(--text-muted);">Reviewer</span>
+                </div>
+                <div
+                  style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span
+                      style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b;"></span>
+                    <span style="font-size: 12px; font-weight: 500;">Alex Rivera (Lead Engineer)</span>
+                  </div>
+                  <span style="font-size: 11px; color: var(--text-muted);">Dev Mode</span>
+                </div>
               </div>
             </div>
           </div>
-
-          <div id="responsivePreviewContainer" style="display: none; margin-top: 16px;">
-            <div style="font-size: 12px; font-weight: 700; color: #f8fafc; margin-bottom: 8px;">Generated Responsive CSS Media Queries</div>
-            <pre id="responsiveCssOutput" style="background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #38bdf8; max-height: 200px; overflow-y: auto;"></pre>
-          </div>
-        </div>
-        <div class="ds-modal-footer">
-          <button class="ds-action-btn" id="btnCancelResponsive">Cancel</button>
-          <button class="ds-action-btn" id="btnGenerateResponsive">Generate Adaptations</button>
-          <button class="ds-action-btn primary" id="btnCommitResponsive" style="display: none;">Commit Responsive Overrides</button>
         </div>
       </div>
-    </div>
 
-    <!-- 3. Component Variable Extraction Modal (Section 11) -->
-    <div class="ds-modal-backdrop" id="modalComponentVariables" style="display: none;">
-      <div class="ds-modal-box" style="max-width: 760px;">
-        <div class="ds-modal-header">
-          <div class="ds-modal-title">
-            <span style="color: #10b981;">🔤</span>
-            <span>Explicit AI Variable Extraction (Component-Level)</span>
+      <!-- MCP Hub Modal Dialog (Section 3) -->
+      <div class="mcp-hub-modal" id="modalMcpHub">
+        <div class="mcp-hub-dialog">
+          <div class="mcp-hub-header">
+            <div class="mcp-hub-title">
+              <span style="color: #38bdf8;">⚡</span>
+              <span>Model Context Protocol (MCP) Ecosystem Hub</span>
+              <span class="mcp-badge badge-neutral">Protocol v2024-11-05</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="mcp-btn-primary" id="btnOpenAddServerModal">+ Add Server</button>
+              <button class="menu-dropdown-btn-sm" id="btnCloseMcpHub" style="font-size: 14px;">✕</button>
+            </div>
           </div>
-          <button class="menu-dropdown-btn-sm" id="btnCloseModalCompVars">✕</button>
-        </div>
-        <div class="ds-modal-body">
-          <p style="font-size: 12px; color: #94a3b8; margin-bottom: 14px;">
-            Inspects the selected component or layer properties, identifying reusable values, and maps them to existing design tokens or proposes new variables. Appearance is strictly preserved.
-          </p>
-          <div id="compVarsSelectionInfo" style="font-size: 12px; font-weight: 600; color: #38bdf8; margin-bottom: 12px;"></div>
-          <div style="max-height: 320px; overflow-y: auto; border: 1px solid #334155; border-radius: 8px;">
-            <table class="ds-proposal-table" id="compVarsTable">
-              <thead>
-                <tr>
-                  <th style="width: 32px;"><input type="checkbox" id="compVarsCheckAll" checked></th>
-                  <th>Property</th>
-                  <th>Raw Value</th>
-                  <th>Proposed Variable / Token</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="compVarsBody"></tbody>
-            </table>
+
+          <nav class="mcp-hub-nav">
+            <button class="mcp-nav-btn active" data-section="overview">📊 Overview</button>
+            <button class="mcp-nav-btn" data-section="servers">🖥️ Servers</button>
+            <button class="mcp-nav-btn" data-section="tools">🛠️ Tool Catalog</button>
+            <button class="mcp-nav-btn" data-section="resources">📁 Resources</button>
+            <button class="mcp-nav-btn" data-section="prompts">💬 Prompts</button>
+            <button class="mcp-nav-btn" data-section="permissions">🛡️ Permissions</button>
+            <button class="mcp-nav-btn" data-section="logs">📋 Audit Logs</button>
+            <button class="mcp-nav-btn" data-section="workflows">⚡ Workflows</button>
+          </nav>
+
+          <div class="mcp-hub-body">
+            <!-- 3.1 Overview Pane -->
+            <div class="mcp-view-pane" id="mcpPane_overview">
+              <div id="mcpOverviewContent"></div>
+            </div>
+
+            <!-- 3.2 Servers Pane -->
+            <div class="mcp-view-pane" id="mcpPane_servers" style="display: none;">
+              <div id="mcpServersList"></div>
+            </div>
+
+            <!-- 3.3 Tool Catalog Pane -->
+            <div class="mcp-view-pane" id="mcpPane_tools" style="display: none;">
+              <div id="mcpToolsCatalogContent"></div>
+            </div>
+
+            <!-- 3.4 Resources Pane -->
+            <div class="mcp-view-pane" id="mcpPane_resources" style="display: none;">
+              <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                <button class="mcp-btn-secondary" id="btnRefreshMcpResources">↻ Refresh Resources</button>
+              </div>
+              <div id="mcpResourcesList"></div>
+            </div>
+
+            <!-- 3.5 Prompts Pane -->
+            <div class="mcp-view-pane" id="mcpPane_prompts" style="display: none;">
+              <div id="mcpPromptsList"></div>
+            </div>
+
+            <!-- 3.6 Permissions Pane -->
+            <div class="mcp-view-pane" id="mcpPane_permissions" style="display: none;">
+              <div id="mcpPermissionsContent"></div>
+            </div>
+
+            <!-- 3.7 Activity Logs Pane -->
+            <div class="mcp-view-pane" id="mcpPane_logs" style="display: none;">
+              <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                <button class="mcp-btn-secondary" id="btnClearMcpLogs" style="color: #f43f5e;">Clear Audit Logs</button>
+              </div>
+              <div id="mcpAuditLogsList"></div>
+            </div>
+
+            <!-- 3.8 Workflows Pane -->
+            <div class="mcp-view-pane" id="mcpPane_workflows" style="display: none;">
+              <div id="mcpWorkflowsContent"></div>
+            </div>
           </div>
-        </div>
-        <div class="ds-modal-footer">
-          <button class="ds-action-btn" id="btnCancelCompVars">Cancel</button>
-          <button class="ds-action-btn primary" id="btnCommitCompVars">Bind Approved Variables</button>
         </div>
       </div>
-    </div>
 
-    <!-- 4. Import React / DTCG System Modal (Section 13) -->
-    <div class="ds-modal-backdrop" id="modalImportReactSystem" style="display: none;">
-      <div class="ds-modal-box" style="max-width: 800px;">
-        <div class="ds-modal-header">
-          <div class="ds-modal-title">
-            <span style="color: #c084fc;">📥</span>
-            <span>Import React & DTCG Design System</span>
+      <!-- Add MCP Server Form Modal -->
+      <div class="mcp-hub-modal" id="modalAddMcpServer" style="z-index: 10001;">
+        <div class="mcp-hub-dialog" style="width: 520px; height: auto; max-height: 85vh;">
+          <div class="mcp-hub-header">
+            <span style="font-weight: 700; font-size: 14px;">Connect New MCP Server</span>
+            <button class="menu-dropdown-btn-sm" id="btnCloseAddServerModal">✕</button>
           </div>
-          <button class="menu-dropdown-btn-sm" id="btnCloseModalImportReact">✕</button>
-        </div>
-        <div class="ds-modal-body">
-          <p style="font-size: 12px; color: #94a3b8; margin-bottom: 14px;">
-            Parse W3C DTCG Token JSON, Tailwind configurations, or React component sources via static analysis in a safe sandboxed environment.
-          </p>
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Paste Token JSON / Tailwind Config / React Component Code</label>
-            <textarea id="importReactSourceInput" class="mcp-search-input" style="width: 100%; height: 160px; font-family: 'JetBrains Mono', monospace; font-size: 11px; box-sizing: border-box; resize: vertical;" placeholder='e.g. DTCG JSON:
+          <form id="formAddMcpServer" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+            <div>
+              <label
+                style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Server
+                Display Name</label>
+              <input type="text" id="addServerName" class="mcp-search-input"
+                style="width: 100%; box-sizing: border-box;" placeholder="e.g. Remote AI Design Partner" required />
+            </div>
+            <div>
+              <label
+                style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Transport
+                Protocol</label>
+              <select id="addServerTransportType" class="mcp-select" style="width: 100%; box-sizing: border-box;">
+                <option value="http-stream">Streamable HTTP (Remote / HTTPS)</option>
+                <option value="stdio">Stdio Process (Local executable)</option>
+              </select>
+            </div>
+            <div id="addServerHttpFields">
+              <label
+                style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Endpoint
+                URL</label>
+              <input type="url" id="addServerEndpoint" class="mcp-search-input"
+                style="width: 100%; box-sizing: border-box;" placeholder="https://api.example.com/mcp" />
+            </div>
+            <div id="addServerStdioFields" style="display: none;">
+              <label
+                style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Executable
+                Command / Binary</label>
+              <input type="text" id="addServerCommand" class="mcp-search-input"
+                style="width: 100%; box-sizing: border-box;" placeholder="node /path/to/server.js" />
+            </div>
+            <!-- External Design Import Engine Modal (MD/Design.md) -->
+            <div class="modal-overlay" id="modalImportDesign"
+              style="display: none; position: fixed; inset: 0; background: rgba(5,7,15,0.85); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center;">
+              <div
+                style="width: 680px; max-width: 95vw; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 14px; box-shadow: 0 25px 60px rgba(0,0,0,0.4); overflow: hidden; display: flex; flex-direction: column;">
+                <div
+                  style="padding: 18px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface);">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div
+                      style="width: 32px; height: 32px; border-radius: 8px; background: rgba(192,132,252,0.15); border: 1px solid #c084fc; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                      📥</div>
+                    <div>
+                      <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">External Design Import
+                        Engine</div>
+                      <div style="font-size: 11px; color: var(--text-muted);">Conforms to MD/Design.md — Sketch, Figma,
+                        SVG, Adobe XD & .dforge</div>
+                    </div>
+                  </div>
+                  <button class="menu-dropdown-btn-sm" id="btnCloseImportModal"
+                    onclick="document.getElementById('modalImportDesign').style.display='none'">✕</button>
+                </div>
+
+                <div
+                  style="padding: 24px; display: flex; flex-direction: column; gap: 18px; max-height: 75vh; overflow-y: auto;">
+                  <!-- Dropzone -->
+                  <div id="importDropZone"
+                    style="border: 2px dashed var(--brand-accent); border-radius: 12px; padding: 28px 20px; text-align: center; background: var(--bg-hover); cursor: pointer; transition: all 0.2s ease;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">📁</div>
+                    <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">Drag &
+                      drop your design file here, or click to browse</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Supports .sketch, .sketch.json, .fig,
+                      .figma.json, .svg, .xd, and .dforge</div>
+                    <input type="file" id="externalDesignFileInput" style="display: none;"
+                      accept=".sketch,.json,.svg,.xd,.dforge">
+                  </div>
+
+                  <!-- Quick Demo Presets -->
+                  <div>
+                    <div
+                      style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-bottom: 8px;">
+                      Or Try Sample Design Files</div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                      <button class="menu-dropdown-btn" id="btnSampleSketch"
+                        style="font-size: 11px; border: 1px solid rgba(245,158,11,0.3); color: #fbbf24;">💎 Sketch
+                        Mobile App Flow</button>
+                      <button class="menu-dropdown-btn" id="btnSampleFigma"
+                        style="font-size: 11px; border: 1px solid rgba(192,132,252,0.3); color: #c084fc;">🎨 Figma Cloud
+                        SaaS Dashboard</button>
+                      <button class="menu-dropdown-btn" id="btnSampleSvg"
+                        style="font-size: 11px; border: 1px solid rgba(56,189,248,0.3); color: #38bdf8;">📐 Illustrator
+                        SVG Vector Art</button>
+                    </div>
+                  </div>
+
+                  <!-- Live Fidelity Preview Report Card -->
+                  <div id="importFidelityCard"
+                    style="display: none; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 16px;">
+                    <div
+                      style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 13px; font-weight: 700; color: var(--text-main);">Import Fidelity
+                          Diagnostics</span>
+                        <span id="importFidelityBadge"
+                          style="font-size: 11px; padding: 2px 8px; border-radius: 9999px; background: rgba(16,185,129,0.15); color: #34d399; font-weight: 700;">100%
+                          High Fidelity</span>
+                      </div>
+                      <span id="importSourceTag"
+                        style="font-size: 11px; color: var(--text-muted); font-family: monospace;">SKETCH</span>
+                    </div>
+
+                    <div
+                      style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; background: var(--bg-input); padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                      <div style="text-align: center;">
+                        <div style="font-size: 11px; color: var(--text-dim);">Pages</div>
+                        <div id="statImportPages" style="font-size: 14px; font-weight: 700; color: var(--text-main);">1
+                        </div>
+                      </div>
+                      <div style="text-align: center;">
+                        <div style="font-size: 11px; color: var(--text-dim);">Layers</div>
+                        <div id="statImportNodes" style="font-size: 14px; font-weight: 700; color: var(--text-main);">18
+                        </div>
+                      </div>
+                      <div style="text-align: center;">
+                        <div style="font-size: 11px; color: var(--text-dim);">Components</div>
+                        <div id="statImportComponents" style="font-size: 14px; font-weight: 700; color: #38bdf8;">3
+                        </div>
+                      </div>
+                      <div style="text-align: center;">
+                        <div style="font-size: 11px; color: var(--text-dim);">Interactions</div>
+                        <div id="statImportInteractions" style="font-size: 14px; font-weight: 700; color: #c084fc;">2
+                        </div>
+                      </div>
+                    </div>
+
+                    <div id="importPreservedList" style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  style="padding: 16px 24px; border-top: 1px solid var(--border-subtle); background: var(--bg-surface); display: flex; justify-content: flex-end; gap: 10px;">
+                  <button class="mcp-btn-secondary"
+                    onclick="document.getElementById('modalImportDesign').style.display='none'">Cancel</button>
+                  <button class="mcp-btn-primary" id="btnCommitImport"
+                    style="display: none; background: var(--brand-action);">Commit Import →</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bulk Rename Modal (MD/figma-design-page-functional-map.md Cmd+R) -->
+            <div class="modal-overlay" id="modalBulkRename"
+              style="display: none; position: fixed; inset: 0; background: rgba(5,7,15,0.8); backdrop-filter: blur(6px); z-index: 9999; align-items: center; justify-content: center;">
+              <div
+                style="width: 440px; max-width: 90vw; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); overflow: hidden;">
+                <div
+                  style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface);">
+                  <span style="font-size: 14px; font-weight: 700; color: var(--text-main);">Rename Layers (⌘R)</span>
+                  <button class="menu-dropdown-btn-sm"
+                    onclick="document.getElementById('modalBulkRename').style.display='none'">✕</button>
+                </div>
+                <form id="formBulkRename" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+                  <div>
+                    <label
+                      style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Name
+                      Pattern (use $n for sequential numbers)</label>
+                    <input type="text" id="bulkRenamePattern" class="mcp-search-input"
+                      style="width: 100%; box-sizing: border-box;" placeholder="e.g. Card / $n or Row #$N"
+                      value="Card / $n" required />
+                  </div>
+                  <div>
+                    <label
+                      style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Find
+                      in Name (Optional)</label>
+                    <input type="text" id="bulkRenameFind" class="mcp-search-input"
+                      style="width: 100%; box-sizing: border-box;" placeholder="e.g. Rectangle" />
+                  </div>
+                  <div>
+                    <label
+                      style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Replace
+                      with (Optional)</label>
+                    <input type="text" id="bulkRenameReplace" class="mcp-search-input"
+                      style="width: 100%; box-sizing: border-box;" placeholder="e.g. Card Background" />
+                  </div>
+                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+                    <button type="button" class="mcp-btn-secondary"
+                      onclick="document.getElementById('modalBulkRename').style.display='none'">Cancel</button>
+                    <button type="submit" class="mcp-btn-primary">Rename Layers</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- Floating Interactive Onboarding Tour Callout Card (Section 15.2) -->
+            <div id="tourCalloutCard"
+              style="display: none; position: fixed; z-index: 10000; bottom: 80px; right: 380px; width: 340px; background: #1e293b; border: 1px solid #3b82f6; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); padding: 16px; color: #f8fafc;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <span id="tourStepTitle" style="font-size: 13px; font-weight: 700; color: #38bdf8;">1. Infinite
+                  Canvas</span>
+                <button id="btnCloseTour"
+                  style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px;">✕</button>
+              </div>
+              <p id="tourStepContent" style="font-size: 12px; line-height: 1.5; color: #cbd5e1; margin-bottom: 14px;">
+              </p>
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span id="tourStepCounter" style="font-size: 11px; color: #64748b;">Step 1 of 6</span>
+                <div style="display: flex; gap: 8px;">
+                  <button class="menu-dropdown-btn-sm" id="btnTourPrev" style="font-size: 11px;">Back</button>
+                  <button class="btn-primary" id="btnTourNext" style="font-size: 11px; padding: 4px 10px;">Next
+                    →</button>
+                </div>
+              </div>
+            </div>
+            <!-- Modals for Unified Design System (Sections 9, 10, 11, 12, 13, 17) -->
+
+            <!-- 1. AI Generate Tokens Guided Wizard (Section 9) -->
+            <div class="ds-modal-backdrop" id="modalAiGenerateTokens" style="display: none;">
+              <div class="ds-modal-box" style="max-width: 860px;">
+                <div class="ds-modal-header">
+                  <div class="ds-modal-title">
+                    <span style="color: #8b5cf6;">✨</span>
+                    <span>AI Generate Tokens Guided Wizard</span>
+                  </div>
+                  <button class="menu-dropdown-btn-sm" id="btnCloseModalAiTokens">✕</button>
+                </div>
+                <div class="ds-modal-body">
+                  <div id="aiTokensStep1">
+                    <div style="font-size: 13px; font-weight: 700; color: #f8fafc; margin-bottom: 12px;">Step 1: System
+                      Context & Brand Parameters</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+                      <div>
+                        <label
+                          style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">System
+                          Name</label>
+                        <input type="text" id="aiTokensSystemName" class="mcp-search-input"
+                          style="width: 100%; box-sizing: border-box;" value="Fintech Experience Design System">
+                      </div>
+                      <div>
+                        <label
+                          style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Brand
+                          Name (Optional)</label>
+                        <input type="text" id="aiTokensBrandName" class="mcp-search-input"
+                          style="width: 100%; box-sizing: border-box;" value="NovaBank">
+                      </div>
+                      <div>
+                        <label
+                          style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Industry
+                          / Use Case</label>
+                        <select id="aiTokensIndustry" class="mcp-search-input"
+                          style="width: 100%; box-sizing: border-box;">
+                          <option value="fintech" selected>Fintech & Banking</option>
+                          <option value="saas">B2B SaaS</option>
+                          <option value="ecommerce">E-Commerce & Retail</option>
+                          <option value="enterprise">Enterprise Systems</option>
+                          <option value="healthcare">Healthcare</option>
+                          <option value="technical">Developer & Technical Tools</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label
+                          style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Design
+                          Direction</label>
+                        <select id="aiTokensDirection" class="mcp-search-input"
+                          style="width: 100%; box-sizing: border-box;">
+                          <option value="minimal" selected>Minimal & Modern</option>
+                          <option value="corporate">Corporate & Structured</option>
+                          <option value="expressive">Expressive & High-Impact</option>
+                          <option value="playful">Playful & Friendly</option>
+                          <option value="luxury">Luxury & Editorial</option>
+                          <option value="technical">Technical & Dense</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                      <label
+                        style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Primary
+                        Brand Color</label>
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="color" id="aiTokensBrandColorPicker" value="#2563eb"
+                          style="width: 36px; height: 36px; border-radius: 6px; border: 1px solid #334155; cursor: pointer; background: transparent;">
+                        <input type="text" id="aiTokensBrandColorHex" class="mcp-search-input" style="width: 120px;"
+                          value="#2563eb">
+                        <span style="font-size: 11px; color: #64748b;">Seed for primary, secondary, and neutral
+                          scales</span>
+                      </div>
+                    </div>
+
+                    <div style="font-size: 13px; font-weight: 700; color: #f8fafc; margin-bottom: 8px;">Step 2: Token
+                      Categories to Generate</div>
+                    <div class="ds-category-grid" id="aiTokensCategoryGrid">
+                      <label class="ds-category-card selected"><input type="checkbox" value="color" checked> 🎨 Color &
+                        Palettes</label>
+                      <label class="ds-category-card selected"><input type="checkbox" value="typography" checked> 🔤
+                        Typography & Scales</label>
+                      <label class="ds-category-card selected"><input type="checkbox" value="spacing" checked> 📏
+                        Spacing & Density</label>
+                      <label class="ds-category-card selected"><input type="checkbox" value="sizing" checked> 📐 Sizing
+                        & Containers</label>
+                      <label class="ds-category-card selected"><input type="checkbox" value="borders" checked> 🔲
+                        Borders & Radii</label>
+                      <label class="ds-category-card selected"><input type="checkbox" value="shadows" checked> 🌓
+                        Shadows & Elevation</label>
+                      <label class="ds-category-card selected"><input type="checkbox" value="motion" checked> ⚡ Motion &
+                        Easing</label>
+                      <label class="ds-category-card selected"><input type="checkbox" value="opacity" checked> 👁
+                        Opacity & Effects</label>
+                      <label class="ds-category-card selected"><input type="checkbox" value="zindex" checked> 📚 Z-Index
+                        Layering</label>
+                      <label class="ds-category-card selected"><input type="checkbox" value="dataviz" checked> 📊 Data
+                        Visualization</label>
+                      <label class="ds-category-card selected"><input type="checkbox" value="accessibility" checked> ♿
+                        Accessibility & Focus</label>
+                    </div>
+                  </div>
+
+                  <!-- Proposal Review Step -->
+                  <div id="aiTokensStep2" style="display: none;">
+                    <div
+                      style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                      <div>
+                        <span style="font-size: 13px; font-weight: 700; color: #f8fafc;">Step 3: Review Structured
+                          Proposals</span>
+                        <p style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Review, edit, or reject tokens
+                          before committing. Published tokens will not be silently overwritten.</p>
+                      </div>
+                      <div style="display: flex; gap: 8px;">
+                        <button class="menu-dropdown-btn-sm" id="btnAiTokensSelectAll">Select All</button>
+                        <button class="menu-dropdown-btn-sm" id="btnAiTokensDeselectAll">Deselect All</button>
+                      </div>
+                    </div>
+                    <div style="max-height: 380px; overflow-y: auto; border: 1px solid #334155; border-radius: 8px;">
+                      <table class="ds-proposal-table" id="aiTokensProposalsTable">
+                        <thead>
+                          <tr>
+                            <th style="width: 32px;"><input type="checkbox" id="aiTokensCheckAll" checked></th>
+                            <th>Token Name</th>
+                            <th>Category</th>
+                            <th>Type</th>
+                            <th>Value / Mapping</th>
+                            <th>Action</th>
+                            <th>Reason</th>
+                          </tr>
+                        </thead>
+                        <tbody id="aiTokensProposalsBody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+                <div class="ds-modal-footer">
+                  <button class="ds-action-btn" id="btnAiTokensBack" style="display: none;">← Back</button>
+                  <button class="ds-action-btn" id="btnAiTokensCancel">Cancel</button>
+                  <button class="ds-action-btn ai" id="btnAiTokensGenerate">⚡ Generate Proposals</button>
+                  <button class="ds-action-btn primary" id="btnAiTokensCommit" style="display: none;">✓ Commit Approved
+                    Tokens</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Responsive Token Adaptations Modal (Section 10) -->
+            <div class="ds-modal-backdrop" id="modalResponsiveTokens" style="display: none;">
+              <div class="ds-modal-box" style="max-width: 800px;">
+                <div class="ds-modal-header">
+                  <div class="ds-modal-title">
+                    <span style="color: #38bdf8;">📱</span>
+                    <span>Responsive Token Adaptation Engine</span>
+                  </div>
+                  <button class="menu-dropdown-btn-sm" id="btnCloseModalResponsive">✕</button>
+                </div>
+                <div class="ds-modal-body">
+                  <p style="font-size: 12px; color: #94a3b8; margin-bottom: 16px;">
+                    Derive tablet (max-width: 1024px) and mobile (max-width: 767px) token overrides from the desktop
+                    source collection. Preserves base desktop values while generating standard responsive CSS media
+                    queries.
+                  </p>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+                    <div>
+                      <label
+                        style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Target
+                        Viewport Adaptations</label>
+                      <select id="responsiveTargetsSelect" class="mcp-search-input"
+                        style="width: 100%; box-sizing: border-box;">
+                        <option value="both" selected>Both Tablet & Mobile</option>
+                        <option value="tablet">Tablet Only (768px - 1024px)</option>
+                        <option value="mobile">Mobile Only (≤767px)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Categories
+                        to Adapt</label>
+                      <div style="display: flex; gap: 10px; margin-top: 6px;">
+                        <label style="font-size: 11px; color: #cbd5e1;"><input type="checkbox" id="respCatSpacing"
+                            checked> Spacing</label>
+                        <label style="font-size: 11px; color: #cbd5e1;"><input type="checkbox" id="respCatTypography"
+                            checked> Typography</label>
+                        <label style="font-size: 11px; color: #cbd5e1;"><input type="checkbox" id="respCatSizing"
+                            checked> Sizing</label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div id="responsivePreviewContainer" style="display: none; margin-top: 16px;">
+                    <div style="font-size: 12px; font-weight: 700; color: #f8fafc; margin-bottom: 8px;">Generated
+                      Responsive CSS Media Queries</div>
+                    <pre id="responsiveCssOutput"
+                      style="background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #38bdf8; max-height: 200px; overflow-y: auto;"></pre>
+                  </div>
+                </div>
+                <div class="ds-modal-footer">
+                  <button class="ds-action-btn" id="btnCancelResponsive">Cancel</button>
+                  <button class="ds-action-btn" id="btnGenerateResponsive">Generate Adaptations</button>
+                  <button class="ds-action-btn primary" id="btnCommitResponsive" style="display: none;">Commit
+                    Responsive Overrides</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Component Variable Extraction Modal (Section 11) -->
+            <div class="ds-modal-backdrop" id="modalComponentVariables" style="display: none;">
+              <div class="ds-modal-box" style="max-width: 760px;">
+                <div class="ds-modal-header">
+                  <div class="ds-modal-title">
+                    <span style="color: #10b981;">🔤</span>
+                    <span>Explicit AI Variable Extraction (Component-Level)</span>
+                  </div>
+                  <button class="menu-dropdown-btn-sm" id="btnCloseModalCompVars">✕</button>
+                </div>
+                <div class="ds-modal-body">
+                  <p style="font-size: 12px; color: #94a3b8; margin-bottom: 14px;">
+                    Inspects the selected component or layer properties, identifying reusable values, and maps them to
+                    existing design tokens or proposes new variables. Appearance is strictly preserved.
+                  </p>
+                  <div id="compVarsSelectionInfo"
+                    style="font-size: 12px; font-weight: 600; color: #38bdf8; margin-bottom: 12px;"></div>
+                  <div style="max-height: 320px; overflow-y: auto; border: 1px solid #334155; border-radius: 8px;">
+                    <table class="ds-proposal-table" id="compVarsTable">
+                      <thead>
+                        <tr>
+                          <th style="width: 32px;"><input type="checkbox" id="compVarsCheckAll" checked></th>
+                          <th>Property</th>
+                          <th>Raw Value</th>
+                          <th>Proposed Variable / Token</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="compVarsBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="ds-modal-footer">
+                  <button class="ds-action-btn" id="btnCancelCompVars">Cancel</button>
+                  <button class="ds-action-btn primary" id="btnCommitCompVars">Bind Approved Variables</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Import React / DTCG System Modal (Section 13) -->
+            <div class="ds-modal-backdrop" id="modalImportReactSystem" style="display: none;">
+              <div class="ds-modal-box" style="max-width: 800px;">
+                <div class="ds-modal-header">
+                  <div class="ds-modal-title">
+                    <span style="color: #c084fc;">📥</span>
+                    <span>Import React & DTCG Design System</span>
+                  </div>
+                  <button class="menu-dropdown-btn-sm" id="btnCloseModalImportReact">✕</button>
+                </div>
+                <div class="ds-modal-body">
+                  <p style="font-size: 12px; color: #94a3b8; margin-bottom: 14px;">
+                    Parse W3C DTCG Token JSON, Tailwind configurations, or React component sources via static analysis
+                    in a safe sandboxed environment.
+                  </p>
+                  <div style="margin-bottom: 14px;">
+                    <label
+                      style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Paste
+                      Token JSON / Tailwind Config / React Component Code</label>
+                    <textarea id="importReactSourceInput" class="mcp-search-input"
+                      style="width: 100%; height: 160px; font-family: 'JetBrains Mono', monospace; font-size: 11px; box-sizing: border-box; resize: vertical;"
+                      placeholder='e.g. DTCG JSON:
 {
   "color": {
     "brand": {
@@ -1399,174 +1658,221 @@
     }
   }
 }'></textarea>
-          </div>
-          <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px;">
-            <button class="ds-action-btn" id="btnAnalyzeImportSource">🔍 Analyze & Inspect Structure</button>
-            <span id="importAnalysisStatus" style="font-size: 11px; color: #64748b;">Waiting for input...</span>
-          </div>
+                  </div>
+                  <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px;">
+                    <button class="ds-action-btn" id="btnAnalyzeImportSource">🔍 Analyze & Inspect Structure</button>
+                    <span id="importAnalysisStatus" style="font-size: 11px; color: #64748b;">Waiting for input...</span>
+                  </div>
 
-          <div id="importReportBox" style="display: none; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 14px;">
-            <div style="font-size: 12px; font-weight: 700; color: #f8fafc; margin-bottom: 6px;">Import Compatibility Report</div>
-            <div id="importReportSummary" style="font-size: 11px; color: #cbd5e1; line-height: 1.5;"></div>
-          </div>
-        </div>
-        <div class="ds-modal-footer">
-          <button class="ds-action-btn" id="btnCancelImportReact">Cancel</button>
-          <button class="ds-action-btn primary" id="btnCommitImportReact" style="display: none;">Commit Import to Registry</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 5. Create Design System From Scratch (Section 12) -->
-    <div class="ds-modal-backdrop" id="modalCreateDesignSystem" style="display: none;">
-      <div class="ds-modal-box" style="max-width: 640px;">
-        <div class="ds-modal-header">
-          <div class="ds-modal-title">
-            <span style="color: #0d99ff;">➕</span>
-            <span>Create Design System from Scratch</span>
-          </div>
-          <button class="menu-dropdown-btn-sm" id="btnCloseModalCreateDs">✕</button>
-        </div>
-        <div class="ds-modal-body">
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">System Name</label>
-            <input type="text" id="createDsName" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" value="Enterprise Cloud Design System">
-          </div>
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Description</label>
-            <input type="text" id="createDsDesc" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" value="Comprehensive token system and component library for cloud services">
-          </div>
-          <div>
-            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Choose Foundation Starter</label>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-              <label class="ds-category-card selected"><input type="radio" name="dsStarterRadio" value="minimal" checked> Minimal Modern</label>
-              <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="enterprise"> Enterprise SaaS</label>
-              <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="fintech"> Fintech High-Trust</label>
-              <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="ecommerce"> E-Commerce Vibrant</label>
-              <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="blank"> Blank System</label>
+                  <div id="importReportBox"
+                    style="display: none; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 14px;">
+                    <div style="font-size: 12px; font-weight: 700; color: #f8fafc; margin-bottom: 6px;">Import
+                      Compatibility Report</div>
+                    <div id="importReportSummary" style="font-size: 11px; color: #cbd5e1; line-height: 1.5;"></div>
+                  </div>
+                </div>
+                <div class="ds-modal-footer">
+                  <button class="ds-action-btn" id="btnCancelImportReact">Cancel</button>
+                  <button class="ds-action-btn primary" id="btnCommitImportReact" style="display: none;">Commit Import
+                    to Registry</button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div class="ds-modal-footer">
-          <button class="ds-action-btn" id="btnCancelCreateDs">Cancel</button>
-          <button class="ds-action-btn primary" id="btnConfirmCreateDs">Create Design System</button>
-        </div>
-      </div>
-    </div>
 
-    <!-- 6. Publish Library Release Modal (Section 17) -->
-    <div class="ds-modal-backdrop" id="modalPublishLibrary" style="display: none;">
-      <div class="ds-modal-box" style="max-width: 580px;">
-        <div class="ds-modal-header">
-          <div class="ds-modal-title">
-            <span style="color: #0d99ff;">🚀</span>
-            <span>Publish Design System Release</span>
-          </div>
-          <button class="menu-dropdown-btn-sm" id="btnCloseModalPublish">✕</button>
-        </div>
-        <div class="ds-modal-body">
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Release Version</label>
-            <input type="text" id="publishDsVersion" class="mcp-search-input" style="width: 100%; box-sizing: border-box;" value="1.1.0">
-          </div>
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Release Notes / Changelog</label>
-            <textarea id="publishDsChangelog" class="mcp-search-input" style="width: 100%; height: 80px; box-sizing: border-box; font-size: 12px; resize: vertical;">Added responsive token adaptations and component-level variable bindings.</textarea>
-          </div>
-          <div id="publishValidationStatus" style="font-size: 11px; padding: 10px; border-radius: 6px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #34d399;">
-            ✓ All tokens and variable references validated. Zero dangling dependencies.
-          </div>
-        </div>
-        <div class="ds-modal-footer">
-          <button class="ds-action-btn" id="btnCancelPublish">Cancel</button>
-          <button class="ds-action-btn primary" id="btnConfirmPublish">Publish Release</button>
-        </div>
-      </div>
-    </div>
+            <!-- 5. Create Design System From Scratch (Section 12) -->
+            <div class="ds-modal-backdrop" id="modalCreateDesignSystem" style="display: none;">
+              <div class="ds-modal-box" style="max-width: 640px;">
+                <div class="ds-modal-header">
+                  <div class="ds-modal-title">
+                    <span style="color: #0d99ff;">➕</span>
+                    <span>Create Design System from Scratch</span>
+                  </div>
+                  <button class="menu-dropdown-btn-sm" id="btnCloseModalCreateDs">✕</button>
+                </div>
+                <div class="ds-modal-body">
+                  <div style="margin-bottom: 14px;">
+                    <label
+                      style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">System
+                      Name</label>
+                    <input type="text" id="createDsName" class="mcp-search-input"
+                      style="width: 100%; box-sizing: border-box;" value="Enterprise Cloud Design System">
+                  </div>
+                  <div style="margin-bottom: 14px;">
+                    <label
+                      style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Description</label>
+                    <input type="text" id="createDsDesc" class="mcp-search-input"
+                      style="width: 100%; box-sizing: border-box;"
+                      value="Comprehensive token system and component library for cloud services">
+                  </div>
+                  <div>
+                    <label
+                      style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Choose
+                      Foundation Starter</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                      <label class="ds-category-card selected"><input type="radio" name="dsStarterRadio" value="minimal"
+                          checked> Minimal Modern</label>
+                      <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="enterprise">
+                        Enterprise SaaS</label>
+                      <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="fintech"> Fintech
+                        High-Trust</label>
+                      <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="ecommerce">
+                        E-Commerce Vibrant</label>
+                      <label class="ds-category-card"><input type="radio" name="dsStarterRadio" value="blank"> Blank
+                        System</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="ds-modal-footer">
+                  <button class="ds-action-btn" id="btnCancelCreateDs">Cancel</button>
+                  <button class="ds-action-btn primary" id="btnConfirmCreateDs">Create Design System</button>
+                </div>
+              </div>
+            </div>
 
-    <!-- 7. Mobile Live Preview QR Code Modal (Blueprint Section 11) -->
-    <div class="modal-backdrop" id="modalMobilePreviewQr" style="display: none; align-items: center; justify-content: center; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);">
-      <div class="modal-window" style="width: 440px; padding: 24px; background: var(--surface-raised); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: 0 20px 50px rgba(0,0,0,0.7);">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-          <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-            <span>📱</span>
-            <span>Mobile Live Preview</span>
-          </div>
-          <button class="btn-icon-xs" id="btnCloseMobilePreviewQr">✕</button>
-        </div>
-        <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
-          Scan with your phone's camera to run this prototype live in your mobile browser with native gestures, touch ripple, and safe-area presets.
-        </p>
-        <div id="modalQrSvgContainer" style="display: flex; justify-content: center; align-items: center; padding: 16px; background: #ffffff; border-radius: 12px; margin-bottom: 14px;"></div>
-        <div id="modalQrUrlText" style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); word-break: break-all; margin-bottom: 16px; text-align: center;"></div>
-        <div style="display: flex; justify-content: flex-end; gap: 10px;">
-          <button class="menu-dropdown-btn" id="btnCopyMobilePreviewLink" style="font-size: 12px;">Copy Link</button>
-          <button class="btn-primary" id="btnOpenMobilePreviewInTab" style="font-size: 12px; background: var(--brand-action);">Open in New Tab</button>
-        </div>
-      </div>
-    </div>
+            <!-- 6. Publish Library Release Modal (Section 17) -->
+            <div class="ds-modal-backdrop" id="modalPublishLibrary" style="display: none;">
+              <div class="ds-modal-box" style="max-width: 580px;">
+                <div class="ds-modal-header">
+                  <div class="ds-modal-title">
+                    <span style="color: #0d99ff;">🚀</span>
+                    <span>Publish Design System Release</span>
+                  </div>
+                  <button class="menu-dropdown-btn-sm" id="btnCloseModalPublish">✕</button>
+                </div>
+                <div class="ds-modal-body">
+                  <div style="margin-bottom: 14px;">
+                    <label
+                      style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Release
+                      Version</label>
+                    <input type="text" id="publishDsVersion" class="mcp-search-input"
+                      style="width: 100%; box-sizing: border-box;" value="1.1.0">
+                  </div>
+                  <div style="margin-bottom: 14px;">
+                    <label
+                      style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px;">Release
+                      Notes / Changelog</label>
+                    <textarea id="publishDsChangelog" class="mcp-search-input"
+                      style="width: 100%; height: 80px; box-sizing: border-box; font-size: 12px; resize: vertical;">Added responsive token adaptations and component-level variable bindings.</textarea>
+                  </div>
+                  <div id="publishValidationStatus"
+                    style="font-size: 11px; padding: 10px; border-radius: 6px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #34d399;">
+                    ✓ All tokens and variable references validated. Zero dangling dependencies.
+                  </div>
+                </div>
+                <div class="ds-modal-footer">
+                  <button class="ds-action-btn" id="btnCancelPublish">Cancel</button>
+                  <button class="ds-action-btn primary" id="btnConfirmPublish">Publish Release</button>
+                </div>
+              </div>
+            </div>
 
-    <!-- 8. Figma Universal Prompt Modal (Web Figma Experience) -->
-    <div class="figma-modal-backdrop" id="figmaPromptModal">
-      <div class="figma-prompt-dialog" role="dialog" aria-modal="true">
-        <div class="figma-prompt-header">
-          <div class="figma-prompt-title-row">
-            <div class="figma-prompt-icon-badge" id="figmaPromptIcon">✏️</div>
-            <div class="figma-prompt-title" id="figmaPromptTitle">Input Required</div>
-          </div>
-          <button class="figma-prompt-close" id="btnFigmaPromptClose" title="Cancel (Esc)">✕</button>
-        </div>
-        <div class="figma-prompt-body">
-          <div class="figma-prompt-subtitle" id="figmaPromptSubtitle">Please enter a value:</div>
-          <div class="figma-prompt-input-container">
-            <input type="text" class="figma-prompt-input" id="figmaPromptTextInput" style="display: block;" autocomplete="off" />
-            <textarea class="figma-prompt-textarea" id="figmaPromptTextArea" style="display: none;"></textarea>
-            <div class="figma-prompt-error" id="figmaPromptError"></div>
-          </div>
-          <div class="figma-prompt-presets" id="figmaPromptPresetsContainer" style="display: none;">
-            <span class="figma-preset-label">Presets:</span>
-            <div id="figmaPromptPresetsList" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
-          </div>
-        </div>
-        <div class="figma-prompt-footer">
-          <button class="figma-btn-cancel" id="btnFigmaPromptCancel">Cancel</button>
-          <button class="figma-btn-primary" id="btnFigmaPromptConfirm">
-            <span id="figmaPromptConfirmIcon">✓</span>
-            <span id="figmaPromptConfirmLabel">Apply</span>
-          </button>
-        </div>
-      </div>
-    </div>
+            <!-- 7. Mobile Live Preview QR Code Modal (Blueprint Section 11) -->
+            <div class="modal-backdrop" id="modalMobilePreviewQr"
+              style="display: none; align-items: center; justify-content: center; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);">
+              <div class="modal-window"
+                style="width: 440px; padding: 24px; background: var(--surface-raised); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: 0 20px 50px rgba(0,0,0,0.7);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                  <div
+                    style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                    <span>📱</span>
+                    <span>Mobile Live Preview</span>
+                  </div>
+                  <button class="btn-icon-xs" id="btnCloseMobilePreviewQr">✕</button>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
+                  Scan with your phone's camera to run this prototype live in your mobile browser with native gestures,
+                  touch ripple, and safe-area presets.
+                </p>
+                <div id="modalQrSvgContainer"
+                  style="display: flex; justify-content: center; align-items: center; padding: 16px; background: #ffffff; border-radius: 12px; margin-bottom: 14px;">
+                </div>
+                <div id="modalQrUrlText"
+                  style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); word-break: break-all; margin-bottom: 16px; text-align: center;">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                  <button class="menu-dropdown-btn" id="btnCopyMobilePreviewLink" style="font-size: 12px;">Copy
+                    Link</button>
+                  <button class="btn-primary" id="btnOpenMobilePreviewInTab"
+                    style="font-size: 12px; background: var(--brand-action);">Open in New Tab</button>
+                </div>
+              </div>
+            </div>
 
-    <!-- 9. Figma AI Floating Prompt Bar (Figma First Draft & Canvas AI) -->
-    <div class="figma-ai-floating-bar" id="figmaAiFloatingBar">
-      <div class="figma-ai-bar-top">
-        <div class="figma-ai-spark-badge">✦</div>
-        <input type="text" class="figma-ai-bar-input" id="figmaAiBarInput" placeholder="Prompt Figma AI to generate or modify designs... (e.g. 'Build a crypto landing page hero')" autocomplete="off" />
-        <div class="figma-ai-bar-actions">
-          <span class="figma-ai-model-pill">🦙 Llama 3.1 Local</span>
-          <button class="figma-btn-primary" id="btnFigmaAiSubmit" style="padding: 6px 14px; font-size: 11px;">
-            <span>⚡ Generate</span>
-          </button>
-          <button class="figma-prompt-close" id="btnFigmaAiClose" title="Close (Esc)">✕</button>
-        </div>
-      </div>
-      <div class="figma-ai-bar-bottom">
-        <div class="figma-ai-presets-row">
-          <span class="figma-preset-label">Ideas:</span>
-          <button class="figma-ai-chip" data-ai-preset="Create modern SaaS pricing table with 3 tiered plans (Starter, Pro, Enterprise) and feature checkmarks">💳 SaaS Pricing Table</button>
-          <button class="figma-ai-chip" data-ai-preset="Create mobile fintech wallet screen with balance card, send/receive action buttons, and recent transactions list">📱 Mobile Wallet</button>
-          <button class="figma-ai-chip" data-ai-preset="Create analytics KPI metrics dashboard with 4 stats cards, progress bars, and high-trust status pills">📊 KPI Dashboard</button>
-          <button class="figma-ai-chip" data-ai-preset="Create user sign-in and registration card with email input, password field, social login buttons, and primary action">🔐 Auth & Sign-In</button>
-          <button class="figma-ai-chip" data-ai-preset="Create e-commerce product showcase card with badge, rating stars, price tag, and add-to-cart button">🛒 Product Card</button>
-        </div>
-      </div>
-    </div>
+            <!-- 8. Figma Universal Prompt Modal (Web Figma Experience) -->
+            <div class="figma-modal-backdrop" id="figmaPromptModal">
+              <div class="figma-prompt-dialog" role="dialog" aria-modal="true">
+                <div class="figma-prompt-header">
+                  <div class="figma-prompt-title-row">
+                    <div class="figma-prompt-icon-badge" id="figmaPromptIcon">✏️</div>
+                    <div class="figma-prompt-title" id="figmaPromptTitle">Input Required</div>
+                  </div>
+                  <button class="figma-prompt-close" id="btnFigmaPromptClose" title="Cancel (Esc)">✕</button>
+                </div>
+                <div class="figma-prompt-body">
+                  <div class="figma-prompt-subtitle" id="figmaPromptSubtitle">Please enter a value:</div>
+                  <div class="figma-prompt-input-container">
+                    <input type="text" class="figma-prompt-input" id="figmaPromptTextInput" style="display: block;"
+                      autocomplete="off" />
+                    <textarea class="figma-prompt-textarea" id="figmaPromptTextArea" style="display: none;"></textarea>
+                    <div class="figma-prompt-error" id="figmaPromptError"></div>
+                  </div>
+                  <div class="figma-prompt-presets" id="figmaPromptPresetsContainer" style="display: none;">
+                    <span class="figma-preset-label">Presets:</span>
+                    <div id="figmaPromptPresetsList" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+                  </div>
+                </div>
+                <div class="figma-prompt-footer">
+                  <button class="figma-btn-cancel" id="btnFigmaPromptCancel">Cancel</button>
+                  <button class="figma-btn-primary" id="btnFigmaPromptConfirm">
+                    <span id="figmaPromptConfirmIcon">✓</span>
+                    <span id="figmaPromptConfirmLabel">Apply</span>
+                  </button>
+                </div>
+              </div>
+            </div>
 
-    <!-- 10. Figma Toast Notification Container -->
-    <div class="figma-toast-container" id="figmaToastContainer"></div>
-  </div>
+            <!-- 9. Figma AI Floating Prompt Bar (Figma First Draft & Canvas AI) -->
+            <div class="figma-ai-floating-bar" id="figmaAiFloatingBar">
+              <div class="figma-ai-bar-top">
+                <div class="figma-ai-spark-badge">✦</div>
+                <input type="text" class="figma-ai-bar-input" id="figmaAiBarInput"
+                  placeholder="Prompt Figma AI to generate or modify designs... (e.g. 'Build a crypto landing page hero')"
+                  autocomplete="off" />
+                <div class="figma-ai-bar-actions">
+                  <span class="figma-ai-model-pill">🦙 Llama 3.1 Local</span>
+                  <button class="figma-btn-primary" id="btnFigmaAiSubmit" style="padding: 6px 14px; font-size: 11px;">
+                    <span>⚡ Generate</span>
+                  </button>
+                  <button class="figma-prompt-close" id="btnFigmaAiClose" title="Close (Esc)">✕</button>
+                </div>
+              </div>
+              <div class="figma-ai-bar-bottom">
+                <div class="figma-ai-presets-row">
+                  <span class="figma-preset-label">Ideas:</span>
+                  <button class="figma-ai-chip"
+                    data-ai-preset="Create modern SaaS pricing table with 3 tiered plans (Starter, Pro, Enterprise) and feature checkmarks">💳
+                    SaaS Pricing Table</button>
+                  <button class="figma-ai-chip"
+                    data-ai-preset="Create mobile fintech wallet screen with balance card, send/receive action buttons, and recent transactions list">📱
+                    Mobile Wallet</button>
+                  <button class="figma-ai-chip"
+                    data-ai-preset="Create analytics KPI metrics dashboard with 4 stats cards, progress bars, and high-trust status pills">📊
+                    KPI Dashboard</button>
+                  <button class="figma-ai-chip"
+                    data-ai-preset="Create user sign-in and registration card with email input, password field, social login buttons, and primary action">🔐
+                    Auth & Sign-In</button>
+                  <button class="figma-ai-chip"
+                    data-ai-preset="Create e-commerce product showcase card with badge, rating stars, price tag, and add-to-cart button">🛒
+                    Product Card</button>
+                </div>
+              </div>
+            </div>
 
-  <script type="module" src="src/app.js"></script>
+            <!-- 10. Figma Toast Notification Container -->
+            <div class="figma-toast-container" id="figmaToastContainer"></div>
+        </div>
+
+        <script type="module" src="src/app.js"></script>
 </body>
+
 </html>
