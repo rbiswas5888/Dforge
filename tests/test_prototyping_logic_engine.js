@@ -139,8 +139,25 @@ async function runPrototypingEngineVerificationSuite() {
           id: 'frame',
           type: 'frame',
           name: 'Screen',
+          childIds: ['first', 'second'],
+          layout: { mode: 'stack-vertical', gap: 8 },
+          transform: { x: 10, y: 20, width: 375, height: 812 }
+        },
+        first: {
+          id: 'first',
+          type: 'frame',
+          name: 'First',
+          parentId: 'frame',
           childIds: [],
-          transform: { width: 375, height: 812 }
+          transform: { x: 0, y: 0, width: 100, height: 20 }
+        },
+        second: {
+          id: 'second',
+          type: 'frame',
+          name: 'Second',
+          parentId: 'frame',
+          childIds: [],
+          transform: { x: 0, y: 0, width: 100, height: 10 }
         }
       }
     }]
@@ -149,7 +166,26 @@ async function runPrototypingEngineVerificationSuite() {
     prototypeHtml.includes('id="activeDeviceBezel" style="width: 100%; height: 100%; border: 0;'),
     'Prototype player viewport should fit its iframe so screen interactions remain reachable'
   );
-  console.log('   ✓ Prototype player viewport scales to its iframe.');
+  const serializedPrototype = JSON.parse(
+    prototypeHtml.match(/window\.__DFORGE_DOC__ = (.+);/)?.[1] || 'null'
+  );
+  assert(
+    serializedPrototype.pages[0].prototypeBounds.second.y === 48,
+    'Prototype layer positions should include parent auto-layout spacing'
+  );
+  assert(
+    prototypeHtml.includes("element.style.whiteSpace = 'pre';"),
+    'Prototype text should preserve explicit line breaks without adding canvas-inconsistent wrapping'
+  );
+  assert(
+    prototypeHtml.includes('@media (max-width: 480px)'),
+    'Prototype player toolbar should remain usable at mobile viewport widths'
+  );
+  assert(
+    prototypeHtml.includes('<meta name="viewport" content="width=device-width, initial-scale=1.0">'),
+    'Prototype iframe should use its actual device width for responsive media queries'
+  );
+  console.log('   ✓ Prototype layout, text wrapping, and responsive toolbar are preserved.');
 
   engine.setFlowStartingPoints([
     { id: 'flow_onboarding', name: 'User Onboarding Flow', startingFrameId: 'screen_home' },

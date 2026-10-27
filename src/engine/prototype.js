@@ -70,16 +70,18 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     return cssColor(fill.color, '#334155');
   }
 
-  function mountNode(node, parentElement) {
+  function mountNode(node, parentElement, parentNodeId) {
     if (!node || node.visible === false || !node.transform) return;
     const element = document.createElement('div');
     const transform = node.transform;
     const style = node.style || {};
+    const bounds = page.prototypeBounds && page.prototypeBounds[node.id];
+    const parentBounds = page.prototypeBounds && page.prototypeBounds[parentNodeId];
     const stroke = (style.strokes || []).find(item => item.visible !== false);
     element.className = 'prototype-node prototype-' + node.type;
     element.dataset.nodeId = node.id;
-    element.style.left = (transform.x || 0) + 'px';
-    element.style.top = (transform.y || 0) + 'px';
+    element.style.left = (bounds && parentBounds ? bounds.x - parentBounds.x : transform.x || 0) + 'px';
+    element.style.top = (bounds && parentBounds ? bounds.y - parentBounds.y : transform.y || 0) + 'px';
     element.style.width = Math.max(0, transform.width || 0) + 'px';
     element.style.height = Math.max(0, transform.height || 0) + 'px';
     element.style.opacity = String(node.opacity == null ? 1 : node.opacity);
@@ -108,15 +110,16 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
       element.style.fontSize = (text.fontSize || 16) + 'px';
       element.style.fontWeight = text.fontWeight || '400';
       element.style.textAlign = text.textAlign || 'left';
-      element.style.whiteSpace = 'pre-wrap';
-      element.style.lineHeight = '1.2';
+      element.style.whiteSpace = 'pre';
+      element.style.lineHeight = String(text.lineHeight || 1.3);
+      element.style.letterSpacing = (text.letterSpacing || 0) + 'px';
     }
     if (node.type === 'frame') {
       element.style.overflow = node.clipContent === false ? 'visible' : 'hidden';
     }
     parentElement.appendChild(element);
     for (const childId of node.childIds || []) {
-      mountNode(page.nodes[childId], element);
+      mountNode(page.nodes[childId], element, node.id);
     }
     const interactions = node.interactions || [];
     for (const interaction of interactions) {
@@ -147,7 +150,7 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     frameElement.style.color = '#f8fafc';
     frameElement.style.transformOrigin = 'top center';
     frameElement.dataset.frameId = frame.id;
-    for (const childId of frame.childIds || []) mountNode(page.nodes[childId], frameElement);
+    for (const childId of frame.childIds || []) mountNode(page.nodes[childId], frameElement, frame.id);
     screen.appendChild(frameElement);
     if (flowLabel) flowLabel.textContent = 'Flow: ' + (frame.name || 'Prototype');
     fitFrame(frameElement);
@@ -177,7 +180,7 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     overlayFrame.style.background = fillStyle(frame);
     overlayFrame.style.overflow = frame.clipContent === false ? 'visible' : 'hidden';
     overlayFrame.addEventListener('click', event => event.stopPropagation());
-    for (const childId of frame.childIds || []) mountNode(page.nodes[childId], overlayFrame);
+    for (const childId of frame.childIds || []) mountNode(page.nodes[childId], overlayFrame, frame.id);
     backdrop.appendChild(overlayFrame);
     screen.appendChild(backdrop);
     overlays.push(backdrop);
@@ -1070,6 +1073,16 @@ export class PrototypeEngine {
     const page = this.doc.pages?.[0];
     if (!page) return '<div>No active design document found.</div>';
 
+    const prototypePages = (this.doc.pages || []).map(sourcePage => {
+      const boundsCache = new Map();
+      const prototypeBounds = Object.fromEntries(
+        Object.keys(sourcePage.nodes || {}).map(nodeId => [
+          nodeId,
+          computeWorldBounds(sourcePage, nodeId, boundsCache)
+        ])
+      );
+      return { ...sourcePage, prototypeBounds };
+    });
     const frames = (page.rootIds || [])
       .map(rid => page.nodes[rid])
       .filter(n => n && n.type === 'frame');
@@ -1078,7 +1091,7 @@ export class PrototypeEngine {
 
     const docDataJson = JSON.stringify({
       name: this.doc.name,
-      pages: this.doc.pages,
+      pages: prototypePages,
       components: this.doc.components || [],
       variables: this.doc.variables || [],
       tokens: this.doc.tokens || [],
@@ -1089,6 +1102,7 @@ export class PrototypeEngine {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${this.escapeHtml(this.doc.name)} — Prototype Presentation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1145,6 +1159,31 @@ export class PrototypeEngine {
     .btn-player:hover {
       background: #334155;
       border-color: #0d99ff;
+    }
+    @media (max-width: 480px) {
+      #playerToolbar {
+        padding: 0 8px;
+        gap: 8px;
+      }
+      #playerToolbar .tool-group {
+        min-width: 0;
+        gap: 6px;
+      }
+      #playerToolbar .tool-group:first-child {
+        flex: 1;
+      }
+      #playerToolbar .tool-group:first-child > span:first-child {
+        font-size: 11px !important;
+        white-space: nowrap;
+      }
+      #activeFlowLabel {
+        display: none;
+      }
+      #btnRestart {
+        font-size: 10px;
+        padding: 4px 6px;
+        white-space: nowrap;
+      }
     }
     #viewportWrapper {
       flex: 1;
