@@ -55,12 +55,24 @@ import {
 } from './engine/design_system/index.js';
 import { generateQRCodeSVG } from './editor-core/qr-code.js';
 import { ColorPickerPopover } from './editor-core/color-picker.js';
+import { WorkspaceStore } from './engine/workspace_store.js';
 
 export class DesignForgeApp {
   constructor() {
     this.storage = new StorageEngine();
     const savedDoc = this.storage.loadAutosave();
     this.doc = savedDoc || createInitialDocument('ForgePay AI — Treasury Platform');
+    this.workspaceStore = new WorkspaceStore();
+    this.storage.setWorkspaceStore(this.workspaceStore);
+    try {
+      this.workspaceStore.ensureActiveProject(this.doc);
+      if (!this.workspaceStore.getActiveProfile()) {
+        this.workspaceStore.saveProfile({ name: 'DesignForge Designer', role: 'Product Designer' });
+      }
+    } catch (error) {
+      this.workspaceInitializationError = error;
+      console.warn('Workspace initialization warning:', error);
+    }
 
     this.engine = new CommandEngine(this.doc);
     this.importer = new ImportManager(this);
@@ -114,6 +126,7 @@ export class DesignForgeApp {
     this.shortcuts = new ShortcutRegistry(this);
 
     this.initUI();
+    this.initWorkspaceExperience();
     this.initMenus();
     this.initRightSidebar();
     this.initCommandPalette();
@@ -133,7 +146,668 @@ export class DesignForgeApp {
     this.updateAiContext();
     this.renderer.render();
 
+    if (this.workspaceInitializationError) {
+      this.showToast(`Workspace setup could not be saved locally: ${this.workspaceInitializationError.message}`, 'error');
+    }
     console.log('⚡ DesignForge AI initialized successfully.');
+  }
+
+  initWorkspaceExperience() {
+    const showProjects = () => this.showWorkspaceView('projects');
+    const showAccount = () => this.openWorkspaceSettings('account');
+    document.getElementById('brandLogoBtn')?.addEventListener('click', showProjects);
+    document.getElementById('brandLogoBtn')?.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        showProjects();
+      }
+    });
+    document.getElementById('btnWorkspaceDashboard')?.addEventListener('click', showProjects);
+    document.getElementById('workspaceDashboardHome')?.addEventListener('click', showProjects);
+    document.getElementById('settingsDashboardHome')?.addEventListener('click', showProjects);
+    document.getElementById('btnOpenWorkspaceSettings')?.addEventListener('click', showAccount);
+    document.getElementById('workspaceSettingsButton')?.addEventListener('click', showAccount);
+    document.getElementById('workspaceRailSettings')?.addEventListener('click', showAccount);
+    document.getElementById('settingsBackToProjects')?.addEventListener('click', () => {
+      this.showWorkspaceView(this.workspaceReturnView || 'projects');
+    });
+    document.getElementById('workspaceRailOrganization')?.addEventListener('click', () => this.openWorkspaceSettings('organization'));
+    for (const id of ['btnWorkspaceProfile', 'workspaceProfileButton', 'settingsProfileButton']) {
+      document.getElementById(id)?.addEventListener('click', showAccount);
+    }
+
+    document.getElementById('workspaceNewProject')?.addEventListener('click', () => this.openNewProjectDialog());
+    document.getElementById('workspaceEmptyCreate')?.addEventListener('click', () => this.openNewProjectDialog());
+    document.getElementById('workspaceNewProjectClose')?.addEventListener('click', () => this.closeNewProjectDialog());
+    document.getElementById('workspaceNewProjectCancel')?.addEventListener('click', () => this.closeNewProjectDialog());
+    document.getElementById('workspaceNewProjectModal')?.addEventListener('click', event => {
+      if (event.target.id === 'workspaceNewProjectModal') this.closeNewProjectDialog();
+    });
+    document.getElementById('workspaceNewProjectForm')?.addEventListener('submit', event => {
+      event.preventDefault();
+      const name = document.getElementById('workspaceNewProjectName')?.value.trim();
+      if (!name) return;
+      try {
+        this.createWorkspaceProject(name);
+      } catch (error) {
+        this.showToast(`Could not create project: ${error.message}`, 'error');
+      }
+    });
+
+    document.getElementById('workspaceProjectGrid')?.addEventListener('click', event => {
+      const projectButton = event.target.closest('[data-open-project]');
+      if (!projectButton) return;
+      try {
+        this.openWorkspaceProject(projectButton.dataset.openProject);
+      } catch (error) {
+        this.showToast(`Could not open project: ${error.message}`, 'error');
+      }
+    });
+    document.getElementById('workspaceProjectSearch')?.addEventListener('input', () => this.renderWorkspaceDashboard());
+    document.getElementById('workspaceProjectSort')?.addEventListener('change', () => this.renderWorkspaceDashboard());
+    document.querySelectorAll('[data-project-filter]').forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('[data-project-filter]').forEach(item => item.classList.toggle('active', item === button));
+        this.workspaceProjectFilter = button.dataset.projectFilter;
+        this.renderWorkspaceDashboard();
+      });
+    });
+
+    document.querySelector('.settings-nav')?.addEventListener('click', event => {
+      const button = event.target.closest('[data-settings-tab]');
+      if (button) this.renderWorkspaceSettings(button.dataset.settingsTab);
+    });
+    const settingsContent = document.getElementById('settingsContent');
+    settingsContent?.addEventListener('submit', event => this.handleWorkspaceSettingsSubmit(event));
+    settingsContent?.addEventListener('click', event => this.handleWorkspaceSettingsClick(event));
+    settingsContent?.addEventListener('change', event => this.handleWorkspaceSettingsChange(event));
+    settingsContent?.addEventListener('input', event => {
+      if (event.target.id === 'providerModelSelect') this.setSettingsStatus('Model selection is not saved until you click Save AI settings.', 'info');
+    });
+    this.workspaceProjectFilter = 'all';
+    this.renderWorkspaceDashboard();
+  }
+
+  workspaceEscape(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[character]);
+  }
+
+  showWorkspaceView(view) {
+    this.workspaceShellView = view;
+    document.getElementById('workspaceDashboard').hidden = view !== 'projects';
+    document.getElementById('workspaceSettings').hidden = view !== 'settings';
+    document.getElementById('workspaceNewProjectModal').hidden = true;
+    if (view === 'projects') {
+      if (!this.storage.flushAutosave(this.doc)) {
+        this.showToast('The current project could not be fully saved before opening the dashboard.', 'error');
+      }
+      this.renderWorkspaceDashboard();
+    }
+  }
+
+  openWorkspaceSettings(tab = 'account') {
+    if (this.workspaceShellView !== 'settings') {
+      this.workspaceReturnView = this.workspaceShellView || 'editor';
+    }
+    this.showWorkspaceView('settings');
+    const backButton = document.getElementById('settingsBackToProjects');
+    if (backButton) backButton.textContent = this.workspaceReturnView === 'editor' ? '← Back to editor' : '← Projects';
+    this.renderWorkspaceSettings(tab);
+  }
+
+  openNewProjectDialog() {
+    const modal = document.getElementById('workspaceNewProjectModal');
+    const input = document.getElementById('workspaceNewProjectName');
+    if (modal) modal.hidden = false;
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+  }
+
+  closeNewProjectDialog() {
+    document.getElementById('workspaceNewProjectModal').hidden = true;
+  }
+
+  createWorkspaceProject(name) {
+    if (!this.storage.flushAutosave(this.doc)) {
+      throw new Error('Current project changes could not be saved; the new project was not created.');
+    }
+    const nextDocument = createInitialDocument(name);
+    this.workspaceStore.createProject(nextDocument);
+    this.replaceDocument(nextDocument);
+    if (!this.storage.flushAutosave(nextDocument)) {
+      this.showToast('Project was created, but its latest local snapshot could not be saved.', 'error');
+    }
+    const titleInput = document.getElementById('projectTitleInput');
+    if (titleInput) titleInput.value = nextDocument.name;
+    this.closeNewProjectDialog();
+    this.showWorkspaceView('editor');
+    this.showToast(`Created "${name}" locally.`, 'success');
+  }
+
+  openWorkspaceProject(projectId) {
+    if (!this.storage.flushAutosave(this.doc)) {
+      throw new Error('Current project changes could not be saved; project switching was cancelled.');
+    }
+    const nextDocument = this.workspaceStore.loadProject(projectId);
+    this.replaceDocument(nextDocument);
+    if (!this.storage.flushAutosave(nextDocument)) {
+      this.showToast('Project opened, but its latest local snapshot could not be saved.', 'error');
+    }
+    const titleInput = document.getElementById('projectTitleInput');
+    if (titleInput) titleInput.value = nextDocument.name;
+    this.showWorkspaceView('editor');
+  }
+
+  renderWorkspaceDashboard() {
+    const grid = document.getElementById('workspaceProjectGrid');
+    if (!grid) return;
+    let projects = [];
+    try {
+      projects = this.workspaceStore.getProjects();
+    } catch (error) {
+      this.setSettingsStatus?.(error.message, 'error');
+    }
+    const search = (document.getElementById('workspaceProjectSearch')?.value || '').trim().toLowerCase();
+    const sort = document.getElementById('workspaceProjectSort')?.value || 'recent';
+    const filter = this.workspaceProjectFilter || 'all';
+    let visibleProjects = projects.filter(project => project.name.toLowerCase().includes(search));
+    if (filter === 'recent') visibleProjects = visibleProjects.slice(0, 6);
+    visibleProjects.sort((a, b) => sort === 'name'
+      ? a.name.localeCompare(b.name)
+      : sort === 'created'
+        ? new Date(b.createdAt) - new Date(a.createdAt)
+        : new Date(b.updatedAt) - new Date(a.updatedAt));
+
+    const activeId = this.workspaceStore.getActiveProjectId();
+    const count = document.getElementById('workspaceProjectCount');
+    if (count) count.textContent = String(projects.length);
+    const heading = document.getElementById('workspaceProjectHeading');
+    const subheading = document.getElementById('workspaceProjectSubheading');
+    if (heading) heading.textContent = filter === 'recent' ? 'Recently opened' : 'Recent projects';
+    if (subheading) subheading.textContent = `${projects.length} local project${projects.length === 1 ? '' : 's'}`;
+
+    const dateText = value => {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return 'Saved locally';
+      const elapsed = Math.max(0, Date.now() - date.getTime());
+      const minutes = Math.floor(elapsed / 60000);
+      if (minutes < 1) return 'Edited just now';
+      if (minutes < 60) return `Edited ${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `Edited ${hours}h ago`;
+      return `Edited ${Math.floor(hours / 24)}d ago`;
+    };
+
+    grid.innerHTML = visibleProjects.map((project, index) => `
+      <article class="workspace-project-card">
+        <button class="workspace-project-open" type="button" data-open-project="${this.workspaceEscape(project.id)}" aria-label="Open ${this.workspaceEscape(project.name)}">
+          <div class="workspace-project-preview" style="background: ${index % 3 === 0 ? 'linear-gradient(145deg,#34445f,#202b3c)' : index % 3 === 1 ? 'linear-gradient(145deg,#34353b,#202226)' : 'linear-gradient(145deg,#314a49,#202b2c)'}">
+            <div aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="workspace-project-meta">
+            <span class="workspace-project-file-icon" aria-hidden="true">▣</span>
+            <span><strong>${this.workspaceEscape(project.name)}${project.id === activeId ? ' · Open' : ''}</strong><small>${dateText(project.updatedAt)}</small></span>
+          </div>
+        </button>
+      </article>
+    `).join('');
+    const isEmpty = !visibleProjects.length;
+    document.getElementById('workspaceEmptyState').hidden = !isEmpty;
+    grid.hidden = isEmpty;
+    this.renderWorkspaceProfileSummary();
+  }
+
+  renderWorkspaceProfileSummary() {
+    let profile = null;
+    try {
+      profile = this.workspaceStore.getActiveProfile();
+    } catch {
+      profile = null;
+    }
+    const name = profile?.name || 'Designer';
+    const initials = name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+    for (const id of ['workspaceProfileMini', 'workspaceProfileButton', 'settingsProfileButton', 'btnWorkspaceProfile']) {
+      const element = document.getElementById(id);
+      if (!element) continue;
+      if (element.id === 'workspaceProfileMini') {
+        element.innerHTML = `<button type="button" aria-label="Open profile"><span class="workspace-profile-initials">${this.workspaceEscape(initials)}</span><span>${this.workspaceEscape(name)}<small>${this.workspaceEscape(profile?.role || 'Product Designer')}</small></span></button>`;
+        element.querySelector('button')?.addEventListener('click', () => this.openWorkspaceSettings('account'));
+      } else {
+        element.textContent = initials || 'D';
+        element.title = name;
+        element.setAttribute('aria-label', `Open profile for ${name}`);
+      }
+    }
+  }
+
+  setSettingsStatus(message, kind = 'info') {
+    const status = document.getElementById('settingsStatus');
+    if (!status) return;
+    status.textContent = message;
+    status.style.color = kind === 'error' ? '#ff8a8a' : kind === 'success' ? '#78d7a4' : '#8fc0ff';
+  }
+
+  renderWorkspaceSettings(tab = 'account') {
+    const profile = this.workspaceStore.getActiveProfile() || { name: '', email: '', role: 'Product Designer', handle: '' };
+    const tabDetails = {
+      account: ['Account', 'Manage your local profile and personal preferences.'],
+      organization: ['Organization', 'See how your design team is organized and who is working on the project.'],
+      notifications: ['Notifications', 'Choose which project activity updates are saved as your preferences.'],
+      security: ['Security & AI', 'Configure AI providers, project design tokens, and statically analyzed React libraries.']
+    };
+    const [title, description] = tabDetails[tab] || tabDetails.account;
+    document.getElementById('settingsBreadcrumb').textContent = title;
+    document.getElementById('settingsPageTitle').textContent = title;
+    document.getElementById('settingsPageDescription').textContent = description;
+    document.querySelectorAll('[data-settings-tab]').forEach(button => {
+      button.classList.toggle('active', button.dataset.settingsTab === tab);
+    });
+    document.getElementById('settingsStatus').textContent = '';
+    this.renderWorkspaceProfileSummary();
+
+    const content = document.getElementById('settingsContent');
+    if (!content) return;
+    if (tab === 'organization') {
+      content.innerHTML = `
+        <section class="settings-card">
+          <h2>DesignForge Product Design</h2>
+          <p>Sample organization chart for this local workspace. The UX lead coordinates the designers below.</p>
+          <div class="settings-hierarchy" role="tree" aria-label="Sample UX organization chart">
+            <div class="settings-org-member team-lead" role="treeitem" aria-level="1">
+              <span class="workspace-profile-initials">JL</span><span><strong>Jordan Lee</strong><small>UX Lead · Design Operations</small></span><em>Team lead</em>
+            </div>
+            <div class="settings-org-member" role="treeitem" aria-level="2">
+              <span class="workspace-profile-initials">AM</span><span><strong>Alex Morgan</strong><small>Senior UX Designer · Research & strategy</small></span><em>Reports to Jordan Lee</em>
+            </div>
+            <div class="settings-org-member" role="treeitem" aria-level="2">
+              <span class="workspace-profile-initials">SK</span><span><strong>Sam Kim</strong><small>Product UX Designer · Design systems</small></span><em>Reports to Jordan Lee</em>
+            </div>
+            <div class="settings-org-member" role="treeitem" aria-level="2">
+              <span class="workspace-profile-initials">RP</span><span><strong>Riley Patel</strong><small>UX Designer · Prototyping</small></span><em>Reports to Jordan Lee</em>
+            </div>
+          </div>
+          <div class="settings-card-actions"><span class="settings-muted">Demo team only · No invitations or messages are sent.</span></div>
+        </section>`;
+      return;
+    }
+
+    if (tab === 'notifications') {
+      const notifications = this.workspaceStore.getNotifications();
+      const options = [
+        ['desktop', 'Desktop notifications', 'Show in-app updates about project activity.'],
+        ['comments', 'Comments and mentions', 'Notify when someone comments on a design or mentions you.'],
+        ['invites', 'Team invites and requests', 'Notify about organization invitations and review requests.'],
+        ['projectUpdates', 'Project updates', 'Notify when a shared project changes.'],
+        ['productNews', 'Product news', 'Receive occasional product tips and release notes.']
+      ];
+      content.innerHTML = `
+        <section class="settings-card">
+          <h2>Activity notifications</h2>
+          <p>These preferences are saved in this browser. Email and operating-system notifications are not configured.</p>
+          ${options.map(([key, label, help]) => `
+            <label class="settings-toggle-row"><span>${label}<small>${help}</small></span>
+              <input type="checkbox" data-notification-setting="${key}" ${notifications[key] ? 'checked' : ''}>
+            </label>
+          `).join('')}
+        </section>`;
+      return;
+    }
+
+    if (tab === 'security') {
+      this.renderWorkspaceSecuritySettings(content);
+      return;
+    }
+
+    const profiles = this.workspaceStore.getProfiles();
+    const activeId = profile.id;
+    const theme = localStorage.getItem('designforge_theme') || 'axiom-dark';
+    content.innerHTML = `
+      <section class="settings-card">
+        <h2>Profile</h2>
+        <p>Local workspace profile only. DesignForge does not create an online account or authenticate a real user.</p>
+        <form data-settings-form="profile">
+          <input type="hidden" name="id" value="${this.workspaceEscape(profile.id || '')}">
+          <div class="settings-form-grid">
+            <label class="settings-field">Display name<input name="name" required maxlength="100" value="${this.workspaceEscape(profile.name)}"></label>
+            <label class="settings-field">Email address<input name="email" type="email" maxlength="200" value="${this.workspaceEscape(profile.email)}" placeholder="name@example.com"></label>
+            <label class="settings-field">Role<input name="role" maxlength="100" value="${this.workspaceEscape(profile.role)}"></label>
+            <label class="settings-field">Profile handle<input name="handle" maxlength="60" value="${this.workspaceEscape(profile.handle || '')}" placeholder="your-handle"></label>
+            <label class="settings-field">Theme
+              <select id="profileTheme">
+                <option value="axiom-dark" ${theme === 'axiom-dark' ? 'selected' : ''}>Dark</option>
+                <option value="axiom-light" ${theme === 'axiom-light' ? 'selected' : ''}>Light</option>
+                <option value="high-contrast" ${theme === 'high-contrast' ? 'selected' : ''}>High contrast</option>
+              </select>
+            </label>
+          </div>
+          <div class="settings-card-actions"><button class="workspace-primary-btn" type="submit">Save profile</button></div>
+        </form>
+        <div class="settings-profile-list">${profiles.map(item => `
+          <div class="settings-profile-row"><span><strong>${this.workspaceEscape(item.name)}</strong><small>${this.workspaceEscape(item.role || 'Product Designer')}${item.email ? ` · ${this.workspaceEscape(item.email)}` : ''}</small></span>
+            ${item.id === activeId ? '<span>Active</span>' : `<button class="workspace-secondary-btn" type="button" data-switch-profile="${this.workspaceEscape(item.id)}">Switch</button>`}
+          </div>
+        `).join('')}</div>
+      </section>
+      <section class="settings-card">
+        <h2>Create another profile</h2>
+        <p>Add a separate local workspace identity. Profiles do not provide sign-in or access control.</p>
+        <button class="workspace-secondary-btn" type="button" data-workspace-action="show-create-profile">＋ Create profile</button>
+        <form data-settings-form="new-profile" hidden style="margin-top: 16px;">
+          <div class="settings-form-grid">
+            <label class="settings-field">Display name<input name="name" required maxlength="100"></label>
+            <label class="settings-field">Email address<input name="email" type="email" maxlength="200" placeholder="name@example.com"></label>
+            <label class="settings-field">Role<input name="role" maxlength="100" value="Product Designer"></label>
+            <label class="settings-field">Handle<input name="handle" maxlength="60" placeholder="your-handle"></label>
+          </div>
+          <div class="settings-card-actions"><button class="workspace-primary-btn" type="submit">Create profile</button></div>
+        </form>
+      </section>`;
+  }
+
+  renderWorkspaceSecuritySettings(content) {
+    const service = this.ai.service;
+    const activeProvider = service.activeProviderName;
+    const provider = service.getProvider(activeProvider);
+    const providerOptions = [
+      ['local', 'DesignForge Local (offline)'],
+      ['ollama', 'Ollama (local models)'],
+      ['openai', 'OpenAI'],
+      ['gemini', 'Google Gemini']
+    ];
+    const models = {
+      local: ['DesignForge-Local-v1.2'],
+      ollama: ['llama3.1', 'qwen2.5-coder'],
+      openai: ['gpt-4o', 'gpt-4.1'],
+      gemini: ['gemini-1.5-flash', 'gemini-1.5-pro']
+    };
+    const libraryRecords = this.workspaceStore.getReactLibraries();
+    const tokenCount = this.dsRegistry.getAllTokens().length;
+    const tokenLabel = `${tokenCount} design token${tokenCount === 1 ? '' : 's'} ${tokenCount === 1 ? 'is' : 'are'}`;
+    content.innerHTML = `
+      <section class="settings-card">
+        <h2>AI model and design agent</h2>
+        <p>Choose an implemented model provider. The active design assistant uses this provider for project design requests.</p>
+        <div class="settings-form-grid">
+          <label class="settings-field">AI provider
+            <select id="providerNameSelect">${providerOptions.map(([value, label]) => `<option value="${value}" ${activeProvider === value ? 'selected' : ''}>${label}</option>`).join('')}</select>
+          </label>
+          <label class="settings-field">Model
+            <select id="providerModelSelect">${(models[activeProvider] || [provider.model]).map(model => `<option value="${this.workspaceEscape(model)}" ${provider.model === model ? 'selected' : ''}>${this.workspaceEscape(model)}</option>`).join('')}</select>
+          </label>
+          <label class="settings-field" id="providerApiKeyField">API key<input id="providerApiKeyInput" type="password" autocomplete="new-password" placeholder="${provider.apiKey ? 'Key configured · leave blank to keep it' : 'Paste provider API key'}"></label>
+          <label class="settings-field">Project context privacy
+            <select id="providerPrivacySelect">
+              <option value="local_only" ${service.privacyMode === 'local_only' ? 'selected' : ''}>Local only</option>
+              <option value="allow_hosted" ${service.privacyMode === 'allow_hosted' ? 'selected' : ''}>Allow hosted provider</option>
+              <option value="redact_text" ${service.privacyMode === 'redact_text' ? 'selected' : ''}>Redact text before hosted requests</option>
+            </select>
+          </label>
+        </div>
+        <div class="settings-inline-warning" style="margin-top: 14px;">API keys are stored in this browser's local storage and are not encrypted. They are sent to the selected provider only when you request AI generation or test the connection. Do not use shared/public devices; clear the key when finished.</div>
+        <div class="settings-card-actions">
+          <button class="workspace-primary-btn" type="button" data-workspace-action="save-ai">Save AI settings</button>
+          <button class="workspace-secondary-btn" type="button" data-workspace-action="test-ai">Test connection</button>
+          <button class="workspace-secondary-btn" type="button" data-workspace-action="clear-ai-key">Clear saved key</button>
+        </div>
+      </section>
+      <section class="settings-card">
+        <h2>AI design tokens</h2>
+      <p>${tokenLabel} available through this project's design system and can guide the AI assistant.</p>
+        <div class="settings-card-actions">
+          <button class="workspace-secondary-btn" type="button" data-workspace-action="open-design-tokens">Open design tokens</button>
+          <button class="workspace-secondary-btn" type="button" data-workspace-action="generate-design-tokens">Generate token suggestions</button>
+        </div>
+      </section>
+      <section class="settings-card">
+        <h2>React libraries and design systems</h2>
+        <p>Add React package/source files for safe static analysis. Supported files include package.json, JSON tokens, CSS, JS, JSX, TS, and TSX. Project code and package scripts are never executed.</p>
+        <div class="settings-card-actions">
+          <button class="workspace-secondary-btn" type="button" data-workspace-action="choose-react-files">＋ Add React library files</button>
+          <button class="workspace-secondary-btn" type="button" data-workspace-action="choose-react-folder">📁 Add React project folder</button>
+          <input type="file" id="workspaceReactFiles" accept=".json,.css,.js,.jsx,.ts,.tsx" multiple hidden>
+          <input type="file" id="workspaceReactFolder" accept=".json,.css,.js,.jsx,.ts,.tsx" webkitdirectory directory multiple hidden>
+        </div>
+        <div class="settings-library-list">${libraryRecords.length ? libraryRecords.map(library => `
+          <div class="settings-library-row"><span><strong>${this.workspaceEscape(library.name)}</strong><small>${library.version ? `v${this.workspaceEscape(library.version)} · ` : ''}${library.sourceFileCount} static file(s) · ${library.tokenCount} token(s) · ${library.componentCount} component(s)</small></span>
+            <button class="workspace-secondary-btn" type="button" data-remove-library="${this.workspaceEscape(library.name)}">Remove</button>
+          </div>`).join('') : '<div class="settings-muted">No React libraries analyzed yet.</div>'}</div>
+      </section>`;
+    this.updateProviderModelChoices(activeProvider);
+  }
+
+  updateProviderModelChoices(providerName) {
+    const select = document.getElementById('providerModelSelect');
+    if (!select) return;
+    const service = this.ai.service;
+    const currentModel = service.getProvider(providerName).model;
+    const modelOptions = {
+      local: ['DesignForge-Local-v1.2'],
+      ollama: ['llama3.1', 'qwen2.5-coder'],
+      openai: ['gpt-4o', 'gpt-4.1'],
+      gemini: ['gemini-1.5-flash', 'gemini-1.5-pro']
+    }[providerName] || [currentModel];
+    select.innerHTML = modelOptions.map(model => `<option value="${this.workspaceEscape(model)}" ${model === currentModel ? 'selected' : ''}>${this.workspaceEscape(model)}</option>`).join('');
+    const keyField = document.getElementById('providerApiKeyField');
+    if (keyField) keyField.hidden = !['openai', 'gemini'].includes(providerName);
+    const keyInput = document.getElementById('providerApiKeyInput');
+    if (keyInput) keyInput.placeholder = service.getProvider(providerName).apiKey ? 'Key configured · leave blank to keep it' : 'Paste provider API key';
+  }
+
+  handleWorkspaceSettingsChange(event) {
+    if (event.target.id === 'workspaceReactFiles' || event.target.id === 'workspaceReactFolder') {
+      void this.importWorkspaceReactLibrary(event.target.files).finally(() => { event.target.value = ''; });
+      return;
+    }
+    const notification = event.target.closest('[data-notification-setting]');
+    if (notification) {
+      const notifications = this.workspaceStore.getNotifications();
+      notifications[notification.dataset.notificationSetting] = notification.checked;
+      try {
+        this.workspaceStore.saveNotifications(notifications);
+        this.setSettingsStatus('Notification preferences saved in this browser.', 'success');
+      } catch (error) {
+        this.setSettingsStatus(error.message, 'error');
+      }
+      return;
+    }
+    if (event.target.id === 'providerNameSelect') {
+      this.updateProviderModelChoices(event.target.value);
+    }
+    if (event.target.id === 'profileTheme') {
+      this.toggleTheme(event.target.value);
+      this.setSettingsStatus('Theme preference updated.', 'success');
+    }
+  }
+
+  handleWorkspaceSettingsClick(event) {
+    const switchButton = event.target.closest('[data-switch-profile]');
+    if (switchButton) {
+      try {
+        this.workspaceStore.setActiveProfile(switchButton.dataset.switchProfile);
+        this.renderWorkspaceSettings('account');
+        this.setSettingsStatus('Profile switched.', 'success');
+      } catch (error) {
+        this.setSettingsStatus(error.message, 'error');
+      }
+      return;
+    }
+    const removeLibrary = event.target.closest('[data-remove-library]');
+    if (removeLibrary) {
+      try {
+        this.workspaceStore.removeReactLibrary(removeLibrary.dataset.removeLibrary);
+        this.renderWorkspaceSettings('security');
+        this.setSettingsStatus('React library removed from the local list. Imported design-system tokens remain in the project.', 'success');
+      } catch (error) {
+        this.setSettingsStatus(error.message, 'error');
+      }
+      return;
+    }
+    const action = event.target.closest('[data-workspace-action]')?.dataset.workspaceAction;
+    if (!action) return;
+    if (action === 'show-create-profile') {
+      const form = document.querySelector('[data-settings-form="new-profile"]');
+      if (form) {
+        form.hidden = false;
+        form.querySelector('input[name="name"]')?.focus();
+      }
+    } else if (action === 'save-ai') {
+      this.saveWorkspaceAiSettings();
+    } else if (action === 'test-ai') {
+      this.testWorkspaceAiProvider();
+    } else if (action === 'clear-ai-key') {
+      this.clearWorkspaceAiKey();
+    } else if (action === 'open-design-tokens') {
+      this.showWorkspaceView('editor');
+      this.setAxiomMode('system');
+      this.dsUi.renderView('tokens');
+    } else if (action === 'generate-design-tokens') {
+      this.showWorkspaceView('editor');
+      this.setAxiomMode('system');
+      this.dsUi.openAiTokensModal();
+    } else if (action === 'choose-react-files') {
+      document.getElementById('workspaceReactFiles')?.click();
+    } else if (action === 'choose-react-folder') {
+      document.getElementById('workspaceReactFolder')?.click();
+    }
+  }
+
+  async handleWorkspaceSettingsSubmit(event) {
+    const formType = event.target.dataset.settingsForm;
+    if (!formType) return;
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const profile = {
+      id: formData.get('id') || undefined,
+      name: formData.get('name'),
+      email: formData.get('email'),
+      role: formData.get('role'),
+      handle: formData.get('handle')
+    };
+    try {
+      this.workspaceStore.saveProfile(profile);
+      this.renderWorkspaceSettings('account');
+      this.setSettingsStatus(formType === 'new-profile' ? 'Profile created and selected.' : 'Profile saved.', 'success');
+    } catch (error) {
+      this.setSettingsStatus(error.message, 'error');
+    }
+  }
+
+  saveWorkspaceAiSettings() {
+    const providerName = document.getElementById('providerNameSelect')?.value;
+    const model = document.getElementById('providerModelSelect')?.value;
+    const apiKey = document.getElementById('providerApiKeyInput')?.value.trim();
+    const privacy = document.getElementById('providerPrivacySelect')?.value;
+    try {
+      if (!providerName || !model) throw new Error('Choose an AI provider and model.');
+      this.ai.service.setActiveProvider(providerName);
+      this.ai.service.configureProvider(providerName, {
+        model,
+        ...(apiKey ? { apiKey } : {})
+      });
+      if (privacy) this.ai.service.setPrivacyMode(privacy);
+      const keyInput = document.getElementById('providerApiKeyInput');
+      if (keyInput) {
+        keyInput.value = '';
+        keyInput.placeholder = this.ai.service.getProvider(providerName).apiKey
+          ? 'Key configured · leave blank to keep it'
+          : 'Paste provider API key';
+      }
+      this.setSettingsStatus('AI provider settings saved for this browser.', 'success');
+    } catch (error) {
+      this.setSettingsStatus(error.message, 'error');
+    }
+  }
+
+  async testWorkspaceAiProvider() {
+    const providerName = document.getElementById('providerNameSelect')?.value;
+    const model = document.getElementById('providerModelSelect')?.value;
+    const apiKey = document.getElementById('providerApiKeyInput')?.value.trim();
+    if (!providerName) return;
+    const provider = this.ai.service.getProvider(providerName);
+    const priorConfig = { model: provider.model, apiKey: provider.apiKey };
+    try {
+      this.ai.service.configureProvider(providerName, {
+        ...(model ? { model } : {}),
+        ...(apiKey ? { apiKey } : {})
+      }, { persist: false });
+      this.setSettingsStatus('Testing provider connection…', 'info');
+      const result = await provider.testConnection();
+      this.setSettingsStatus(result.message || (result.success ? 'Provider connection succeeded.' : 'Provider connection failed.'), result.success ? 'success' : 'error');
+    } catch (error) {
+      this.setSettingsStatus(`Connection test failed: ${error.message}`, 'error');
+    } finally {
+      provider.model = priorConfig.model;
+      provider.apiKey = priorConfig.apiKey;
+      const keyInput = document.getElementById('providerApiKeyInput');
+      if (keyInput) keyInput.value = '';
+    }
+  }
+
+  clearWorkspaceAiKey() {
+    const providerName = document.getElementById('providerNameSelect')?.value;
+    if (!providerName || !['openai', 'gemini'].includes(providerName)) {
+      this.setSettingsStatus('Select OpenAI or Gemini to clear a hosted API key.', 'error');
+      return;
+    }
+    try {
+      this.ai.service.clearProviderApiKey(providerName);
+      const keyInput = document.getElementById('providerApiKeyInput');
+      if (keyInput) {
+        keyInput.value = '';
+        keyInput.placeholder = 'Paste provider API key';
+      }
+      this.setSettingsStatus('Saved API key cleared from this browser.', 'success');
+    } catch (error) {
+      this.setSettingsStatus(error.message, 'error');
+    }
+  }
+
+  async importWorkspaceReactLibrary(files) {
+    const supportedFiles = Array.from(files || [])
+      .filter(file => /\.(?:json|css|jsx?|tsx?)$/i.test(file.name))
+      .filter(file => !/(?:^|\/)(?:node_modules|dist|build|\.git|coverage)\//i.test(file.webkitRelativePath || file.name));
+    const totalBytes = supportedFiles.reduce((sum, file) => sum + file.size, 0);
+    if (!supportedFiles.length) {
+      this.setSettingsStatus('Choose package.json, token JSON, CSS, JS, JSX, TS, or TSX source files.', 'error');
+      return;
+    }
+    if (supportedFiles.length > 300 || totalBytes > 10 * 1024 * 1024) {
+      this.setSettingsStatus('Selected React library exceeds the static analysis limit (300 files or 10 MB).', 'error');
+      return;
+    }
+    this.setSettingsStatus(`Analyzing ${supportedFiles.length} file(s) without executing uploaded code…`, 'info');
+    try {
+      const report = await this.dsUi.analyzeSourceFiles(supportedFiles);
+      const packages = report.packages || [];
+      const packageInfo = packages[0] || null;
+      const name = packageInfo?.name || (supportedFiles[0].webkitRelativePath || supportedFiles[0].name).split('/')[0] || 'Imported React library';
+      const collectionName = `${name} Design System`.slice(0, 120);
+      const result = this.reactDsImporter.commitImportedSystem(report, collectionName);
+      const libraryName = String(name).slice(0, 120);
+      const saved = this.workspaceStore.addReactLibrary({
+        name: libraryName,
+        version: packageInfo?.version || '',
+        sourceFileCount: supportedFiles.length,
+        tokenCount: result.importedTokensCount,
+        componentCount: result.importedComponentsCount,
+        warnings: report.warnings.slice(0, 8)
+      });
+      this.storage.flushAutosave(this.doc);
+      this.updateHeaderInfo();
+      this.renderer.render();
+      this.renderWorkspaceSecuritySettings(document.getElementById('settingsContent'));
+      this.setSettingsStatus(`Analyzed ${saved.name}: ${result.importedTokensCount} token(s), ${result.importedComponentsCount} component(s) added. No package scripts were run.`, 'success');
+    } catch (error) {
+      this.setSettingsStatus(`React library analysis failed: ${error.message}`, 'error');
+    }
   }
 
   initUI() {
@@ -144,6 +818,7 @@ export class DesignForgeApp {
       titleInput.addEventListener('change', (e) => {
         this.doc.name = e.target.value.trim() || 'Untitled Project';
         this.storage.scheduleAutosave(this.doc);
+        this.renderWorkspaceDashboard();
       });
     }
 
@@ -346,17 +1021,7 @@ export class DesignForgeApp {
 
     // File Menu Actions
     document.getElementById('menuNewProject')?.addEventListener('click', () => {
-      if (confirm('Create a new blank project? Unsaved changes will be archived.')) {
-        this.doc = createInitialDocument('Untitled Experience');
-        this.engine = new CommandEngine(this.doc);
-        this.renderer.engine = this.engine;
-        this.ai.engine = this.engine;
-        this.bindEngineEvents();
-        this.updateLayersTree();
-        this.updatePagesList();
-        this.updateInspector();
-        this.renderer.zoomToFit();
-      }
+      this.openNewProjectDialog();
     });
     document.getElementById('menuOpenProject')?.addEventListener('click', () => this.openProjectPicker());
     document.getElementById('menuImportDesign')?.addEventListener('click', () => this.openImportModal());
@@ -3853,6 +4518,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
   replaceDocument(nextDocument) {
     this.doc = nextDocument;
+    const projectTitleInput = document.getElementById('projectTitleInput');
+    if (projectTitleInput) projectTitleInput.value = nextDocument.name || 'Untitled Project';
     this.engine = new CommandEngine(this.doc);
     this.renderer.engine = this.engine;
     this.ai.engine = this.engine;

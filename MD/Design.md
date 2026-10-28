@@ -1650,6 +1650,8 @@ Provide native `.dforge` project save/open, packaged project archive, SVG, PNG, 
 
 The current React export downloads a ZIP archive of the generated project files. Selection SVG/PNG export renders selected scene-graph content rather than a screenshot of the editor viewport. Embedded media is limited to 2 MB per project for reliable local saves. Image and video generation requires a configured media-generation provider; without one, users can upload local media files.
 
+The local workspace shell provides a project dashboard, editable browser-local profiles, account preferences, notification toggles, an Organization view with a clearly labeled sample UX reporting tree, and Security & AI settings. Project snapshots, profiles, React-library analysis summaries, and notification preferences stay in browser storage. AI provider API keys are stored in browser local storage without encryption; users are warned to avoid shared devices and can clear saved keys. React package source is analyzed statically and never executed.
+
 ## 16. Rendering and performance
 
 Use a retained scene graph and incremental invalidation. Avoid re-rendering the entire document after every property edit.

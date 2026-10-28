@@ -10,6 +10,25 @@ const AUTOSAVE_KEY = 'designforge_autosave_project';
 export class StorageEngine {
   constructor() {
     this.autosaveTimer = null;
+    this.workspaceStore = null;
+  }
+
+  setWorkspaceStore(workspaceStore) {
+    this.workspaceStore = workspaceStore;
+  }
+
+  flushAutosave(document) {
+    if (this.autosaveTimer) clearTimeout(this.autosaveTimer);
+    this.autosaveTimer = null;
+    if (typeof localStorage === 'undefined') return false;
+    try {
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(document));
+      this.workspaceStore?.saveProject(document);
+      return true;
+    } catch (error) {
+      console.warn('Autosave warning:', error);
+      return false;
+    }
   }
 
   /**
@@ -22,6 +41,13 @@ export class StorageEngine {
       try {
         const payload = JSON.stringify(document);
         localStorage.setItem(AUTOSAVE_KEY, payload);
+        if (this.workspaceStore) {
+          try {
+            this.workspaceStore.saveProject(document);
+          } catch (workspaceError) {
+            console.warn('Workspace project snapshot warning:', workspaceError);
+          }
+        }
         return true;
       } catch (err) {
         console.warn('Autosave warning:', err);
@@ -160,4 +186,3 @@ export function unpackDForgeBundle(bundleOrJson) {
   const engine = new StorageEngine();
   return engine.unpackDForgeBundle(bundleOrJson);
 }
-

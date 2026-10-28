@@ -5,9 +5,10 @@
   "description": "DesignForge AI - Professional AI-Native Design Platform & React Compiler",
   "scripts": {
     "start": "node serve.js",
-    "test": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_export_engine.js && node tests/test_figma_functional_map.js && node tests/test_design_system.js",
+    "test": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_export_engine.js && node tests/test_figma_functional_map.js && node tests/test_design_system.js && node tests/test_workspace.js",
     "test:export": "node tests/test_export_engine.js",
     "test:ds": "node tests/test_design_system.js",
+    "test:workspace": "node tests/test_workspace.js",
     "test:ollama": "node tests/test_ollama.js",
     "test:import": "node tests/test_import_engine.js",
     "test:figma": "node tests/test_figma_functional_map.js",

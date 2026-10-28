@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="src/styles/design_system.css">
   <link rel="stylesheet" href="src/styles/axiom_layout.css">
   <link rel="stylesheet" href="src/styles/figma_modals.css">
+  <link rel="stylesheet" href="src/styles/workspace.css">
 </head>
 
 <body class="theme-axiom-dark">
@@ -27,7 +28,7 @@
     <!-- Top Application Bar (A. Global Command Bar - Section 3.1 & 3.3) -->
     <header class="top-bar global-command-bar">
       <div class="top-bar-left command-bar-left">
-        <div class="brand-badge axiom-brand-badge" id="brandLogoBtn" title="DesignForge AI (Axiom Layout)">
+        <div class="brand-badge axiom-brand-badge" id="brandLogoBtn" title="Open DesignForge projects" role="button" tabindex="0">
           <div class="brand-logo axiom-spark-icon">⚡</div>
           <span>DesignForge <span style="color: var(--brand-accent-soft); font-weight: 500;">AI</span></span>
         </div>
@@ -162,6 +163,9 @@
           <span class="dot"></span>
           <span id="saveStatusText">Saved locally</span>
         </div>
+        <button class="menu-dropdown-btn workspace-top-action" id="btnWorkspaceDashboard" type="button">Projects</button>
+        <button class="btn-icon workspace-top-action" id="btnOpenWorkspaceSettings" type="button" title="Profile and settings">⚙</button>
+        <button class="btn-icon workspace-top-action" id="btnWorkspaceProfile" type="button" title="Open profile">👤</button>
 
         <button class="menu-dropdown-btn" id="btnOpenCommandPalette" title="Open Command Palette (⌘K)"
           style="font-size: 11px; display: flex; align-items: center; gap: 6px; padding: 4px 8px;">
@@ -1919,6 +1923,105 @@
 
             <!-- 10. Figma Toast Notification Container -->
             <div class="figma-toast-container" id="figmaToastContainer"></div>
+        </div>
+
+        <section class="workspace-screen projects-screen" id="workspaceDashboard" aria-label="Project dashboard" hidden>
+          <aside class="projects-rail">
+            <button class="workspace-wordmark" id="workspaceDashboardHome" type="button"><span class="workspace-mark-icon">⚡</span><strong>DesignForge</strong><span>AI</span></button>
+            <label class="workspace-search">
+              <span aria-hidden="true">⌕</span>
+              <input id="workspaceProjectSearch" type="search" placeholder="Search projects" aria-label="Search projects">
+            </label>
+            <nav class="projects-nav" aria-label="Project navigation">
+              <button class="active" type="button" data-project-filter="all">▦ <span>All projects</span><span id="workspaceProjectCount"></span></button>
+              <button type="button" data-project-filter="recent">◷ <span>Recently opened</span></button>
+            </nav>
+            <div class="projects-rail-section">
+              <span>WORKSPACE</span>
+              <button type="button" id="workspaceRailSettings">⚙ <span>Settings</span></button>
+              <button type="button" id="workspaceRailOrganization">♧ <span>Organization</span></button>
+            </div>
+            <div class="projects-rail-spacer"></div>
+            <div class="workspace-profile-mini" id="workspaceProfileMini"></div>
+          </aside>
+          <div class="projects-main">
+            <header class="workspace-header">
+              <div>
+                <div class="workspace-breadcrumb">Workspace <span>/</span> Projects</div>
+                <h1>Your projects</h1>
+                <p>Pick up where you left off or start a new design.</p>
+              </div>
+              <div class="workspace-header-actions">
+                <button class="workspace-secondary-btn" id="workspaceSettingsButton" type="button">⚙ Settings</button>
+                <button class="workspace-avatar" id="workspaceProfileButton" type="button" aria-label="Open profile"></button>
+                <button class="workspace-primary-btn" id="workspaceNewProject" type="button">＋ New project</button>
+              </div>
+            </header>
+            <div class="projects-toolbar">
+              <div>
+                <h2 id="workspaceProjectHeading">Recent projects</h2>
+                <span id="workspaceProjectSubheading">Your local design files</span>
+              </div>
+              <label class="workspace-sort">Sort by
+                <select id="workspaceProjectSort">
+                  <option value="recent">Last edited</option>
+                  <option value="name">Name</option>
+                  <option value="created">Date created</option>
+                </select>
+              </label>
+            </div>
+            <div class="workspace-project-grid" id="workspaceProjectGrid"></div>
+            <div class="workspace-empty-state" id="workspaceEmptyState" hidden>
+              <div class="workspace-empty-icon">▦</div>
+              <h2>No projects found</h2>
+              <p>Create a project or try a different search.</p>
+              <button class="workspace-primary-btn" id="workspaceEmptyCreate" type="button">Create a project</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="workspace-screen settings-screen" id="workspaceSettings" aria-label="Profile and settings" hidden>
+          <header class="settings-topbar">
+            <button class="workspace-wordmark" id="settingsDashboardHome" type="button"><span class="workspace-mark-icon">⚡</span><strong>DesignForge</strong><span>AI</span></button>
+            <div class="settings-topbar-right">
+              <span class="settings-local-badge">● Saved in this browser</span>
+              <button class="workspace-avatar" id="settingsProfileButton" type="button" aria-label="Open profile"></button>
+              <button class="workspace-secondary-btn" id="settingsBackToProjects" type="button">← Projects</button>
+            </div>
+          </header>
+          <div class="settings-layout">
+            <aside class="settings-nav">
+              <div class="settings-nav-heading">PERSONAL SETTINGS</div>
+              <button type="button" data-settings-tab="account" class="active"><span>◉</span> Account</button>
+              <button type="button" data-settings-tab="organization"><span>♧</span> Organization</button>
+              <button type="button" data-settings-tab="notifications"><span>♢</span> Notifications</button>
+              <button type="button" data-settings-tab="security"><span>⬡</span> Security & AI</button>
+            </aside>
+            <main class="settings-content-area">
+              <div class="settings-page-heading">
+                <div class="workspace-breadcrumb">Settings <span>/</span> <span id="settingsBreadcrumb">Account</span></div>
+                <h1 id="settingsPageTitle">Account</h1>
+                <p id="settingsPageDescription">Manage your local profile and personal preferences.</p>
+              </div>
+              <div id="settingsStatus" class="settings-status" role="status" aria-live="polite"></div>
+              <div id="settingsContent"></div>
+            </main>
+          </div>
+        </section>
+
+        <div class="workspace-modal-backdrop" id="workspaceNewProjectModal" hidden>
+          <form class="workspace-modal" id="workspaceNewProjectForm">
+            <button class="workspace-modal-close" id="workspaceNewProjectClose" type="button" aria-label="Close">×</button>
+            <div class="workspace-empty-icon">✦</div>
+            <h2>Create a new project</h2>
+            <p>Your new project is saved locally and remains editable in DesignForge.</p>
+            <label for="workspaceNewProjectName">Project name</label>
+            <input id="workspaceNewProjectName" maxlength="100" required placeholder="e.g. Mobile app concept">
+            <div class="workspace-modal-actions">
+              <button class="workspace-secondary-btn" id="workspaceNewProjectCancel" type="button">Cancel</button>
+              <button class="workspace-primary-btn" type="submit">Create project</button>
+            </div>
+          </form>
         </div>
 
         <script type="module" src="src/app.js"></script>

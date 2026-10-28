@@ -34,6 +34,15 @@ export class DesignForgeAIService {
     this.registerProvider(new OpenAIProvider());
     this.registerProvider(new GeminiProvider());
 
+    for (const provider of this.providers.values()) {
+      const savedKey = this.loadSetting(`api_key_${provider.name}`);
+      const savedModel = this.loadSetting(`model_${provider.name}`);
+      const savedEndpoint = this.loadSetting(`endpoint_${provider.name}`);
+      if (savedKey) provider.apiKey = savedKey;
+      if (savedModel) provider.model = savedModel;
+      if (savedEndpoint) provider.endpoint = savedEndpoint;
+    }
+
     // Load saved settings (defaults to OLLAMA with llama3.1 in browser, LOCAL in headless tests)
     this.activeProviderName = this.loadSetting('ai_active_provider') || (typeof window !== 'undefined' ? PROVIDERS.OLLAMA : PROVIDERS.LOCAL);
     this.privacyMode = this.loadSetting('ai_privacy_mode') || PRIVACY_MODES.LOCAL_ONLY;
@@ -76,21 +85,31 @@ export class DesignForgeAIService {
     this.saveSetting('ai_privacy_mode', mode);
   }
 
-  configureProvider(name, config) {
+  configureProvider(name, config, options = {}) {
+    const persist = options.persist !== false;
     const provider = this.providers.get(name);
     if (provider) {
       if (config.apiKey !== undefined) {
         provider.apiKey = config.apiKey;
-        this.saveSetting(`api_key_${name}`, config.apiKey);
+        if (persist) this.saveSetting(`api_key_${name}`, config.apiKey);
       }
       if (config.endpoint !== undefined) {
         provider.endpoint = config.endpoint;
-        this.saveSetting(`endpoint_${name}`, config.endpoint);
+        if (persist) this.saveSetting(`endpoint_${name}`, config.endpoint);
       }
       if (config.model !== undefined) {
         provider.model = config.model;
-        this.saveSetting(`model_${name}`, config.model);
+        if (persist) this.saveSetting(`model_${name}`, config.model);
       }
+    }
+  }
+
+  clearProviderApiKey(name) {
+    const provider = this.providers.get(name);
+    if (!provider) throw new Error(`Unknown AI provider "${name}".`);
+    provider.apiKey = '';
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(`designforge_api_key_${name}`);
     }
   }
 
@@ -372,4 +391,3 @@ export class DesignForgeAIService {
     return this.intelligence.audit();
   }
 }
-
