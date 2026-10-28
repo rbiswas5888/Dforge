@@ -3271,25 +3271,138 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     document.getElementById('btnExportSelectionSvg')?.addEventListener('click', () => this.exportSelectedAsSvg());
   }
 
-  // --- Prototype Panel Synchronizer (Section 4.2 & Appendix A2.4) ---
+  // --- Prototype Panel Synchronizer (Figma UI3 Parity) ---
   updatePrototypePanel() {
     const container = document.getElementById('prototypePanelContent');
     if (!container) return;
     const selectedIds = this.engine.getSelection();
     const page = this.engine.getActivePage();
+    const frames = (page.rootIds || []).map(id => page.nodes[id]).filter(n => n && n.type === 'frame');
 
     if (selectedIds.length === 0) {
+      const startingFrames = frames.filter(f => f.isFlowStart || f.flowName);
+      const docVars = this.doc.variables || [];
+
       container.innerHTML = `
-        <div class="empty-inspector-note">
-          <p>Select a frame or layer to attach interactive triggers, transitions, and screen navigation.</p>
-        </div>`;
+        <div style="margin-bottom: 14px;">
+          <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span>Flow Starting Points (${startingFrames.length})</span>
+          </div>
+          ${startingFrames.length === 0 ? `
+            <div style="font-size: 11px; color: var(--text-muted); background: var(--bg-surface); padding: 10px; border-radius: 6px; border: 1px dashed var(--border-subtle); margin-bottom: 10px;">
+              No flows started yet. Select a frame on the canvas and check "Set as Flow Starting Point" to create a user flow.
+            </div>
+            ${frames.length > 0 ? `
+              <button class="btn-secondary" id="btnMakeFirstFlowStart" style="width: 100%; font-size: 11px; margin-bottom: 10px;">+ Set "${this.escapeAttr(frames[0].name)}" as Flow 1</button>
+            ` : ''}
+          ` : `
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;">
+              ${startingFrames.map((f, i) => `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 6px;">
+                  <div>
+                    <div style="font-size: 11px; font-weight: 600; color: #38bdf8;">▶ ${this.escapeAttr(f.flowName || f.name || `Flow ${i + 1}`)}</div>
+                    <div style="font-size: 10px; color: var(--text-dim);">Frame: ${this.escapeAttr(f.name)}</div>
+                  </div>
+                  <button class="btn-icon-xs btn-play-flow" data-frame-id="${f.id}" title="Play this flow" style="color: #10b981;">▶</button>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <div class="section-title" style="margin-bottom: 8px;">Prototype Presentation Settings</div>
+          <div class="props-row" style="margin-bottom: 6px;">
+            <span style="font-size: 11px; color: var(--text-dim);">Device Preset:</span>
+            <select class="prop-select" id="protoSettingDevice" style="font-size: 11px;">
+              <option value="desktop" ${this.prototype.currentDevice === 'desktop' ? 'selected' : ''}>MacBook Pro (1440 × 900)</option>
+              <option value="iphone16" ${this.prototype.currentDevice === 'iphone16' || this.prototype.currentDevice === 'mobile' ? 'selected' : ''}>iPhone 16 Pro (393 × 852)</option>
+              <option value="pixel9" ${this.prototype.currentDevice === 'pixel9' ? 'selected' : ''}>Google Pixel 9 (412 × 923)</option>
+              <option value="tablet" ${this.prototype.currentDevice === 'tablet' ? 'selected' : ''}>iPad Pro (768 × 1024)</option>
+              <option value="responsive" ${this.prototype.currentDevice === 'responsive' ? 'selected' : ''}>Responsive Fullscreen</option>
+            </select>
+          </div>
+          <div class="props-row" style="margin-bottom: 6px;">
+            <span style="font-size: 11px; color: var(--text-dim);">Background:</span>
+            <input type="text" class="prop-input" id="protoSettingBg" value="#090d16" style="width: 80px; font-size: 11px;">
+          </div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span>Prototype Variables (${docVars.length})</span>
+            <button class="btn-icon-xs" id="btnAddProtoVar" style="color: #38bdf8;">+ Var</button>
+          </div>
+          ${docVars.length === 0 ? `
+            <div style="font-size: 11px; color: var(--text-muted); background: var(--bg-surface); padding: 8px; border-radius: 6px;">
+              No variables defined yet. Click + Var to create reactive state.
+            </div>
+          ` : `
+            <div style="display: flex; flex-direction: column; gap: 4px; max-height: 120px; overflow-y: auto;">
+              ${docVars.map(v => `
+                <div style="display: flex; justify-content: space-between; font-size: 11px; padding: 4px 6px; background: var(--bg-surface); border-radius: 4px;">
+                  <code style="color: #38bdf8;">${this.escapeAttr(v.name || v.id)}</code>
+                  <span style="color: var(--text-dim);">${this.escapeAttr(String(v.value !== undefined ? v.value : ''))}</span>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        </div>
+
+        <div style="margin-top: 14px;">
+          <button class="btn-primary" id="btnLaunchProtoSim" style="width: 100%; font-size: 11px;">▶ Launch Prototype Simulator (⌥⌘P)</button>
+        </div>
+      `;
+
+      document.getElementById('btnMakeFirstFlowStart')?.addEventListener('click', () => {
+        if (frames[0]) {
+          this.engine.updateNode(frames[0].id, { isFlowStart: true, flowName: 'Flow 1' }, 'Set Flow Starting Point');
+          this.updatePrototypePanel();
+          this.renderer.render();
+        }
+      });
+
+      container.querySelectorAll('.btn-play-flow').forEach(btn => {
+        btn.addEventListener('click', () => {
+          this.prototype.currentFrameId = btn.dataset.frameId;
+          this.openPrototypeModal();
+        });
+      });
+
+      document.getElementById('protoSettingDevice')?.addEventListener('change', (e) => {
+        this.prototype.setDevice(e.target.value);
+      });
+
+      document.getElementById('btnAddProtoVar')?.addEventListener('click', () => {
+        const name = prompt('Variable Name (e.g. cart_count, user_name, is_logged_in):');
+        if (!name) return;
+        const initial = prompt('Initial Value (number, boolean true/false, or text):', '0');
+        let parsed = initial;
+        let type = 'string';
+        if (initial === 'true' || initial === 'false') { parsed = initial === 'true'; type = 'boolean'; }
+        else if (!isNaN(Number(initial)) && initial.trim() !== '') { parsed = Number(initial); type = 'number'; }
+        const curVars = this.doc.variables || [];
+        curVars.push({ id: name, name, type, value: parsed, initialValue: parsed });
+        this.doc.variables = curVars;
+        this.prototype.initVariables();
+        this.updatePrototypePanel();
+      });
+
+      document.getElementById('btnLaunchProtoSim')?.addEventListener('click', () => {
+        this.openPrototypeModal();
+      });
+
+      const addBtn = document.getElementById('btnAddInteractionBtn');
+      if (addBtn) addBtn.onclick = () => {
+        this.showToast('Select a layer or frame first to add an interaction.', 'info');
+      };
+
       return;
     }
 
     const node = this.engine.getNode(selectedIds[0]);
     if (!node) return;
 
-    const frames = page.rootIds.map(id => page.nodes[id]).filter(n => n && n.type === 'frame');
     const interactions = node.interactions || [];
 
     container.innerHTML = `
@@ -3297,54 +3410,162 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         Layer: <strong>${this.escapeAttr(node.name)}</strong> (${this.escapeAttr(node.type)})
       </div>
 
-      <!-- Flow Starting Point Toggle -->
-      <div class="props-row" style="margin-bottom: 12px; padding: 8px; background: var(--bg-surface); border-radius: 6px;">
+      <!-- Flow Starting Point Toggle & Name -->
+      <div class="props-row" style="margin-bottom: 12px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 8px;">
         <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; cursor: pointer;">
           <input type="checkbox" id="chkFlowStart" ${node.isFlowStart ? 'checked' : ''}>
-          <span>Set as Flow Starting Point</span>
+          <span style="font-weight: 600;">Set as Flow Starting Point</span>
         </label>
+        ${node.isFlowStart ? `
+          <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+            <span style="font-size: 10px; color: var(--text-dim);">Flow Name:</span>
+            <input type="text" class="prop-input" id="txtFlowName" value="${this.escapeAttr(node.flowName || node.name || 'Flow 1')}" placeholder="Flow Name">
+          </div>
+        ` : ''}
       </div>
 
-      <div class="section-title">Interactions (${interactions.length})</div>
+      <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span>Interactions (${interactions.length})</span>
+      </div>
 
       ${interactions.map((int, idx) => `
-      <div class="proto-interaction-card">
-        <div class="proto-row">
+      <div class="proto-interaction-card" style="padding: 10px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 6px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;">
+        <div class="proto-row" style="display: flex; justify-content: space-between; align-items: center;">
           <span style="font-weight: 600; color: #38bdf8;">⚡ Interaction ${idx + 1}</span>
-          <button class="btn-icon-xs btn-remove-interaction" data-index="${idx}">✕</button>
+          <button class="btn-icon-xs btn-remove-interaction" data-index="${idx}" title="Remove interaction">✕</button>
         </div>
+
+        <!-- Trigger Selector -->
         <div class="proto-row">
           <span style="color: var(--text-dim);">Trigger:</span>
           <select class="prop-select sel-trigger" data-index="${idx}" style="font-size: 11px;">
-            <option value="click" ${int.trigger === 'click' ? 'selected' : ''}>On Click</option>
+            <option value="click" ${int.trigger === 'click' ? 'selected' : ''}>On Click / On Tap</option>
+            <option value="drag" ${int.trigger === 'drag' ? 'selected' : ''}>On Drag</option>
             <option value="hover" ${int.trigger === 'hover' ? 'selected' : ''}>While Hovering</option>
             <option value="press" ${int.trigger === 'press' ? 'selected' : ''}>While Pressing</option>
             <option value="enter" ${int.trigger === 'enter' ? 'selected' : ''}>Mouse Enter</option>
+            <option value="leave" ${int.trigger === 'leave' ? 'selected' : ''}>Mouse Leave</option>
+            <option value="down" ${int.trigger === 'down' ? 'selected' : ''}>Mouse Down</option>
+            <option value="up" ${int.trigger === 'up' ? 'selected' : ''}>Mouse Up</option>
+            <option value="delay" ${int.trigger === 'delay' ? 'selected' : ''}>After Delay</option>
+            <option value="key" ${int.trigger === 'key' ? 'selected' : ''}>Key / Gamepad</option>
+            <option value="scroll" ${int.trigger === 'scroll' ? 'selected' : ''}>On Scroll</option>
           </select>
         </div>
+
+        ${int.trigger === 'delay' ? `
+        <div class="proto-row">
+          <span style="color: var(--text-dim);">Delay (ms):</span>
+          <input type="number" class="prop-input sel-delay" data-index="${idx}" value="${int.delay || 500}" min="10" step="50" style="font-size: 11px;">
+        </div>` : ''}
+
+        ${int.trigger === 'key' ? `
+        <div class="proto-row">
+          <span style="color: var(--text-dim);">Key:</span>
+          <input type="text" class="prop-input sel-key" data-index="${idx}" value="${this.escapeAttr(int.key || 'Enter')}" placeholder="Enter, Escape, Space...">
+        </div>` : ''}
+
+        <!-- Action Selector -->
         <div class="proto-row">
           <span style="color: var(--text-dim);">Action:</span>
           <select class="prop-select sel-action" data-index="${idx}" style="font-size: 11px;">
             <option value="navigate" ${int.action === 'navigate' ? 'selected' : ''}>Navigate To Frame</option>
             <option value="overlay" ${int.action === 'overlay' ? 'selected' : ''}>Open Modal Overlay</option>
+            <option value="swap_overlay" ${int.action === 'swap_overlay' ? 'selected' : ''}>Swap Overlay</option>
+            <option value="close_overlay" ${int.action === 'close_overlay' ? 'selected' : ''}>Close Overlay</option>
             <option value="back" ${int.action === 'back' ? 'selected' : ''}>Go Back</option>
+            <option value="scroll_to" ${int.action === 'scroll_to' ? 'selected' : ''}>Scroll To Element</option>
             <option value="url" ${int.action === 'url' ? 'selected' : ''}>Open External URL</option>
+            <option value="set_variable" ${int.action === 'set_variable' ? 'selected' : ''}>Set Variable (Logic)</option>
+            <option value="set_variable_mode" ${int.action === 'set_variable_mode' ? 'selected' : ''}>Set Variable Mode</option>
+            <option value="conditional" ${int.action === 'conditional' ? 'selected' : ''}>Conditional (If / Else)</option>
+            <option value="change_to" ${int.action === 'change_to' ? 'selected' : ''}>Change Component Variant</option>
           </select>
         </div>
+
+        <!-- Target Frame for Navigate / Overlay -->
+        ${int.action === 'navigate' || int.action === 'overlay' || int.action === 'swap_overlay' ? `
+        <div class="proto-row">
+          <span style="color: var(--text-dim);">Target:</span>
+          <select class="prop-select sel-target" data-index="${idx}" style="font-size: 11px;">
+            ${frames.length
+              ? frames.map(f => `<option value="${f.id}" ${int.targetId === f.id ? 'selected' : ''}>${this.escapeAttr(f.name)}</option>`).join('')
+              : '<option value="">No frames on this page</option>'}
+          </select>
+        </div>` : ''}
+
+        ${int.action === 'overlay' ? `
+        <div class="proto-row">
+          <span style="color: var(--text-dim);">Position:</span>
+          <select class="prop-select sel-overlay-pos" data-index="${idx}" style="font-size: 11px;">
+            <option value="center" ${int.overlayPosition === 'center' ? 'selected' : ''}>Centered</option>
+            <option value="top-center" ${int.overlayPosition === 'top-center' ? 'selected' : ''}>Top Center</option>
+            <option value="bottom-center" ${int.overlayPosition === 'bottom-center' ? 'selected' : ''}>Bottom Center</option>
+            <option value="top-left" ${int.overlayPosition === 'top-left' ? 'selected' : ''}>Top Left</option>
+            <option value="bottom-left" ${int.overlayPosition === 'bottom-left' ? 'selected' : ''}>Bottom Left</option>
+            <option value="manual" ${int.overlayPosition === 'manual' ? 'selected' : ''}>Manual (Designed pos)</option>
+          </select>
+        </div>
+        <div class="proto-row">
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer;">
+            <input type="checkbox" class="chk-overlay-outside" data-index="${idx}" ${int.closeOnClickOutside !== false ? 'checked' : ''}>
+            <span>Close when clicking outside</span>
+          </label>
+        </div>` : ''}
+
         ${int.action === 'url' ? `
         <div class="proto-row">
           <span style="color: var(--text-dim);">URL:</span>
           <input type="url" class="prop-input sel-url" data-index="${idx}" value="${this.escapeAttr(int.url || '')}" placeholder="https://example.com">
         </div>` : ''}
+
+        ${int.action === 'set_variable' ? `
         <div class="proto-row">
-          <span style="color: var(--text-dim);">Target:</span>
-          <select class="prop-select sel-target" data-index="${idx}" style="font-size: 11px;"
-            ${int.action === 'back' || int.action === 'url' || frames.length === 0 ? 'disabled' : ''}>
-            ${frames.length
-              ? frames.map(f => `<option value="${f.id}" ${int.targetId === f.id ? 'selected' : ''}>${this.escapeAttr(f.name)}</option>`).join('')
-              : '<option value="">No frames on this page</option>'}
+          <span style="color: var(--text-dim);">Variable:</span>
+          <input type="text" class="prop-input sel-var-id" data-index="${idx}" value="${this.escapeAttr(int.variableId || '')}" placeholder="e.g. cart_count">
+        </div>
+        <div class="proto-row">
+          <span style="color: var(--text-dim);">Operator:</span>
+          <select class="prop-select sel-var-op" data-index="${idx}" style="font-size: 11px;">
+            <option value="=" ${int.operator === '=' ? 'selected' : ''}>= (Set to)</option>
+            <option value="+=" ${int.operator === '+=' ? 'selected' : ''}>+= (Add)</option>
+            <option value="-=" ${int.operator === '-=' ? 'selected' : ''}>-= (Subtract)</option>
+            <option value="*=" ${int.operator === '*=' ? 'selected' : ''}>*= (Multiply)</option>
+            <option value="/=" ${int.operator === '/=' ? 'selected' : ''}>/= (Divide)</option>
+            <option value="toggle" ${int.operator === 'toggle' ? 'selected' : ''}>toggle (Boolean)</option>
           </select>
         </div>
+        <div class="proto-row">
+          <span style="color: var(--text-dim);">Expr / Value:</span>
+          <input type="text" class="prop-input sel-var-val" data-index="${idx}" value="${this.escapeAttr(int.value !== undefined ? String(int.value) : (int.expr || '1'))}" placeholder="1 or expression">
+        </div>` : ''}
+
+        ${int.action === 'conditional' ? `
+        <div class="proto-row">
+          <span style="color: var(--text-dim);">If Cond:</span>
+          <input type="text" class="prop-input sel-cond-expr" data-index="${idx}" value="${this.escapeAttr(int.condition || 'cart_count > 0')}" placeholder="cart_count > 0">
+        </div>
+        <div class="proto-row">
+          <span style="color: var(--text-dim);">Then Frame:</span>
+          <select class="prop-select sel-cond-then" data-index="${idx}" style="font-size: 11px;">
+            ${frames.map(f => `<option value="${f.id}" ${int.thenTarget === f.id ? 'selected' : ''}>${this.escapeAttr(f.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="proto-row">
+          <span style="color: var(--text-dim);">Else Frame:</span>
+          <select class="prop-select sel-cond-else" data-index="${idx}" style="font-size: 11px;">
+            <option value="">(None)</option>
+            ${frames.map(f => `<option value="${f.id}" ${int.elseTarget === f.id ? 'selected' : ''}>${this.escapeAttr(f.name)}</option>`).join('')}
+          </select>
+        </div>` : ''}
+
+        ${int.action === 'change_to' ? `
+        <div class="proto-row">
+          <span style="color: var(--text-dim);">Variant:</span>
+          <input type="text" class="prop-input sel-variant-id" data-index="${idx}" value="${this.escapeAttr(int.variantId || 'active')}" placeholder="e.g. hover, active">
+        </div>` : ''}
+
+        <!-- Animation / Transition Settings -->
         <div class="proto-row">
           <span style="color: var(--text-dim);">Animation:</span>
           <select class="prop-select sel-anim" data-index="${idx}" style="font-size: 11px;">
@@ -3352,7 +3573,33 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             <option value="dissolve" ${int.animation === 'dissolve' ? 'selected' : ''}>Dissolve</option>
             <option value="smart-animate" ${int.animation === 'smart-animate' ? 'selected' : ''}>Smart Animate</option>
             <option value="slide-left" ${int.animation === 'slide-left' ? 'selected' : ''}>Slide Left</option>
+            <option value="slide-right" ${int.animation === 'slide-right' ? 'selected' : ''}>Slide Right</option>
+            <option value="slide-up" ${int.animation === 'slide-up' ? 'selected' : ''}>Slide Up</option>
+            <option value="slide-down" ${int.animation === 'slide-down' ? 'selected' : ''}>Slide Down</option>
+            <option value="push" ${int.animation === 'push' ? 'selected' : ''}>Push</option>
           </select>
+        </div>
+
+        <div class="proto-row">
+          <span style="color: var(--text-dim);">Easing:</span>
+          <select class="prop-select sel-easing" data-index="${idx}" style="font-size: 11px;">
+            <option value="ease-out" ${int.easing === 'ease-out' ? 'selected' : ''}>Ease Out</option>
+            <option value="ease-in-out" ${int.easing === 'ease-in-out' ? 'selected' : ''}>Ease In and Out</option>
+            <option value="ease-in" ${int.easing === 'ease-in' ? 'selected' : ''}>Ease In</option>
+            <option value="linear" ${int.easing === 'linear' ? 'selected' : ''}>Linear</option>
+            <option value="gentle" ${int.easing === 'gentle' ? 'selected' : ''}>Gentle Spring</option>
+            <option value="quick" ${int.easing === 'quick' ? 'selected' : ''}>Quick Spring</option>
+            <option value="bouncy" ${int.easing === 'bouncy' ? 'selected' : ''}>Bouncy Spring</option>
+            <option value="slow" ${int.easing === 'slow' ? 'selected' : ''}>Slow Spring</option>
+          </select>
+        </div>
+
+        <div class="proto-row">
+          <span style="color: var(--text-dim);">Duration:</span>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <input type="number" class="prop-input sel-duration" data-index="${idx}" value="${int.duration || 300}" min="0" step="50" style="width: 70px; font-size: 11px;">
+            <span style="font-size: 10px; color: var(--text-dim);">ms</span>
+          </div>
         </div>
       </div>
       `).join('')}
@@ -3362,16 +3609,26 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       </div>
     `;
 
+    // Event Wire-up
     document.getElementById('chkFlowStart')?.addEventListener('change', (e) => {
-      this.engine.updateNode(node.id, { isFlowStart: e.target.checked }, 'Toggle Flow Starting Point');
+      this.engine.updateNode(node.id, { isFlowStart: e.target.checked, flowName: node.flowName || node.name || 'Flow 1' }, 'Toggle Flow Starting Point');
+      this.updatePrototypePanel();
+      this.renderer.render();
+    });
+
+    document.getElementById('txtFlowName')?.addEventListener('change', (e) => {
+      this.engine.updateNode(node.id, { flowName: e.target.value.trim() }, 'Rename Flow');
+      this.renderer.render();
     });
 
     const addInteractionButton = document.getElementById('btnAddInteractionBtn');
     if (addInteractionButton) addInteractionButton.onclick = () => {
       const cur = JSON.parse(JSON.stringify(node.interactions || []));
       const targetId = frames.find(frame => frame.id !== node.id)?.id || frames[0]?.id || null;
-      cur.push({ trigger: 'click', action: 'navigate', targetId, animation: 'dissolve' });
+      cur.push({ trigger: 'click', action: 'navigate', targetId, animation: 'smart-animate', easing: 'ease-out', duration: 300 });
       this.engine.updateNode(node.id, { interactions: cur }, 'Add Interaction');
+      this.updatePrototypePanel();
+      this.renderer.render();
     };
 
     container.querySelectorAll('.btn-remove-interaction').forEach(btn => {
@@ -3380,6 +3637,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         const cur = JSON.parse(JSON.stringify(node.interactions || []));
         cur.splice(idx, 1);
         this.engine.updateNode(node.id, { interactions: cur }, 'Remove Interaction');
+        this.updatePrototypePanel();
+        this.renderer.render();
       });
     });
 
@@ -3390,6 +3649,30 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         if (cur[idx]) {
           cur[idx].trigger = e.target.value;
           this.engine.updateNode(node.id, { interactions: cur }, 'Change Trigger');
+          this.updatePrototypePanel();
+          this.renderer.render();
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-delay').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const idx = parseInt(inp.dataset.index, 10);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].delay = Number(e.target.value) || 500;
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Delay');
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-key').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const idx = parseInt(inp.dataset.index, 10);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].key = e.target.value.trim();
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Key');
         }
       });
     });
@@ -3401,6 +3684,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         if (cur[idx]) {
           cur[idx].action = e.target.value;
           this.engine.updateNode(node.id, { interactions: cur }, 'Change Action');
+          this.updatePrototypePanel();
+          this.renderer.render();
         }
       });
     });
@@ -3412,6 +3697,29 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         if (cur[idx]) {
           cur[idx].targetId = e.target.value;
           this.engine.updateNode(node.id, { interactions: cur }, 'Change Target Frame');
+          this.renderer.render();
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-overlay-pos').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = parseInt(sel.dataset.index, 10);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].overlayPosition = e.target.value;
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Overlay Position');
+        }
+      });
+    });
+
+    container.querySelectorAll('.chk-overlay-outside').forEach(chk => {
+      chk.addEventListener('change', (e) => {
+        const idx = parseInt(chk.dataset.index, 10);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].closeOnClickOutside = e.target.checked;
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Overlay Dismiss');
         }
       });
     });
@@ -3427,6 +3735,28 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       });
     });
 
+    container.querySelectorAll('.sel-easing').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = Number(sel.dataset.index);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].easing = e.target.value;
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Easing');
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-duration').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const idx = Number(inp.dataset.index);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].duration = Number(e.target.value) || 300;
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Duration');
+        }
+      });
+    });
+
     container.querySelectorAll('.sel-url').forEach(input => {
       input.addEventListener('change', (e) => {
         const idx = Number(input.dataset.index);
@@ -3434,6 +3764,88 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         if (cur[idx]) {
           cur[idx].url = e.target.value.trim();
           this.engine.updateNode(node.id, { interactions: cur }, 'Change Interaction URL');
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-var-id').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const idx = Number(inp.dataset.index);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].variableId = e.target.value.trim();
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Variable ID');
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-var-op').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = Number(sel.dataset.index);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].operator = e.target.value;
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Variable Operator');
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-var-val').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const idx = Number(inp.dataset.index);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          const v = e.target.value.trim();
+          cur[idx].value = !isNaN(Number(v)) ? Number(v) : (v === 'true' ? true : v === 'false' ? false : v);
+          cur[idx].expr = v;
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Variable Value');
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-cond-expr').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const idx = Number(inp.dataset.index);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].condition = e.target.value.trim();
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Condition Expr');
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-cond-then').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = Number(sel.dataset.index);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].thenTarget = e.target.value;
+          cur[idx].thenAction = { action: 'navigate', targetId: e.target.value };
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Then Branch');
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-cond-else').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = Number(sel.dataset.index);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].elseTarget = e.target.value;
+          cur[idx].elseAction = e.target.value ? { action: 'navigate', targetId: e.target.value } : null;
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Else Branch');
+        }
+      });
+    });
+
+    container.querySelectorAll('.sel-variant-id').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const idx = Number(inp.dataset.index);
+        const cur = JSON.parse(JSON.stringify(node.interactions || []));
+        if (cur[idx]) {
+          cur[idx].variantId = e.target.value.trim();
+          cur[idx].variant = e.target.value.trim();
+          this.engine.updateNode(node.id, { interactions: cur }, 'Change Variant ID');
         }
       });
     });
@@ -4916,14 +5328,22 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         this.prototype.setDevice(device);
         const bezel = document.getElementById('deviceBezel');
         if (bezel) {
-          if (device === 'mobile') {
-            bezel.style.width = '375px';
-            bezel.style.height = '780px';
+          if (device === 'mobile' || device === 'iphone16') {
+            bezel.style.width = '393px';
+            bezel.style.height = '852px';
+            bezel.className = 'device-bezel mobile';
+          } else if (device === 'pixel9') {
+            bezel.style.width = '412px';
+            bezel.style.height = '923px';
             bezel.className = 'device-bezel mobile';
           } else if (device === 'tablet') {
             bezel.style.width = '768px';
             bezel.style.height = '840px';
             bezel.className = 'device-bezel tablet';
+          } else if (device === 'responsive') {
+            bezel.style.width = '100%';
+            bezel.style.height = '100%';
+            bezel.className = 'device-bezel responsive';
           } else {
             bezel.style.width = '100%';
             bezel.style.height = '100%';

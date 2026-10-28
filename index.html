@@ -8,6 +8,11 @@
   <meta name="description"
     content="Professional Figma-grade AI-native design platform with infinite canvas, contextual properties, native AI assistant, markdown parser, and deterministic React compiler.">
 
+  <!-- Brand Favicon & Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="assets/logo-64.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="assets/logo-192.png">
+
   <!-- Modern Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,7 +34,7 @@
     <header class="top-bar global-command-bar">
       <div class="top-bar-left command-bar-left">
         <div class="brand-badge axiom-brand-badge" id="brandLogoBtn" title="Open DesignForge projects" role="button" tabindex="0">
-          <div class="brand-logo axiom-spark-icon">⚡</div>
+          <img src="assets/logo-64.png" alt="DesignForge Logo" class="brand-logo-img axiom-spark-icon" width="24" height="24">
           <span>DesignForge <span style="color: var(--brand-accent-soft); font-weight: 500;">AI</span></span>
         </div>
 
@@ -900,7 +905,9 @@
           <div style="display: flex; gap: 8px;">
             <button class="menu-dropdown-btn btn-device-switch active" data-device="desktop">MacBook (1440px)</button>
             <button class="menu-dropdown-btn btn-device-switch" data-device="tablet">iPad (768px)</button>
-            <button class="menu-dropdown-btn btn-device-switch" data-device="mobile">iPhone 15 Pro (375px)</button>
+            <button class="menu-dropdown-btn btn-device-switch" data-device="iphone16">iPhone 16 Pro (393px)</button>
+            <button class="menu-dropdown-btn btn-device-switch" data-device="pixel9">Pixel 9 (412px)</button>
+            <button class="menu-dropdown-btn btn-device-switch" data-device="responsive">Responsive (100%)</button>
           </div>
           <button class="btn-icon" id="btnCloseProtoModal">✕</button>
         </div>
@@ -1927,7 +1934,7 @@
 
         <section class="workspace-screen projects-screen" id="workspaceDashboard" aria-label="Project dashboard" hidden>
           <aside class="projects-rail">
-            <button class="workspace-wordmark" id="workspaceDashboardHome" type="button"><span class="workspace-mark-icon">⚡</span><strong>DesignForge</strong><span>AI</span></button>
+            <button class="workspace-wordmark" id="workspaceDashboardHome" type="button"><img src="assets/logo-64.png" alt="DesignForge" class="workspace-mark-logo" width="22" height="22"><strong>DesignForge</strong><span>AI</span></button>
             <label class="workspace-search">
               <span aria-hidden="true">⌕</span>
               <input id="workspaceProjectSearch" type="search" placeholder="Search projects" aria-label="Search projects">
@@ -1982,7 +1989,7 @@
 
         <section class="workspace-screen settings-screen" id="workspaceSettings" aria-label="Profile and settings" hidden>
           <header class="settings-topbar">
-            <button class="workspace-wordmark" id="settingsDashboardHome" type="button"><span class="workspace-mark-icon">⚡</span><strong>DesignForge</strong><span>AI</span></button>
+            <button class="workspace-wordmark" id="settingsDashboardHome" type="button"><img src="assets/logo-64.png" alt="DesignForge" class="workspace-mark-logo" width="22" height="22"><strong>DesignForge</strong><span>AI</span></button>
             <div class="settings-topbar-right">
               <span class="settings-local-badge">● Saved in this browser</span>
               <button class="workspace-avatar" id="settingsProfileButton" type="button" aria-label="Open profile"></button>
@@ -2012,7 +2019,7 @@
         <div class="workspace-modal-backdrop" id="workspaceNewProjectModal" hidden>
           <form class="workspace-modal" id="workspaceNewProjectForm">
             <button class="workspace-modal-close" id="workspaceNewProjectClose" type="button" aria-label="Close">×</button>
-            <div class="workspace-empty-icon">✦</div>
+            <img src="assets/logo-128.png" alt="DesignForge" class="workspace-empty-icon" style="width: 48px; height: 48px; border-radius: 10px; object-fit: contain; margin: 0 auto 13px; display: block; border: none; background: transparent;">
             <h2>Create a new project</h2>
             <p>Your new project is saved locally and remains editable in DesignForge.</p>
             <label for="workspaceNewProjectName">Project name</label>

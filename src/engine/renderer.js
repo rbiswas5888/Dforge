@@ -613,15 +613,53 @@ export class CanvasRenderer {
 
   drawPrototypeLinks(ctx, page, boundsCache) {
     if (!this.showPrototypeLinks) return;
+    const selectedIds = this.engine ? this.engine.getSelection() : [];
+
+    // 1. Draw Flow Starting Point Badges above starting frames
+    for (const rid of page.rootIds || []) {
+      const frame = page.nodes[rid];
+      if (frame && frame.type === 'frame' && (frame.isFlowStart || frame.flowName)) {
+        const b = computeWorldBounds(page, rid, boundsCache);
+        if (!b) continue;
+        const flowTitle = '▶ ' + (frame.flowName || 'Flow 1');
+        ctx.save();
+        ctx.font = `600 ${Math.max(9, 11 / this.zoom)}px 'Inter', sans-serif`;
+        const textW = ctx.measureText(flowTitle).width;
+        const badgeW = textW + 16 / this.zoom;
+        const badgeH = 22 / this.zoom;
+        const badgeX = b.x;
+        const badgeY = b.y - badgeH - 6 / this.zoom;
+
+        // Rounded pill background
+        ctx.fillStyle = '#0284c7';
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 6 / this.zoom);
+        } else {
+          ctx.rect(badgeX, badgeY, badgeW, badgeH);
+        }
+        ctx.fill();
+
+        // Text
+        ctx.fillStyle = '#ffffff';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(flowTitle, badgeX + 8 / this.zoom, badgeY + badgeH / 2);
+        ctx.restore();
+      }
+    }
+
+    // 2. Draw Interaction Bezier Connectors
     for (const id in page.nodes) {
       const node = page.nodes[id];
       if (!node || !node.interactions || node.interactions.length === 0) continue;
       const srcBounds = computeWorldBounds(page, id, boundsCache);
       if (!srcBounds) continue;
+      const isSelected = selectedIds.includes(id);
 
       for (const interaction of node.interactions) {
-        if (!interaction.targetId || !page.nodes[interaction.targetId]) continue;
-        const targetBounds = computeWorldBounds(page, interaction.targetId, boundsCache);
+        const targetId = interaction.targetId || interaction.destinationFrameId || interaction.overlayFrameId;
+        if (!targetId || !page.nodes[targetId]) continue;
+        const targetBounds = computeWorldBounds(page, targetId, boundsCache);
         if (!targetBounds) continue;
 
         const startX = srcBounds.x + srcBounds.width;
@@ -630,9 +668,15 @@ export class CanvasRenderer {
         const endY = targetBounds.y + 40;
 
         ctx.save();
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2 / this.zoom;
-        ctx.fillStyle = '#38bdf8';
+        const strokeColor = isSelected ? '#00f0ff' : '#0284c7';
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = (isSelected ? 3 : 2) / this.zoom;
+        ctx.fillStyle = strokeColor;
+
+        if (isSelected) {
+          ctx.shadowColor = '#00f0ff';
+          ctx.shadowBlur = 8 / this.zoom;
+        }
 
         // Draw start circle
         ctx.beginPath();
@@ -643,13 +687,49 @@ export class CanvasRenderer {
         ctx.beginPath();
         ctx.moveTo(startX, startY);
         const dx = Math.max(60, (endX - startX) / 2);
-        ctx.bezierCurveTo(startX + dx, startY, endX - dx, endY, endX, endY);
+        const cp1x = startX + dx, cp1y = startY;
+        const cp2x = endX - dx, cp2y = endY;
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
         ctx.stroke();
 
         // Draw arrow tip
         ctx.beginPath();
         ctx.arc(endX, endY, 4 / this.zoom, 0, Math.PI * 2);
         ctx.fill();
+
+        // Draw Trigger Badge at midpoint
+        const midX = 0.5 * (startX + endX);
+        const midY = 0.5 * (startY + endY);
+        const triggerLabel = interaction.trigger === 'delay'
+          ? `Delay: ${interaction.delay || 500}ms`
+          : interaction.trigger === 'key'
+          ? `Key: ${interaction.key || 'Enter'}`
+          : interaction.action === 'set_variable'
+          ? `Set Var: ${interaction.variableId || ''}`
+          : (interaction.trigger || 'Click');
+
+        ctx.font = `500 ${Math.max(8, 10 / this.zoom)}px 'Inter', sans-serif`;
+        const tw = ctx.measureText(triggerLabel).width;
+        const pillW = tw + 10 / this.zoom;
+        const pillH = 16 / this.zoom;
+
+        ctx.fillStyle = '#0f172a';
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 1 / this.zoom;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(midX - pillW / 2, midY - pillH / 2, pillW, pillH, 4 / this.zoom);
+        } else {
+          ctx.rect(midX - pillW / 2, midY - pillH / 2, pillW, pillH);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.fillText(triggerLabel, midX, midY);
+
         ctx.restore();
       }
     }

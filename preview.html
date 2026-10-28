@@ -6,6 +6,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>DesignForge AI — Mobile Live Preview & Usability Player</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="assets/logo-64.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="assets/logo-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -379,7 +382,10 @@
   <!-- Top Toolbar -->
   <header class="preview-header">
     <div class="brand-section">
-      <div class="logo-badge">DesignForge <span>Live</span></div>
+      <div class="logo-badge">
+        <img src="assets/logo-64.png" alt="DesignForge" style="width: 22px; height: 22px; border-radius: 5px; object-fit: contain; display: inline-block;">
+        DesignForge <span>Live</span>
+      </div>
       <div class="status-pill" id="syncStatus">
         <div class="status-dot"></div>
         <span id="syncStatusText">Connecting...</span>

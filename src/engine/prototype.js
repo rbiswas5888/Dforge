@@ -38,18 +38,63 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
   const doc = window.__DFORGE_DOC__;
   const toolbar = document.getElementById('playerToolbar');
   const screen = document.getElementById('deviceScreen');
+  const bezel = document.getElementById('activeDeviceBezel');
+  const dynamicIsland = document.getElementById('dynamicIsland');
   const flowLabel = document.getElementById('activeFlowLabel');
+  const flowSelect = document.getElementById('protoFlowSelect');
+  const scaleSelect = document.getElementById('protoScaleSelect');
+  const deviceSelect = document.getElementById('protoDeviceSelect');
+  const btnPrev = document.getElementById('btnPrevFrame');
+  const btnNext = document.getElementById('btnNextFrame');
+  const btnToggleHints = document.getElementById('btnToggleHints');
+  const btnToggleDebugger = document.getElementById('btnToggleDebugger');
+  const debuggerDrawer = document.getElementById('debuggerDrawer');
+  const dbgVarsPane = document.getElementById('dbgVarsPane');
+  const dbgEventsPane = document.getElementById('dbgEventsPane');
+  const dbgVarCount = document.getElementById('dbgVarCount');
+  const dbgEventCount = document.getElementById('dbgEventCount');
+  const btnClearLog = document.getElementById('btnClearLog');
+  const btnCloseDebugger = document.getElementById('btnCloseDebugger');
+
   const pages = doc.pages || [];
-  let page = pages[0];
+  let page = pages[0] || { nodes: {} };
   let currentFrameId = doc.initialFrameId;
   const history = [];
   const overlays = [];
+  const eventLog = [];
+  let showHotspotHints = true;
+  let activeScaleMode = 'fit'; // 'fit' | '100' | 'width'
+  let currentDevice = 'responsive';
+
+  // Reactive Variables Store
+  const variables = {};
+  for (const v of doc.variables || []) {
+    const k = v.id || v.name;
+    const val = v.value !== undefined ? v.value : (v.initialValue !== undefined ? v.initialValue : (v.type === 'number' ? 0 : v.type === 'boolean' ? false : ''));
+    variables[k] = val;
+    if (v.name && v.id && v.name !== v.id) {
+      variables[v.name] = val;
+    }
+  }
+
+  // Active delay timers for cleanup
+  let activeDelayTimers = [];
+  function clearDelayTimers() {
+    activeDelayTimers.forEach(t => clearTimeout(t));
+    activeDelayTimers = [];
+  }
 
   function getNode(id) {
     for (const candidate of pages) {
       if (candidate.nodes && candidate.nodes[id]) return candidate.nodes[id];
     }
     return null;
+  }
+
+  function getFrames() {
+    return (page.rootIds || [])
+      .map(id => page.nodes[id])
+      .filter(n => n && n.type === 'frame');
   }
 
   function escapeText(value) {
@@ -70,9 +115,137 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     return cssColor(fill.color, '#334155');
   }
 
+  // Evaluates mathematical/logical expressions in prototype scope
+  function evaluateExpr(expr, scope = {}) {
+    if (!expr || typeof expr !== 'string') return expr;
+    const s = { ...variables, ...scope };
+    s.min = Math.min;
+    s.max = Math.max;
+    s.round = Math.round;
+    s.floor = Math.floor;
+    s.ceil = Math.ceil;
+    s.abs = Math.abs;
+    s.clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+    s.concat = (...args) => args.join('');
+    s.contains = (str, sub) => String(str || '').includes(sub);
+    s.upper = (str) => String(str || '').toUpperCase();
+    s.lower = (str) => String(str || '').toLowerCase();
+    s.length = (str) => String(str || '').length;
+    s.trim = (str) => String(str || '').trim();
+    s.len = (list) => Array.isArray(list) ? list.length : (list ? Object.keys(list).length : 0);
+    s.sum = (list) => Array.isArray(list) ? list.reduce((a, b) => a + (Number(b) || 0), 0) : 0;
+    s.avg = (list) => Array.isArray(list) && list.length ? s.sum(list) / list.length : 0;
+    s.if = (cond, thenVal, elseVal) => cond ? thenVal : elseVal;
+    s.isEmail = (str) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(str || '').trim());
+    s.isPhone = (str) => /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]{6,15}$/.test(String(str || '').trim());
+    s.required = (val) => val !== null && val !== undefined && val !== '';
+
+    let norm = expr.trim()
+      .replace(/\band\b/g, '&&')
+      .replace(/\bor\b/g, '||')
+      .replace(/\bnot\s+/g, '!')
+      .replace(/\bif\s*\(/g, '__if(');
+
+    if (s['if']) {
+      s['__if'] = s['if'];
+      delete s['if'];
+    }
+
+    try {
+      const keys = Object.keys(s).filter(k => /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k));
+      const vals = keys.map(k => s[k]);
+      const fn = new Function(...keys, '"use strict"; return (' + norm + ');');
+      return fn(...vals);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Interpolates variable expressions like {counter} in text content
+  function interpolateText(content) {
+    if (typeof content !== 'string') return content;
+    return content.replace(/\{([a-zA-Z0-9_$.]+)\}/g, (match, varName) => {
+      const v = variables[varName];
+      return v !== undefined ? String(v) : match;
+    });
+  }
+
+  function updateDynamicBindings() {
+    screen.querySelectorAll('.prototype-text').forEach(el => {
+      const raw = el.dataset.rawContent;
+      if (raw) el.textContent = interpolateText(raw);
+    });
+    updateDebuggerView();
+  }
+
+  function flashHotspotHints() {
+    if (!showHotspotHints) return;
+    const hotspots = screen.querySelectorAll('[data-interactive="true"]');
+    hotspots.forEach(el => {
+      el.classList.remove('hotspot-pulse');
+      void el.offsetWidth;
+      el.classList.add('hotspot-pulse');
+      setTimeout(() => el.classList.remove('hotspot-pulse'), 500);
+    });
+  }
+
+  function logEvent(trigger, sourceName, desc) {
+    const time = new Date().toTimeString().split(' ')[0];
+    eventLog.unshift({ time, trigger, sourceName: sourceName || 'Canvas', desc });
+    if (eventLog.length > 50) eventLog.pop();
+    updateDebuggerView();
+  }
+
+  function updateDebuggerView() {
+    if (!debuggerDrawer || debuggerDrawer.style.display === 'none') return;
+    if (dbgVarCount) dbgVarCount.textContent = Object.keys(variables).length;
+    if (dbgEventCount) dbgEventCount.textContent = eventLog.length;
+
+    if (dbgVarsPane) {
+      const vKeys = Object.keys(variables);
+      if (vKeys.length === 0) {
+        dbgVarsPane.innerHTML = '<div style="color: #64748b; font-size: 11px; padding: 8px;">No variables defined in document.</div>';
+      } else {
+        dbgVarsPane.innerHTML = '<table class="dbg-table"><thead><tr><th>Name</th><th>Value</th><th>Live Override</th></tr></thead><tbody>' +
+          vKeys.map(k => {
+            const val = variables[k];
+            const type = typeof val;
+            return '<tr><td><code>' + k + '</code></td><td><span class="type-pill">' + type + '</span> ' + escapeText(val) + '</td><td><input class="dbg-input" data-var="' + k + '" value="' + escapeText(val) + '"></td></tr>';
+          }).join('') + '</tbody></table>';
+
+        dbgVarsPane.querySelectorAll('.dbg-input').forEach(inp => {
+          inp.addEventListener('change', (e) => {
+            const k = inp.dataset.var;
+            let v = e.target.value;
+            if (typeof variables[k] === 'number') v = Number(v) || 0;
+            else if (typeof variables[k] === 'boolean') v = v === 'true';
+            variables[k] = v;
+            logEvent('debug_edit', 'Debugger', k + ' -> ' + v);
+            updateDynamicBindings();
+          });
+        });
+      }
+    }
+
+    if (dbgEventsPane) {
+      if (eventLog.length === 0) {
+        dbgEventsPane.innerHTML = '<div style="color: #64748b; font-size: 11px; padding: 8px;">No events recorded yet. Click hotspots to interact.</div>';
+      } else {
+        dbgEventsPane.innerHTML = eventLog.map(e =>
+          '<div class="dbg-event-row"><span class="dbg-time">' + e.time + '</span><span class="dbg-badge">' + e.trigger + '</span><span class="dbg-source">' + escapeText(e.sourceName) + '</span><span class="dbg-desc">' + escapeText(e.desc) + '</span></div>'
+        ).join('');
+      }
+    }
+  }
+
   function mountNode(node, parentElement, parentNodeId) {
     if (!node || node.visible === false || !node.transform) return;
-    const element = document.createElement('div');
+    const isInputType = (node.type === 'text' || node.type === 'frame') && (
+      (node.name && /input|field|textbox|search|email|password/i.test(node.name)) ||
+      (node.interactions || []).some(i => i.trigger === 'change' || i.trigger === 'input' || i.action === 'set_variable')
+    );
+
+    const element = document.createElement(isInputType && node.type === 'text' ? 'input' : 'div');
     const transform = node.transform;
     const style = node.style || {};
     const bounds = page.prototypeBounds && page.prototypeBounds[node.id];
@@ -80,6 +253,7 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     const stroke = (style.strokes || []).find(item => item.visible !== false);
     element.className = 'prototype-node prototype-' + node.type;
     element.dataset.nodeId = node.id;
+    element.dataset.nodeName = node.name || node.type;
     element.style.left = (bounds && parentBounds ? bounds.x - parentBounds.x : transform.x || 0) + 'px';
     element.style.top = (bounds && parentBounds ? bounds.y - parentBounds.y : transform.y || 0) + 'px';
     element.style.width = Math.max(0, transform.width || 0) + 'px';
@@ -104,7 +278,16 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     }
     if (node.type === 'text' && node.text) {
       const text = node.text;
-      element.textContent = escapeText(text.content);
+      const rawText = escapeText(text.content);
+      element.dataset.rawContent = rawText;
+      if (element.tagName === 'INPUT') {
+        element.value = interpolateText(rawText);
+        element.style.outline = 'none';
+        element.style.border = 'none';
+        element.style.background = 'transparent';
+      } else {
+        element.textContent = interpolateText(rawText);
+      }
       element.style.color = cssColor(text.color, '#f8fafc');
       element.style.fontFamily = text.fontFamily || 'Inter, sans-serif';
       element.style.fontSize = (text.fontSize || 16) + 'px';
@@ -117,30 +300,94 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     if (node.type === 'frame') {
       element.style.overflow = node.clipContent === false ? 'visible' : 'hidden';
     }
+
     parentElement.appendChild(element);
+
     for (const childId of node.childIds || []) {
       mountNode(page.nodes[childId], element, node.id);
     }
+
     const interactions = node.interactions || [];
-    for (const interaction of interactions) {
-      const trigger = interaction.trigger || 'click';
-      const eventName = trigger === 'hover' || trigger === 'enter' ? 'pointerenter' : trigger === 'press' ? 'pointerdown' : 'click';
+    if (interactions.length > 0) {
+      element.dataset.interactive = 'true';
       element.style.cursor = 'pointer';
-      element.addEventListener(eventName, event => {
-        event.stopPropagation();
-        runInteraction(interaction);
+
+      // Setup gesture drag tracking if on-drag trigger present
+      let dragStartX = 0, dragStartY = 0, isDragging = false;
+      const dragInteraction = interactions.find(i => i.trigger === 'drag');
+      if (dragInteraction) {
+        element.addEventListener('pointerdown', (e) => {
+          dragStartX = e.clientX;
+          dragStartY = e.clientY;
+          isDragging = true;
+        });
+        window.addEventListener('pointermove', (e) => {
+          if (!isDragging) return;
+          const dist = Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY);
+          if (dist > 8) {
+            isDragging = false;
+            runInteraction(dragInteraction, node);
+          }
+        });
+        window.addEventListener('pointerup', () => { isDragging = false; });
+      }
+
+      for (const interaction of interactions) {
+        const trigger = interaction.trigger || 'click';
+
+        if (trigger === 'click' || trigger === 'tap') {
+          element.addEventListener('click', (e) => {
+            e.stopPropagation();
+            runInteraction(interaction, node);
+          });
+        } else if (trigger === 'hover' || trigger === 'enter') {
+          element.addEventListener('pointerenter', (e) => {
+            e.stopPropagation();
+            runInteraction(interaction, node);
+          });
+        } else if (trigger === 'leave') {
+          element.addEventListener('pointerleave', (e) => {
+            e.stopPropagation();
+            runInteraction(interaction, node);
+          });
+        } else if (trigger === 'press' || trigger === 'down') {
+          element.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            runInteraction(interaction, node);
+          });
+        } else if (trigger === 'up') {
+          element.addEventListener('pointerup', (e) => {
+            e.stopPropagation();
+            runInteraction(interaction, node);
+          });
+        }
+      }
+    }
+
+    // Interactive input handling
+    if (isInputType) {
+      element.addEventListener('input', (e) => {
+        const val = e.target.value;
+        const boundVar = (interactions.find(i => i.action === 'set_variable') || {}).variableId || node.name;
+        if (boundVar && variables[boundVar] !== undefined) {
+          variables[boundVar] = val;
+          updateDynamicBindings();
+        }
       });
     }
   }
 
-  function renderFrame(frameId, animation) {
+  function renderFrame(frameId, animation, easing, duration) {
     const frame = getNode(frameId);
     if (!frame || !page.nodes[frameId]) return;
+    clearDelayTimers();
     currentFrameId = frameId;
     overlays.length = 0;
     screen.innerHTML = '';
+
     const frameElement = document.createElement('div');
-    frameElement.className = 'prototype-frame' + (animation ? ' transition-' + animation : '');
+    const animClass = animation && animation !== 'instant' ? ' transition-' + animation : '';
+    frameElement.className = 'prototype-frame' + animClass;
     frameElement.style.width = Math.max(1, frame.transform.width || 1) + 'px';
     frameElement.style.height = Math.max(1, frame.transform.height || 1) + 'px';
     frameElement.style.background = fillStyle(frame);
@@ -150,33 +397,85 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     frameElement.style.color = '#f8fafc';
     frameElement.style.transformOrigin = 'top center';
     frameElement.dataset.frameId = frame.id;
+
+    // Apply animation duration & easing if provided
+    if (duration) frameElement.style.animationDuration = duration + 'ms';
+    if (easing) frameElement.style.animationTimingFunction = easing;
+
     for (const childId of frame.childIds || []) mountNode(page.nodes[childId], frameElement, frame.id);
     screen.appendChild(frameElement);
-    if (flowLabel) flowLabel.textContent = 'Flow: ' + (frame.name || 'Prototype');
+
+    if (flowLabel) flowLabel.textContent = 'Flow: ' + (frame.flowName || frame.name || 'Prototype');
+    if (flowSelect) {
+      for (let i = 0; i < flowSelect.options.length; i++) {
+        if (flowSelect.options[i].value === frame.id) flowSelect.selectedIndex = i;
+      }
+    }
+
+    // Schedule After-Delay triggers on frame layers
+    const scanDelayTriggers = (nodeId) => {
+      const n = getNode(nodeId);
+      if (!n) return;
+      for (const inter of n.interactions || []) {
+        if (inter.trigger === 'delay' || inter.trigger === 'after_delay' || inter.trigger === 'after-delay') {
+          const delayMs = Number(inter.delay || inter.delayMs || inter.timeout || 500);
+          const tId = setTimeout(() => {
+            runInteraction(inter, n);
+          }, delayMs);
+          activeDelayTimers.push(tId);
+        }
+      }
+      for (const cid of n.childIds || []) scanDelayTriggers(cid);
+    };
+    scanDelayTriggers(frameId);
+
+    // Frame empty area click triggers hotspot hint pulse
+    frameElement.addEventListener('click', () => {
+      flashHotspotHints();
+    });
+
     fitFrame(frameElement);
+    logEvent('navigate', frame.name, 'Screen mounted (' + (animation || 'instant') + ')');
+    updateDynamicBindings();
   }
 
   function fitFrame(frame) {
-    const scale = Math.min(screen.clientWidth / frame.offsetWidth, screen.clientHeight / frame.offsetHeight, 1);
+    if (!frame) return;
+    let scale = 1;
+    if (activeScaleMode === 'fit') {
+      scale = Math.min(screen.clientWidth / frame.offsetWidth, screen.clientHeight / frame.offsetHeight, 1);
+    } else if (activeScaleMode === 'width') {
+      scale = Math.min(screen.clientWidth / frame.offsetWidth, 1);
+    } else {
+      scale = 1;
+    }
     frame.style.transform = 'scale(' + Math.max(0.1, scale) + ')';
     frame.style.marginLeft = 'auto';
     frame.style.marginRight = 'auto';
     frame.style.marginBottom = Math.max(0, frame.offsetHeight * (scale - 1)) + 'px';
   }
 
-  function renderOverlay(frameId) {
+  function renderOverlay(frameId, interaction = {}) {
     const frame = getNode(frameId);
     if (!frame) return;
+    const pos = interaction.overlayPosition || interaction.position || 'center';
     const backdrop = document.createElement('div');
     backdrop.className = 'prototype-overlay-backdrop';
-    backdrop.addEventListener('click', () => {
-      if (overlays.length) overlays.pop();
-      backdrop.remove();
+    if (pos === 'top-center' || pos === 'top-left' || pos === 'top-right') backdrop.style.alignItems = 'flex-start';
+    if (pos === 'bottom-center' || pos === 'bottom-left' || pos === 'bottom-right') backdrop.style.alignItems = 'flex-end';
+    if (pos === 'top-left' || pos === 'bottom-left') backdrop.style.justifyContent = 'flex-start';
+    if (pos === 'top-right' || pos === 'bottom-right') backdrop.style.justifyContent = 'flex-end';
+
+    backdrop.addEventListener('click', (e) => {
+      if (interaction.closeOnClickOutside !== false) {
+        closeOverlay();
+      }
     });
+
     const overlayFrame = document.createElement('div');
     overlayFrame.className = 'prototype-overlay-frame';
-    overlayFrame.style.width = Math.min(frame.transform.width || 360, screen.clientWidth * 0.9) + 'px';
-    overlayFrame.style.height = Math.min(frame.transform.height || 240, screen.clientHeight * 0.9) + 'px';
+    overlayFrame.style.width = Math.min(frame.transform.width || 360, screen.clientWidth * 0.95) + 'px';
+    overlayFrame.style.height = Math.min(frame.transform.height || 240, screen.clientHeight * 0.95) + 'px';
     overlayFrame.style.background = fillStyle(frame);
     overlayFrame.style.overflow = frame.clipContent === false ? 'visible' : 'hidden';
     overlayFrame.addEventListener('click', event => event.stopPropagation());
@@ -184,46 +483,282 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     backdrop.appendChild(overlayFrame);
     screen.appendChild(backdrop);
     overlays.push(backdrop);
+    logEvent('overlay', frame.name, 'Overlay opened at ' + pos);
   }
 
-  function runInteraction(interaction) {
+  function closeOverlay() {
+    const overlay = overlays.pop();
+    if (overlay) overlay.remove();
+    logEvent('close_overlay', 'Overlay', 'Overlay dismissed');
+  }
+
+  function runInteraction(interaction, sourceNode = null) {
+    // Condition Guard Evaluation
+    if (interaction.condition || interaction.guard) {
+      const cond = interaction.condition || interaction.guard;
+      const passed = evaluateExpr(cond);
+      if (!passed) {
+        logEvent('guard_blocked', sourceNode?.name, 'Condition failed: ' + cond);
+        if (interaction.elseAction) runInteraction(interaction.elseAction, sourceNode);
+        return;
+      }
+    }
+
     const action = interaction.action || 'navigate';
-    if (action === 'navigate' || action === 'overlay') {
+
+    if (action === 'navigate' || action === 'navigate_to') {
       const target = interaction.targetId || interaction.destinationFrameId;
       if (!getNode(target)) return;
-      if (action === 'overlay') {
-        renderOverlay(target);
-      } else {
-        history.push(currentFrameId);
-        renderFrame(target, interaction.animation);
-      }
+      history.push(currentFrameId);
+      renderFrame(target, interaction.animation || interaction.transition, interaction.easing, interaction.duration || interaction.durationMs);
+    } else if (action === 'overlay' || action === 'open_overlay') {
+      const target = interaction.targetId || interaction.overlayFrameId || interaction.destinationFrameId;
+      if (!getNode(target)) return;
+      renderOverlay(target, interaction);
+    } else if (action === 'swap_overlay') {
+      closeOverlay();
+      const target = interaction.targetId || interaction.overlayFrameId;
+      if (getNode(target)) renderOverlay(target, interaction);
+    } else if (action === 'close_overlay' || action === 'close') {
+      closeOverlay();
     } else if (action === 'back') {
       const previous = history.pop();
-      if (previous) renderFrame(previous, interaction.animation);
+      if (previous) renderFrame(previous, interaction.animation || 'dissolve');
+      logEvent('back', sourceNode?.name, 'Navigated back');
+    } else if (action === 'scroll_to') {
+      const target = screen.querySelector('[data-node-id="' + interaction.targetId + '"]');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        logEvent('scroll_to', sourceNode?.name, 'Scrolled to ' + interaction.targetId);
+      }
     } else if (action === 'url' && interaction.url) {
       try {
         const url = new URL(interaction.url, window.location.href);
-        if (url.protocol === 'https:' || url.protocol === 'http:') window.open(url.href, '_blank', 'noopener');
+        if (url.protocol === 'https:' || url.protocol === 'http:') {
+          window.open(url.href, interaction.newTab !== false ? '_blank' : '_self', 'noopener');
+          logEvent('url', sourceNode?.name, 'Opened URL ' + url.href);
+        }
       } catch (error) {
-        console.error('Invalid prototype interaction URL:', error);
+        console.error('Invalid URL:', error);
       }
-    } else if (action === 'close_overlay' || action === 'close') {
-      const overlay = overlays.pop();
-      if (overlay) overlay.remove();
+    } else if (action === 'set_variable') {
+      const varId = interaction.variableId || interaction.varId || interaction.variable || interaction.name;
+      let val = interaction.value;
+      const expr = interaction.expr || interaction.expression;
+      const op = interaction.operator || interaction.op || '=';
+
+      if (expr) {
+        val = evaluateExpr(expr);
+      } else if (op && op !== '=') {
+        const cur = variables[varId] || 0;
+        if (op === '+=' || op === 'add') val = Number(cur) + Number(val || 1);
+        else if (op === '-=' || op === 'sub') val = Number(cur) - Number(val || 1);
+        else if (op === '*=' || op === 'mul') val = Number(cur) * Number(val || 1);
+        else if (op === '/=' || op === 'div') val = Number(val) !== 0 ? Number(cur) / Number(val) : 0;
+        else if (op === 'toggle') val = !Boolean(cur);
+      }
+      variables[varId] = val;
+      logEvent('set_variable', sourceNode?.name, varId + ' = ' + val);
+      updateDynamicBindings();
+    } else if (action === 'conditional') {
+      const cond = interaction.condition || interaction.expr;
+      const passed = evaluateExpr(cond);
+      logEvent('conditional', sourceNode?.name, cond + ' => ' + passed);
+      if (passed && interaction.thenAction) {
+        runInteraction(interaction.thenAction, sourceNode);
+      } else if (!passed && interaction.elseAction) {
+        runInteraction(interaction.elseAction, sourceNode);
+      }
+    } else if (action === 'change_to' || action === 'change_variant') {
+      logEvent('change_to', sourceNode?.name, 'Variant swapped to ' + (interaction.targetVariantId || interaction.variant));
     }
   }
 
   function restart() {
+    clearDelayTimers();
     history.length = 0;
     overlays.length = 0;
     renderFrame(doc.initialFrameId, 'instant');
+    logEvent('restart', 'Player', 'Prototype restarted from origin');
   }
 
-  document.getElementById('btnRestart').addEventListener('click', restart);
+  function applyDevicePreset(preset) {
+    currentDevice = preset;
+    if (!bezel) return;
+    if (preset === 'iphone16') {
+      bezel.style.width = '393px';
+      bezel.style.height = '852px';
+      bezel.style.border = '12px solid #1c1c1e';
+      bezel.style.borderRadius = '54px';
+      bezel.style.boxShadow = '0 25px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.08)';
+      if (dynamicIsland) dynamicIsland.style.display = 'block';
+    } else if (preset === 'pixel9') {
+      bezel.style.width = '412px';
+      bezel.style.height = '923px';
+      bezel.style.border = '10px solid #202124';
+      bezel.style.borderRadius = '36px';
+      bezel.style.boxShadow = '0 25px 60px rgba(0,0,0,0.85)';
+      if (dynamicIsland) dynamicIsland.style.display = 'none';
+    } else if (preset === 'ipad') {
+      bezel.style.width = '768px';
+      bezel.style.height = '1024px';
+      bezel.style.border = '14px solid #1e293b';
+      bezel.style.borderRadius = '28px';
+      bezel.style.boxShadow = '0 25px 60px rgba(0,0,0,0.85)';
+      if (dynamicIsland) dynamicIsland.style.display = 'none';
+    } else if (preset === 'macbook') {
+      bezel.style.width = '1000px';
+      bezel.style.height = '625px';
+      bezel.style.border = '14px solid #0f172a';
+      bezel.style.borderRadius = '14px';
+      bezel.style.boxShadow = '0 25px 60px rgba(0,0,0,0.85)';
+      if (dynamicIsland) dynamicIsland.style.display = 'none';
+    } else {
+      bezel.style.width = '100%';
+      bezel.style.height = '100%';
+      bezel.style.border = '0';
+      bezel.style.borderRadius = '0';
+      bezel.style.boxShadow = 'none';
+      if (dynamicIsland) dynamicIsland.style.display = 'none';
+    }
+    const cur = screen.querySelector('.prototype-frame');
+    if (cur) fitFrame(cur);
+  }
+
+  // Populate Flow starting points dropdown
+  if (flowSelect) {
+    const frames = getFrames();
+    flowSelect.innerHTML = frames.map(f => {
+      const name = f.flowName || f.name;
+      const isStart = f.isFlowStart ? ' ▶ ' : '';
+      return '<option value="' + f.id + '" ' + (f.id === currentFrameId ? 'selected' : '') + '>' + isStart + escapeText(name) + '</option>';
+    }).join('');
+
+    flowSelect.addEventListener('change', (e) => {
+      clearDelayTimers();
+      history.length = 0;
+      overlays.length = 0;
+      renderFrame(e.target.value, 'dissolve');
+    });
+  }
+
+  if (deviceSelect) {
+    deviceSelect.addEventListener('change', (e) => applyDevicePreset(e.target.value));
+  }
+
+  if (scaleSelect) {
+    scaleSelect.addEventListener('change', (e) => {
+      activeScaleMode = e.target.value;
+      const cur = screen.querySelector('.prototype-frame');
+      if (cur) fitFrame(cur);
+    });
+  }
+
+  if (btnPrev) {
+    btnPrev.addEventListener('click', () => {
+      const prev = history.pop();
+      if (prev) renderFrame(prev, 'slide-left');
+    });
+  }
+
+  if (btnNext) {
+    btnNext.addEventListener('click', () => {
+      const frames = getFrames();
+      const idx = frames.findIndex(f => f.id === currentFrameId);
+      if (idx !== -1 && idx < frames.length - 1) {
+        history.push(currentFrameId);
+        renderFrame(frames[idx + 1].id, 'slide-left');
+      }
+    });
+  }
+
+  if (btnToggleHints) {
+    btnToggleHints.addEventListener('click', () => {
+      showHotspotHints = !showHotspotHints;
+      btnToggleHints.style.color = showHotspotHints ? '#38bdf8' : '#94a3b8';
+      btnToggleHints.style.borderColor = showHotspotHints ? '#38bdf8' : '#334155';
+      flashHotspotHints();
+    });
+  }
+
+  if (btnToggleDebugger) {
+    btnToggleDebugger.addEventListener('click', () => {
+      if (!debuggerDrawer) return;
+      const isClosed = debuggerDrawer.style.display === 'none';
+      debuggerDrawer.style.display = isClosed ? 'flex' : 'none';
+      btnToggleDebugger.style.color = isClosed ? '#38bdf8' : '#f8fafc';
+      updateDebuggerView();
+    });
+  }
+
+  if (btnCloseDebugger) {
+    btnCloseDebugger.addEventListener('click', () => {
+      if (debuggerDrawer) debuggerDrawer.style.display = 'none';
+      if (btnToggleDebugger) btnToggleDebugger.style.color = '#f8fafc';
+    });
+  }
+
+  if (btnClearLog) {
+    btnClearLog.addEventListener('click', () => {
+      eventLog.length = 0;
+      updateDebuggerView();
+    });
+  }
+
+  // Debugger Tab Switcher
+  document.querySelectorAll('.dbg-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.dbg-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const t = tab.dataset.tab;
+      if (dbgVarsPane) dbgVarsPane.style.display = t === 'vars' ? 'block' : 'none';
+      if (dbgEventsPane) dbgEventsPane.style.display = t === 'events' ? 'block' : 'none';
+    });
+  });
+
+  // Global Keyboard Shortcuts for presentation player
+  window.addEventListener('keydown', (e) => {
+    // Avoid capturing inputs if active
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    if (e.key === 'r' || e.key === 'R') {
+      restart();
+    } else if (e.key === 'h' || e.key === 'H') {
+      btnToggleHints?.click();
+    } else if (e.key === 'd' || e.key === 'D') {
+      btnToggleDebugger?.click();
+    } else if (e.key === 'Escape') {
+      if (overlays.length > 0) closeOverlay();
+      else if (debuggerDrawer?.style.display === 'flex') btnCloseDebugger?.click();
+    } else if (e.key === 'ArrowLeft') {
+      btnPrev?.click();
+    } else if (e.key === 'ArrowRight') {
+      btnNext?.click();
+    }
+
+    // Match interactive key triggers on active frame
+    const curFrame = getNode(currentFrameId);
+    if (curFrame) {
+      const matchKeyInteractions = (nodeId) => {
+        const n = getNode(nodeId);
+        if (!n) return;
+        for (const inter of n.interactions || []) {
+          if (inter.trigger === 'key' && (!inter.key || inter.key.toLowerCase() === e.key.toLowerCase())) {
+            runInteraction(inter, n);
+          }
+        }
+        for (const cid of n.childIds || []) matchKeyInteractions(cid);
+      };
+      matchKeyInteractions(currentFrameId);
+    }
+  });
+
+  document.getElementById('btnRestart')?.addEventListener('click', restart);
   window.addEventListener('resize', () => {
     const frame = screen.querySelector('.prototype-frame');
     if (frame) fitFrame(frame);
   });
+
   if (toolbar) toolbar.hidden = false;
   if (currentFrameId) renderFrame(currentFrameId, 'instant');
 })();
@@ -385,8 +920,10 @@ export class PrototypeEngine {
     if (this.doc?.variables) {
       const mode = this.doc.themeMode || 'dark';
       for (const v of this.doc.variables) {
-        const val = v.values?.[mode] !== undefined ? v.values[mode] : v.values?.default;
-        this.setVariable(v.name || v.id, val, v.scope || 'global');
+        const val = v.value !== undefined ? v.value : (v.values?.[mode] !== undefined ? v.values[mode] : v.values?.default);
+        if (val !== undefined) {
+          this.setVariable(v.name || v.id, val, v.scope || 'global');
+        }
       }
     }
 
@@ -593,14 +1130,35 @@ export class PrototypeEngine {
       this.scheduleDelayActions(targetId);
     }
 
+    if (!this.originFrameId) this.originFrameId = targetId;
+
     this.logEvent('start_flow', null, [{ action: 'start_flow', targetId }]);
     return targetId;
   }
 
-
   restart() {
-    const initialFrame = this.navigationHistory[0] || null;
+    const initialFrame = this.originFrameId || this.navigationHistory[0] || null;
     return this.startFlow(initialFrame);
+  }
+
+  getState() {
+    return {
+      currentFrameId: this.currentFrameId,
+      activeFlowId: this.activeFlowId || null,
+      history: [...this.navigationHistory],
+      overlays: [...this.overlays],
+      variables: this.getVariablesSnapshot(),
+      virtualTimeMs: this.virtualTimeMs,
+      device: this.currentDevice
+    };
+  }
+
+  handleInteraction(nodeId, triggerType = 'click', data = {}) {
+    return this.handleEvent(nodeId, triggerType, data);
+  }
+
+  resetState() {
+    return this.restart();
   }
 
   getCurrentFrame() {
@@ -782,14 +1340,14 @@ export class PrototypeEngine {
     }
 
     // 3. Variant & Component State Changes
-    if (action === 'change_variant' || action === 'change-variant' || action === 'set_variant') {
-      const targetVariantId = interaction.targetVariantId || interaction.variantId;
+    if (action === 'change_to' || action === 'change_variant' || action === 'change-variant' || action === 'set_variant') {
+      const targetVariantId = interaction.targetVariantId || interaction.variantId || interaction.variant;
       const targetNodeId = interaction.targetNodeId || sourceNodeId;
       if (targetNodeId && targetVariantId) {
         this.instanceVariants.set(targetNodeId, targetVariantId);
         return {
           success: true,
-          action: 'change_variant',
+          action: 'change_to',
           nodeId: targetNodeId,
           variantId: targetVariantId,
           animation: interaction.animation || 'instant'
@@ -851,12 +1409,39 @@ export class PrototypeEngine {
       const varId = interaction.variableId || interaction.varId || interaction.variable || interaction.name;
       let val = interaction.value !== undefined ? interaction.value : interaction.variableUpdate?.value;
       const expr = interaction.expr || interaction.expression || interaction.variableUpdate?.expr;
+      const op = interaction.operator || interaction.op || '=';
 
       if (expr) {
-        val = this.evaluateExpression(expr, eventData);
+        val = this.evaluateExpression(expr, { ...this.getVariablesSnapshot(), ...eventData });
+      } else if (op && op !== '=') {
+        const curObj = this.getVariable(varId, 0);
+        const cur = curObj && typeof curObj === 'object' && curObj.value !== undefined ? curObj.value : curObj;
+        if (op === '+=' || op === 'add') val = Number(cur || 0) + Number(val || 1);
+        else if (op === '-=' || op === 'sub') val = Number(cur || 0) - Number(val || 1);
+        else if (op === '*=' || op === 'mul') val = Number(cur || 0) * Number(val || 1);
+        else if (op === '/=' || op === 'div') val = Number(val) !== 0 ? Number(cur || 0) / Number(val) : 0;
+        else if (op === 'toggle') val = !Boolean(cur);
       }
       this.setVariable(varId, val);
-      return { success: true, action: 'set_variable', varId, variableId: varId, value: val };
+      return { success: true, action: 'set_variable', varId, variableId: varId, value: val, op };
+    }
+
+    if (action === 'set_variable_mode') {
+      const collection = interaction.collection || 'default';
+      const mode = interaction.mode || 'light';
+      this.setVariable(`mode_${collection}`, mode);
+      return { success: true, action: 'set_variable_mode', collection, mode };
+    }
+
+    if (action === 'conditional') {
+      const cond = interaction.condition || interaction.expr || interaction.predicate;
+      const passed = this.evaluatePredicate(cond, { ...this.getVariablesSnapshot(), ...eventData });
+      if (passed && interaction.thenAction) {
+        return this.executeAction(interaction.thenAction, sourceNodeId, eventData);
+      } else if (!passed && interaction.elseAction) {
+        return this.executeAction(interaction.elseAction, sourceNodeId, eventData);
+      }
+      return { success: true, action: 'conditional', passed };
     }
 
     if (action === 'toggle' || action === 'toggle_variable') {
@@ -1142,6 +1727,20 @@ export class PrototypeEngine {
       align-items: center;
       gap: 10px;
     }
+    .player-select {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 8px;
+      outline: none;
+      cursor: pointer;
+    }
+    .player-select:hover {
+      border-color: #0ea5e9;
+    }
     .btn-player {
       background: #1e293b;
       color: #f8fafc;
@@ -1203,6 +1802,18 @@ export class PrototypeEngine {
       background: #000;
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
+    .dynamic-island {
+      width: 96px;
+      height: 26px;
+      background: #000;
+      border-radius: 20px;
+      position: absolute;
+      top: 10px;
+      left: calc(50% - 48px);
+      z-index: 50;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+      pointer-events: none;
+    }
     .device-screen {
       width: 100%;
       height: 100%;
@@ -1228,6 +1839,19 @@ export class PrototypeEngine {
     .prototype-node[data-node-id] {
       cursor: default;
     }
+    .prototype-node[data-interactive="true"] {
+      cursor: pointer;
+    }
+    .hotspot-pulse {
+      outline: 2px solid #38bdf8 !important;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.8) !important;
+      animation: hotspotAnim 0.4s ease-out;
+    }
+    @keyframes hotspotAnim {
+      0% { outline-color: rgba(56,189,248,0.2); box-shadow: 0 0 0 rgba(56,189,248,0); }
+      50% { outline-color: rgba(56,189,248,1); box-shadow: 0 0 20px rgba(56,189,248,0.9); }
+      100% { outline-color: rgba(56,189,248,0.2); box-shadow: 0 0 0 rgba(56,189,248,0); }
+    }
     .prototype-overlay-backdrop {
       position: absolute;
       inset: 0;
@@ -1237,6 +1861,11 @@ export class PrototypeEngine {
       justify-content: center;
       padding: 18px;
       background: rgba(0,0,0,.55);
+      animation: overlayFadeIn 0.2s ease-out;
+    }
+    @keyframes overlayFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
     .prototype-overlay-frame {
       position: relative;
@@ -1244,38 +1873,212 @@ export class PrototypeEngine {
       max-height: 100%;
       border-radius: 12px;
       box-shadow: 0 18px 48px rgba(0,0,0,.45);
+      animation: overlayPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes overlayPop {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
     }
     .transition-dissolve {
-      animation: prototypeFade .18s ease-out;
+      animation: prototypeFade .22s ease-out;
+    }
+    .transition-smart-animate {
+      animation: prototypeSmart .28s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .transition-slide-left {
-      animation: prototypeSlide .22s ease-out;
+      animation: prototypeSlideL .24s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .transition-slide-right {
+      animation: prototypeSlideR .24s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .transition-slide-up {
+      animation: prototypeSlideU .24s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .transition-slide-down {
+      animation: prototypeSlideD .24s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .transition-push {
+      animation: prototypePush .24s cubic-bezier(0.16, 1, 0.3, 1);
     }
     @keyframes prototypeFade {
       from { opacity: .35; }
       to { opacity: 1; }
     }
-    @keyframes prototypeSlide {
-      from { opacity: .55; translate: 18px 0; }
-      to { opacity: 1; translate: 0 0; }
+    @keyframes prototypeSmart {
+      from { opacity: .6; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
     }
+    @keyframes prototypeSlideL {
+      from { opacity: .55; transform: translateX(24px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes prototypeSlideR {
+      from { opacity: .55; transform: translateX(-24px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes prototypeSlideU {
+      from { opacity: .55; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes prototypeSlideD {
+      from { opacity: .55; transform: translateY(-24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes prototypePush {
+      from { transform: translateX(30px); }
+      to { transform: translateX(0); }
+    }
+
+    /* Live Debugger Drawer */
+    .debugger-drawer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 220px;
+      background: #090d16;
+      border-top: 1px solid #1e293b;
+      z-index: 150;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 -8px 24px rgba(0,0,0,0.5);
+    }
+    .debugger-header {
+      height: 36px;
+      background: #0f172a;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 12px;
+    }
+    .debugger-tabs {
+      display: flex;
+      gap: 6px;
+    }
+    .dbg-tab {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .dbg-tab.active {
+      background: #1e293b;
+      color: #38bdf8;
+    }
+    .debugger-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px;
+    }
+    .dbg-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    .dbg-table th, .dbg-table td {
+      padding: 5px 8px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .dbg-table th {
+      color: #64748b;
+      font-weight: 600;
+    }
+    .dbg-input {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f8fafc;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 11px;
+      width: 120px;
+    }
+    .type-pill {
+      font-size: 9px;
+      background: rgba(56,189,248,0.15);
+      color: #38bdf8;
+      padding: 1px 4px;
+      border-radius: 3px;
+      margin-right: 4px;
+    }
+    .dbg-event-row {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 4px 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dbg-time { color: #64748b; }
+    .dbg-badge {
+      background: rgba(56,189,248,0.15);
+      color: #38bdf8;
+      border-radius: 3px;
+      padding: 1px 4px;
+      font-size: 10px;
+    }
+    .dbg-source { color: #f8fafc; font-weight: 600; }
+    .dbg-desc { color: #94a3b8; }
   </style>
 </head>
 <body>
   <div id="playerContainer">
     <div id="playerToolbar">
       <div class="tool-group">
-        <span style="font-weight: 700; color: #818cf8; font-size: 13px;">⚡ DesignForge Prototype</span>
+        <span style="font-weight: 700; color: #818cf8; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+          <img src="assets/logo-64.png" alt="DesignForge" style="width: 18px; height: 18px; border-radius: 4px; object-fit: contain;" onerror="this.style.display='none'">
+          DesignForge Prototype
+        </span>
         <span id="activeFlowLabel" style="font-size: 11px; color: #94a3b8;">Flow: Main</span>
+        <select id="protoFlowSelect" class="player-select" title="Switch active prototype flow"></select>
       </div>
       <div class="tool-group">
+        <select id="protoDeviceSelect" class="player-select" title="Switch device frame">
+          <option value="responsive">Responsive Canvas</option>
+          <option value="iphone16">iPhone 16 Pro (393 × 852)</option>
+          <option value="pixel9">Google Pixel 9 (412 × 923)</option>
+          <option value="ipad">iPad Pro (768 × 1024)</option>
+          <option value="macbook">MacBook Pro (1000 × 625)</option>
+        </select>
+        <select id="protoScaleSelect" class="player-select" title="Display zoom scale">
+          <option value="fit">Fit to Screen</option>
+          <option value="100">100% Actual Size</option>
+          <option value="width">Fit Width</option>
+        </select>
+        <button class="btn-player" id="btnPrevFrame" title="Previous Screen (Left Arrow)">◀</button>
+        <button class="btn-player" id="btnNextFrame" title="Next Screen (Right Arrow)">▶</button>
+        <button class="btn-player" id="btnToggleHints" title="Toggle Hotspot Hints (H)">💡 Hints</button>
+        <button class="btn-player" id="btnToggleDebugger" title="Toggle Variables & Event Debugger (D)">🐞 Debugger</button>
         <button class="btn-player" id="btnRestart">↺ Restart (R)</button>
       </div>
     </div>
     <div id="viewportWrapper">
       <div class="device-bezel" id="activeDeviceBezel" style="width: 100%; height: 100%; border: 0; border-radius: 0; box-shadow: none; background: transparent;">
+        <div class="dynamic-island" id="dynamicIsland" style="display: none;"></div>
         <div class="device-screen" id="deviceScreen">
           <!-- Interactive DOM Elements dynamically mounted -->
+        </div>
+      </div>
+      <div id="debuggerDrawer" class="debugger-drawer" style="display: none;">
+        <div class="debugger-header">
+          <div class="debugger-tabs">
+            <button class="dbg-tab active" data-tab="vars">Variables (<span id="dbgVarCount">0</span>)</button>
+            <button class="dbg-tab" data-tab="events">Event Log (<span id="dbgEventCount">0</span>)</button>
+          </div>
+          <div class="debugger-actions" style="display: flex; gap: 6px;">
+            <button class="btn-player" id="btnClearLog" style="padding: 2px 8px; font-size: 10px;">Clear Log</button>
+            <button class="btn-player" id="btnCloseDebugger" style="padding: 2px 8px; font-size: 10px;">✕</button>
+          </div>
+        </div>
+        <div class="debugger-body">
+          <div id="dbgVarsPane" class="dbg-pane active"></div>
+          <div id="dbgEventsPane" class="dbg-pane" style="display: none;"></div>
         </div>
       </div>
     </div>
