@@ -116,6 +116,10 @@ export class DesignForgeApp {
     this.pendingAiPlan = null;
     this.aiInputMode = 'prompt'; // 'prompt' | 'markdown'
     this.layerSearchQuery = '';
+    this.collapsedNodeIds = new Set();
+    this.lastSelectedLayerId = null;
+    this.editingLayerId = null;
+    this.draggedLayerId = null;
     this.showRulers = true;
     this.showGrid = true;
 
@@ -939,6 +943,8 @@ export class DesignForgeApp {
       });
     }
 
+    this.initLayersTreeHandlers();
+
     // Undo / Redo in top bar
     document.getElementById('btnUndo')?.addEventListener('click', () => this.undo());
     document.getElementById('btnRedo')?.addEventListener('click', () => this.redo());
@@ -1122,6 +1128,11 @@ export class DesignForgeApp {
     document.getElementById('ctxCreateComponent')?.addEventListener('click', () => this.createComponentFromSelection());
     document.getElementById('ctxBringToFront')?.addEventListener('click', () => this.reorderSelected('top'));
     document.getElementById('ctxSendToBack')?.addEventListener('click', () => this.reorderSelected('bottom'));
+    document.getElementById('ctxBooleanUnion')?.addEventListener('click', () => this.booleanSelected('union'));
+    document.getElementById('ctxBooleanSubtract')?.addEventListener('click', () => this.booleanSelected('subtract'));
+    document.getElementById('ctxBooleanIntersect')?.addEventListener('click', () => this.booleanSelected('intersect'));
+    document.getElementById('ctxBooleanExclude')?.addEventListener('click', () => this.booleanSelected('exclude'));
+    document.getElementById('ctxFlatten')?.addEventListener('click', () => this.flattenSelected());
     document.getElementById('ctxExportPng')?.addEventListener('click', () => this.exportSelectedAsPng());
     document.getElementById('ctxExportSvg')?.addEventListener('click', () => this.exportSelectedAsSvg());
   }
@@ -1784,7 +1795,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       }
 
       // 4. Hit-test canvas objects
-      const hitNodeId = renderer.hitTest(canvasCoords.x, canvasCoords.y);
+      const rawHitNodeId = renderer.hitTest(canvasCoords.x, canvasCoords.y);
+      const isDeepSelect = !!(e.metaKey || e.ctrlKey);
+      const hitNodeId = this.resolveSelectionTarget(rawHitNodeId, isDeepSelect);
 
       if (hitNodeId) {
         if (e.shiftKey) {
@@ -1959,28 +1972,151 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       }
     }, listenerOptions);
 
-    // Double click to inline edit text
+    // Double click on canvas object
     canvas.addEventListener('dblclick', async (e) => {
+      // If already in Vector Edit Mode, double clicking anywhere exits it
+      if (this.isVectorEditMode) {
+        this.isVectorEditMode = false;
+        this.renderer.isVectorEditMode = false;
+        this.renderer.render();
+        this.showToast('Exited Vector Edit Mode');
+        return;
+      }
+
       const coords = renderer.screenToCanvas(e.clientX, e.clientY);
       const hitId = renderer.hitTest(coords.x, coords.y);
-      if (hitId) {
-        const node = engine.getNode(hitId);
-        if (node && node.type === 'text') {
-          const currentText = node.text?.content || '';
-          const newText = await this.showPromptModal({
-            title: 'Edit Text Content',
-            subtitle: 'Update copy for selected text layer:',
-            defaultValue: currentText,
-            multiline: true,
-            icon: '🔤',
-            confirmText: 'Apply Text'
-          });
-          if (newText !== null && newText !== currentText) {
-            engine.updateNode(hitId, { text: { content: newText } }, 'Edit text');
+
+      if (!hitId) return;
+
+      const node = engine.getNode(hitId);
+      if (!node) return;
+
+      // 1. Text Layer: activate direct inline canvas text editing
+      if (node.type === 'text') {
+        engine.setSelection([hitId]);
+        this.startInlineCanvasTextEdit(node, e.clientX, e.clientY);
+        return;
+      }
+
+      const currentSelection = engine.getSelection();
+
+      // 2. Container (Frame, Group, Boolean Group) with children:
+      // If a container is currently selected, drill down into the child directly under cursor
+      if (currentSelection.length === 1) {
+        const selNode = engine.getNode(currentSelection[0]);
+        if (selNode && selNode.childIds && selNode.childIds.length > 0) {
+          let targetChildId = null;
+          for (let i = selNode.childIds.length - 1; i >= 0; i--) {
+            const cid = selNode.childIds[i];
+            const match = renderer.hitTestRecursive(engine.getActivePage(), cid, coords.x, coords.y);
+            if (match) {
+              targetChildId = match;
+              break;
+            }
+          }
+          if (targetChildId) {
+            engine.setSelection([targetChildId]);
+            const childNode = engine.getNode(targetChildId);
+            if (childNode?.type === 'text') {
+              this.startInlineCanvasTextEdit(childNode, e.clientX, e.clientY);
+            } else {
+              this.showToast(`Selected: ${childNode?.name || 'Inner Layer'}`);
+            }
+            return;
           }
         }
+
+        // If the selected node is already this shape, enter Vector Edit Mode (Figma behavior)
+        if (currentSelection[0] === hitId && ['rectangle', 'ellipse', 'star', 'polygon', 'line', 'vector', 'boolean_group'].includes(selNode?.type)) {
+          this.isVectorEditMode = true;
+          this.renderer.isVectorEditMode = true;
+          this.renderer.render();
+          this.showToast(`Vector Edit Mode: editing ${selNode.name}. Press Esc to exit.`);
+          return;
+        }
+      }
+
+      // 3. Leaf Geometry Nodes (Vector, Rectangle, Ellipse, Star, Polygon, Line, Boolean Group):
+      // Enter Vector Edit Mode (Figma P / Enter anchor points editing)
+      if (['rectangle', 'ellipse', 'star', 'polygon', 'line', 'vector', 'boolean_group'].includes(node.type)) {
+        engine.setSelection([hitId]);
+        this.isVectorEditMode = true;
+        this.renderer.isVectorEditMode = true;
+        this.renderer.render();
+        this.showToast(`Vector Edit Mode: editing ${node.name}. Press Esc to exit.`);
+      } else if (node.childIds && node.childIds.length > 0) {
+        this.drillInSelection();
       }
     }, listenerOptions);
+  }
+
+  startInlineCanvasTextEdit(node, clientX, clientY) {
+    if (!node || node.type !== 'text') return;
+
+    let existing = document.getElementById('canvasInlineTextEditor');
+    if (existing) existing.remove();
+
+    const renderer = this.renderer;
+    const page = this.engine.getActivePage();
+    const bounds = computeWorldBounds(page, node.id);
+    if (!bounds) return;
+
+    const p1 = renderer.canvasToScreen(bounds.x, bounds.y);
+    const p2 = renderer.canvasToScreen(bounds.x + bounds.width, bounds.y + bounds.height);
+    const screenW = Math.max(90, p2.x - p1.x);
+    const screenH = Math.max(26, p2.y - p1.y);
+
+    const textarea = document.createElement('textarea');
+    textarea.id = 'canvasInlineTextEditor';
+    textarea.value = node.text?.content || '';
+    textarea.style.position = 'fixed';
+    textarea.style.left = `${Math.round(p1.x)}px`;
+    textarea.style.top = `${Math.round(p1.y)}px`;
+    textarea.style.width = `${Math.round(screenW + 24)}px`;
+    textarea.style.height = `${Math.round(screenH + 12)}px`;
+    textarea.style.zIndex = '1000';
+    textarea.style.background = 'rgba(15, 23, 42, 0.95)';
+    textarea.style.color = node.text?.color || '#ffffff';
+    textarea.style.fontFamily = node.text?.fontFamily || 'Inter, sans-serif';
+    textarea.style.fontSize = `${Math.max(12, Math.round((node.text?.fontSize || 14) * renderer.zoom))}px`;
+    textarea.style.fontWeight = node.text?.fontWeight || '400';
+    textarea.style.border = '2px solid #38bdf8';
+    textarea.style.borderRadius = '4px';
+    textarea.style.padding = '4px 6px';
+    textarea.style.outline = 'none';
+    textarea.style.resize = 'both';
+    textarea.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(56, 189, 248, 0.3)';
+
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    let committed = false;
+    const commit = () => {
+      if (committed) return;
+      committed = true;
+      const val = textarea.value;
+      textarea.remove();
+      if (val !== (node.text?.content || '')) {
+        this.engine.updateNode(node.id, { text: { content: val } }, 'Edit text');
+      }
+    };
+
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || !node.text?.multiline)) {
+        e.preventDefault();
+        commit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        committed = true;
+        textarea.remove();
+      }
+      e.stopPropagation();
+    });
+
+    textarea.addEventListener('blur', () => {
+      commit();
+    });
   }
 
   handleShapeCreation(tool, coords, bounds = null) {
@@ -2411,6 +2547,35 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         <button class="btn-align-tool" id="inspDistV" title="Distribute Vertical Spacing">⫾</button>
       </div>
 
+      ${selectedIds.length >= 2 ? `
+      <!-- Boolean Operations (2+ shapes selected) -->
+      <div class="section-group" style="padding-bottom: 8px;">
+        <div class="section-title">Boolean Operations</div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 6px;">
+          <button class="btn-inspector-action" id="btnInspBoolUnion" title="Union Selection (⌥⌘U)" style="font-size: 11px; padding: 4px 2px;">∪ Union</button>
+          <button class="btn-inspector-action" id="btnInspBoolSubtract" title="Subtract Selection (⌥⌘S)" style="font-size: 11px; padding: 4px 2px;">− Subtract</button>
+          <button class="btn-inspector-action" id="btnInspBoolIntersect" title="Intersect Selection (⌥⌘I)" style="font-size: 11px; padding: 4px 2px;">∩ Intersect</button>
+          <button class="btn-inspector-action" id="btnInspBoolExclude" title="Exclude Selection (⌥⌘X)" style="font-size: 11px; padding: 4px 2px;">⊻ Exclude</button>
+        </div>
+      </div>` : ''}
+
+      ${selectedIds.length === 1 && node.type === 'boolean_group' ? `
+      <!-- Boolean Group Operation Mode -->
+      <div class="section-group" style="padding-bottom: 8px;">
+        <div class="section-title">Boolean Operation</div>
+        <div class="props-row">
+          <div class="prop-field" style="flex: 1;">
+            <select class="prop-input" id="propBooleanGroupOp">
+              <option value="union" ${node.booleanOperation === 'union' ? 'selected' : ''}>∪ Union Selection</option>
+              <option value="subtract" ${node.booleanOperation === 'subtract' ? 'selected' : ''}>− Subtract Selection</option>
+              <option value="intersect" ${node.booleanOperation === 'intersect' ? 'selected' : ''}>∩ Intersect Selection</option>
+              <option value="exclude" ${node.booleanOperation === 'exclude' ? 'selected' : ''}>⊻ Exclude Selection</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-inspector-action" id="btnInspFlatten" style="margin-top: 6px; width: 100%; font-size: 11px;" title="Flatten into single vector (⌘E)">Flatten Selection (⌘E)</button>
+      </div>` : ''}
+
       <!-- 2. Transform Section & Explicit Variable Extraction (Section 11) -->
       <div class="section-group">
         <div class="section-title">
@@ -2797,6 +2962,19 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     document.getElementById('inspDistV')?.addEventListener('click', () => this.distributeSelected('vertical'));
     document.getElementById('btnExtractCompVariables')?.addEventListener('click', () => {
       this.dsUi.openComponentVariablesModal(node);
+    });
+
+    // Boolean Operations in Inspector
+    document.getElementById('btnInspBoolUnion')?.addEventListener('click', () => this.booleanSelected('union'));
+    document.getElementById('btnInspBoolSubtract')?.addEventListener('click', () => this.booleanSelected('subtract'));
+    document.getElementById('btnInspBoolIntersect')?.addEventListener('click', () => this.booleanSelected('intersect'));
+    document.getElementById('btnInspBoolExclude')?.addEventListener('click', () => this.booleanSelected('exclude'));
+    document.getElementById('btnInspFlatten')?.addEventListener('click', () => this.flattenSelected());
+    document.getElementById('propBooleanGroupOp')?.addEventListener('change', (e) => {
+      this.engine.updateNode(node.id, { booleanOperation: e.target.value }, 'Change Boolean Operation');
+      this.renderer.render();
+      this.updateLayersTree();
+      this.updateInspector();
     });
 
     // 2. Transform Inputs & Scrubbing
@@ -4478,141 +4656,382 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
   }
 
-  // --- Layers Tree Synchronizer ---
+  // --- Layers Tree Synchronizer & Interaction Handlers ---
+  initLayersTreeHandlers() {
+    if (this._layersTreeHandlersInitialized) return;
+    const list = document.getElementById('layersTreeList');
+    if (!list) return;
+    this._layersTreeHandlersInitialized = true;
+
+    // 1. Drag & Drop Reordering & Reparenting
+    list.addEventListener('dragstart', (e) => {
+      const item = e.target.closest('.layer-item');
+      if (!item || e.target.closest('.layer-btn') || e.target.closest('.layer-chevron') || e.target.closest('.layer-rename-input')) {
+        e.preventDefault();
+        return;
+      }
+      this.draggedLayerId = item.dataset.nodeId;
+      e.dataTransfer?.setData('text/plain', this.draggedLayerId);
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+      item.classList.add('dragging');
+    });
+
+    list.addEventListener('dragover', (e) => {
+      if (!this.draggedLayerId) return;
+      const item = e.target.closest('.layer-item');
+      if (!item) return;
+
+      const targetId = item.dataset.nodeId;
+      const page = this.engine.getActivePage();
+      const draggedNode = page?.nodes?.[this.draggedLayerId];
+      const targetNode = page?.nodes?.[targetId];
+      if (!draggedNode || !targetNode || draggedNode.id === targetNode.id) return;
+
+      // Prevent dragging a node into its own descendant
+      let curr = targetNode;
+      let isDesc = false;
+      while (curr && curr.parentId) {
+        if (curr.parentId === draggedNode.id) { isDesc = true; break; }
+        curr = page.nodes[curr.parentId];
+      }
+      if (isDesc) return;
+
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+
+      const bounds = item.getBoundingClientRect();
+      const relY = (e.clientY - bounds.top) / bounds.height;
+      const isContainer = targetNode.type === 'frame' || targetNode.type === 'group' || targetNode.type === 'component';
+
+      let position = 'before';
+      if (isContainer) {
+        if (relY < 0.25) position = 'before';
+        else if (relY > 0.75) position = 'after';
+        else position = 'inside';
+      } else {
+        position = relY < 0.5 ? 'before' : 'after';
+      }
+
+      list.querySelectorAll('.layer-item[data-drop-position]').forEach(el => {
+        if (el !== item) delete el.dataset.dropPosition;
+      });
+      item.dataset.dropPosition = position;
+    });
+
+    list.addEventListener('dragleave', (e) => {
+      const item = e.target.closest('.layer-item');
+      if (item && !item.contains(e.relatedTarget)) {
+        delete item.dataset.dropPosition;
+      }
+    });
+
+    list.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const item = e.target.closest('.layer-item');
+      if (!item || !this.draggedLayerId) return;
+
+      const targetId = item.dataset.nodeId;
+      const position = item.dataset.dropPosition || 'before';
+      delete item.dataset.dropPosition;
+
+      if (this.draggedLayerId !== targetId) {
+        this.engine.reorderNodeTo(this.draggedLayerId, targetId, position);
+      }
+      this.draggedLayerId = null;
+      list.querySelectorAll('.layer-item.dragging').forEach(el => el.classList.remove('dragging'));
+    });
+
+    list.addEventListener('dragend', () => {
+      this.draggedLayerId = null;
+      list.querySelectorAll('.layer-item.dragging').forEach(el => el.classList.remove('dragging'));
+      list.querySelectorAll('.layer-item[data-drop-position]').forEach(el => delete el.dataset.dropPosition);
+    });
+
+    // 2. Click Interactions (Expand/Collapse, Lock, Visibility, Selection)
+    list.addEventListener('click', (e) => {
+      const actionBtn = e.target.closest('[data-action]');
+      const item = e.target.closest('.layer-item');
+      if (!item) return;
+      const id = item.dataset.nodeId;
+      const page = this.engine.getActivePage();
+
+      // Expand/Collapse toggle
+      if (actionBtn && actionBtn.dataset.action === 'toggle-collapse') {
+        e.stopPropagation();
+        const shouldCollapse = !this.collapsedNodeIds.has(id);
+        if (shouldCollapse) {
+          this.collapsedNodeIds.add(id);
+        } else {
+          this.collapsedNodeIds.delete(id);
+        }
+
+        // Alt+Click recursively toggles descendants
+        if (e.altKey) {
+          const toggleRecursive = (nodeId) => {
+            const n = page?.nodes?.[nodeId];
+            if (!n || !Array.isArray(n.childIds)) return;
+            if (shouldCollapse) this.collapsedNodeIds.add(nodeId);
+            else this.collapsedNodeIds.delete(nodeId);
+            for (const cid of n.childIds) toggleRecursive(cid);
+          };
+          toggleRecursive(id);
+        }
+        this.updateLayersTree();
+        return;
+      }
+
+      // Lock toggle
+      if (actionBtn && actionBtn.dataset.action === 'toggle-lock') {
+        e.stopPropagation();
+        this.engine.toggleLock(id);
+        return;
+      }
+
+      // Visibility toggle
+      if (actionBtn && actionBtn.dataset.action === 'toggle-vis') {
+        e.stopPropagation();
+        this.engine.toggleVisibility(id);
+        return;
+      }
+
+      // Ignore row clicks on rename input
+      if (e.target.closest('.layer-rename-input')) return;
+
+      this._preventTreeScroll = true;
+      if (e.metaKey || e.ctrlKey) {
+        this.engine.selectToggle(id);
+      } else if (e.shiftKey && this.lastSelectedLayerId) {
+        const allItems = Array.from(list.querySelectorAll('.layer-item')).map(el => el.dataset.nodeId);
+        const idxA = allItems.indexOf(this.lastSelectedLayerId);
+        const idxB = allItems.indexOf(id);
+        if (idxA !== -1 && idxB !== -1) {
+          const [start, end] = idxA < idxB ? [idxA, idxB] : [idxB, idxA];
+          const rangeIds = allItems.slice(start, end + 1);
+          this.engine.setSelection(rangeIds);
+        } else {
+          this.engine.setSelection([id]);
+        }
+      } else {
+        this.engine.setSelection([id]);
+      }
+      this.lastSelectedLayerId = id;
+      setTimeout(() => { this._preventTreeScroll = false; }, 100);
+    });
+
+    // 3. Double Click for Inline Rename
+    list.addEventListener('dblclick', (e) => {
+      const item = e.target.closest('.layer-item');
+      if (!item || e.target.closest('.layer-chevron') || e.target.closest('.layer-btn')) return;
+      const id = item.dataset.nodeId;
+      this.editingLayerId = id;
+      this.updateLayersTree();
+    });
+
+    // 4. Right Click for Context Menu
+    list.addEventListener('contextmenu', (e) => {
+      const item = e.target.closest('.layer-item');
+      if (!item) return;
+      e.preventDefault();
+      const id = item.dataset.nodeId;
+      const selected = this.engine.getSelection();
+      if (!selected.includes(id)) {
+        this.engine.setSelection([id]);
+        this.lastSelectedLayerId = id;
+      }
+      const ctxMenu = document.getElementById('canvasContextMenu');
+      if (ctxMenu) {
+        ctxMenu.style.display = 'block';
+        ctxMenu.style.left = `${Math.min(e.clientX, window.innerWidth - 220)}px`;
+        ctxMenu.style.top = `${Math.min(e.clientY, window.innerHeight - 260)}px`;
+      }
+    });
+
+    // 5. Tree <-> Canvas Hover Synchronization
+    list.addEventListener('mouseover', (e) => {
+      const item = e.target.closest('.layer-item');
+      if (item && item.dataset.nodeId) {
+        const hoverId = item.dataset.nodeId;
+        if (this.renderer.hoveredNodeId !== hoverId) {
+          this.renderer.hoveredNodeId = hoverId;
+          this.renderer.render();
+        }
+      }
+    });
+
+    list.addEventListener('mouseleave', () => {
+      if (this.renderer.hoveredNodeId) {
+        this.renderer.hoveredNodeId = null;
+        this.renderer.render();
+      }
+    });
+  }
+
   updateLayersTree() {
     const list = document.getElementById('layersTreeList');
     if (!list) return;
 
     const page = this.engine.getActivePage();
+    if (!page) {
+      list.innerHTML = '';
+      return;
+    }
     const selectedIds = this.engine.getSelection();
+
+    this.collapsedNodeIds = this.collapsedNodeIds || new Set();
+
+    // Auto-expand ancestors of selected nodes so they are visible
+    for (const selId of selectedIds) {
+      let pId = page.nodes?.[selId]?.parentId;
+      while (pId) {
+        this.collapsedNodeIds.delete(pId);
+        pId = page.nodes?.[pId]?.parentId;
+      }
+    }
+
+    const query = (this.layerSearchQuery || '').toLowerCase().trim();
+    const matchesQuery = (id) => {
+      if (!query) return true;
+      const n = page.nodes[id];
+      if (!n) return false;
+      if (n.name.toLowerCase().includes(query)) return true;
+      if (Array.isArray(n.childIds)) {
+        return n.childIds.some(cid => matchesQuery(cid));
+      }
+      return false;
+    };
+
+    // If search active, auto-expand containers having matching children
+    if (query) {
+      const expandMatching = (id) => {
+        const n = page.nodes[id];
+        if (!n || !Array.isArray(n.childIds)) return;
+        if (n.childIds.some(cid => matchesQuery(cid))) {
+          this.collapsedNodeIds.delete(id);
+        }
+        for (const cid of n.childIds) expandMatching(cid);
+      };
+      for (const rootId of (page.rootIds || [])) expandMatching(rootId);
+    }
+
+    const escapeHtml = (str) => String(str || '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
 
     let html = '';
     const renderLayerItem = (nodeId, depth = 0) => {
       const node = page.nodes[nodeId];
       if (!node) return;
-
-      // Filter by search query if active
-      if (this.layerSearchQuery && !node.name.toLowerCase().includes(this.layerSearchQuery)) {
-        if (node.childIds) {
-          for (const cid of node.childIds) renderLayerItem(cid, depth + 1);
-        }
-        return;
-      }
+      if (query && !matchesQuery(nodeId)) return;
 
       const isSelected = selectedIds.includes(nodeId);
+      const isEditing = this.editingLayerId === nodeId;
+      const hasChildren = Array.isArray(node.childIds) && node.childIds.length > 0;
+      const isCollapsed = this.collapsedNodeIds.has(nodeId);
+
       const icon = node.type === 'frame' ? '#' :
                    node.type === 'text' ? 'T' :
                    node.type === 'ellipse' ? '○' :
                    node.type === 'line' ? '─' :
                    node.type === 'group' ? '⬚' :
-                   node.type === 'instance' ? '◇' : '□';
+                   node.type === 'component' ? '❖' :
+                   node.type === 'instance' ? '◇' :
+                   (node.type === 'boolean' || node.type === 'boolean_group') ? (
+                     node.booleanOperation === 'subtract' ? '−' :
+                     node.booleanOperation === 'intersect' ? '∩' :
+                     node.booleanOperation === 'exclude' ? '⊻' : '∪'
+                   ) : '□';
 
-      const paddingLeft = 12 + depth * 14;
+      const paddingLeft = 6 + depth * 14;
+
+      const chevronHtml = hasChildren
+        ? `<button class="layer-chevron ${isCollapsed ? 'collapsed' : ''}" data-action="toggle-collapse" data-node-id="${node.id}" title="${isCollapsed ? 'Expand' : 'Collapse'}" tabindex="-1">${isCollapsed ? '▸' : '▾'}</button>`
+        : `<span class="layer-chevron-spacer"></span>`;
+
+      const nameHtml = isEditing
+        ? `<input type="text" class="layer-rename-input" value="${escapeHtml(node.name)}" data-node-id="${node.id}" spellcheck="false">`
+        : `<span class="layer-name" title="${escapeHtml(node.name)}">${escapeHtml(node.name)}</span>`;
+
+      const stateClasses = [
+        'layer-item',
+        'layer-tree-item',
+        isSelected ? 'selected' : '',
+        !node.visible ? 'layer-hidden' : '',
+        node.locked ? 'layer-locked' : '',
+        hasChildren ? 'is-container' : 'is-leaf'
+      ].filter(Boolean).join(' ');
 
       html += `
-        <div class="layer-item ${isSelected ? 'selected' : ''}" data-node-id="${node.id}" draggable="true" style="padding-left: ${paddingLeft}px;">
-          <span class="layer-icon">${icon}</span>
-          <span class="layer-name" title="${node.name}">${node.name}</span>
+        <div class="${stateClasses}" data-node-id="${node.id}" draggable="${!isEditing}" style="padding-left: ${paddingLeft}px;">
+          ${chevronHtml}
+          <span class="layer-icon" title="${node.type}">${icon}</span>
+          ${nameHtml}
           <div class="layer-actions">
-            <button class="layer-btn toggle-lock" title="Toggle Lock">${node.locked ? '🔒' : '🔓'}</button>
-            <button class="layer-btn toggle-vis" title="Toggle Visibility">${node.visible ? '👁' : '🚫'}</button>
+            <button class="layer-btn toggle-lock" data-action="toggle-lock" data-node-id="${node.id}" title="${node.locked ? 'Unlock Layer' : 'Lock Layer'}">${node.locked ? '🔒' : '🔓'}</button>
+            <button class="layer-btn toggle-vis" data-action="toggle-vis" data-node-id="${node.id}" title="${node.visible ? 'Hide Layer' : 'Show Layer'}">${node.visible ? '👁' : '🚫'}</button>
           </div>
         </div>
       `;
 
-      if (node.childIds && node.childIds.length > 0) {
+      if (!isCollapsed && hasChildren) {
         for (const cid of node.childIds) {
           renderLayerItem(cid, depth + 1);
         }
       }
     };
 
-    for (const rootId of page.rootIds) {
+    for (const rootId of (page.rootIds || [])) {
       renderLayerItem(rootId, 0);
     }
 
-    list.innerHTML = html || '<div style="padding: 16px; color: var(--text-dim); font-size: 11px;">No matching layers found.</div>';
+    const prevScroll = list.scrollTop;
+    list.innerHTML = html || `<div style="padding: 16px; color: var(--text-dim); font-size: 11px; text-align: center;">No layers found${query ? ` matching "${escapeHtml(query)}"` : ''}.</div>`;
+    list.scrollTop = prevScroll;
 
-    // Click listeners on layers items
-    let draggedLayerId = null;
-    list.querySelectorAll('.layer-item').forEach(item => {
-      item.addEventListener('dragstart', event => {
-        if (event.target.closest('.layer-btn')) {
-          event.preventDefault();
-          return;
-        }
-        draggedLayerId = item.dataset.nodeId;
-        event.dataTransfer?.setData('text/plain', draggedLayerId);
-        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
-        item.classList.add('dragging');
-      });
-
-      item.addEventListener('dragover', event => {
-        const draggedNode = this.engine.getActivePage().nodes[draggedLayerId];
-        const targetNode = this.engine.getActivePage().nodes[item.dataset.nodeId];
-        if (!draggedNode || !targetNode || draggedNode.parentId !== targetNode.parentId || draggedNode.id === targetNode.id) return;
-        event.preventDefault();
-        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-        const bounds = item.getBoundingClientRect();
-        const position = event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after';
-        item.dataset.dropPosition = position;
-      });
-
-      item.addEventListener('dragleave', event => {
-        if (!item.contains(event.relatedTarget)) {
-          delete item.dataset.dropPosition;
-        }
-      });
-
-      item.addEventListener('drop', event => {
-        event.preventDefault();
-        const position = item.dataset.dropPosition || 'before';
-        delete item.dataset.dropPosition;
-        if (draggedLayerId) this.engine.reorderNodeTo(draggedLayerId, item.dataset.nodeId, position);
-      });
-
-      item.addEventListener('dragend', () => {
-        draggedLayerId = null;
-        item.classList.remove('dragging');
-        list.querySelectorAll('.layer-item[data-drop-position]').forEach(target => delete target.dataset.dropPosition);
-      });
-
-      item.addEventListener('click', (e) => {
-        const id = item.dataset.nodeId;
-        if (e.target.classList.contains('toggle-vis')) {
-          this.engine.toggleVisibility(id);
-          return;
-        }
-        if (e.target.classList.contains('toggle-lock')) {
-          this.engine.toggleLock(id);
-          return;
-        }
-        if (e.shiftKey) {
-          this.engine.selectToggle(id);
-        } else {
-          this.engine.setSelection([id]);
-        }
-      });
-
-      // Double click to rename
-      item.addEventListener('dblclick', async (e) => {
-        const id = item.dataset.nodeId;
-        const node = this.engine.getNode(id);
-        if (node) {
-          const newName = await this.showPromptModal({
-            title: 'Rename Layer',
-            subtitle: 'Enter a new name for this layer:',
-            defaultValue: node.name,
-            icon: '✏️',
-            confirmText: 'Rename'
-          });
-          if (newName && newName.trim()) {
-            this.engine.updateNode(id, { name: newName.trim() }, 'Rename layer');
+    // Handle inline rename input focus & lifecycle
+    if (this.editingLayerId) {
+      const renameInput = list.querySelector('.layer-rename-input');
+      if (renameInput) {
+        renameInput.focus();
+        renameInput.select();
+        let committed = false;
+        const commitRename = () => {
+          if (committed) return;
+          committed = true;
+          const newName = renameInput.value.trim();
+          const targetId = this.editingLayerId;
+          this.editingLayerId = null;
+          if (newName && page.nodes[targetId] && page.nodes[targetId].name !== newName) {
+            this.engine.updateNode(targetId, { name: newName }, 'Rename layer');
+          } else {
             this.updateLayersTree();
           }
-        }
-      });
-    });
+        };
+        renameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            commitRename();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            committed = true;
+            this.editingLayerId = null;
+            this.updateLayersTree();
+          }
+          e.stopPropagation();
+        });
+        renameInput.addEventListener('blur', () => {
+          commitRename();
+        });
+        return;
+      }
+    }
+
+    // Gentle auto-scroll to selected layer if canvas triggered selection
+    if (selectedIds.length === 1 && !this._preventTreeScroll) {
+      const selEl = list.querySelector(`.layer-item[data-node-id="${selectedIds[0]}"]`);
+      if (selEl) {
+        selEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
   }
 
   renderTokensList() {
@@ -4759,6 +5178,41 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       this.switchRightTab('design');
       this.showToast('Returned to Design Canvas Mode');
     }
+  }
+
+  resolveSelectionTarget(leafHitId, isDeepSelect = false) {
+    if (!leafHitId) return null;
+    const page = this.engine.getActivePage();
+    if (!page || !page.nodes) return leafHitId;
+
+    if (isDeepSelect) {
+      return leafHitId;
+    }
+
+    const currentSelection = this.engine.getSelection();
+
+    // Find the hierarchy chain from root down to leafHitId
+    const chain = [];
+    let cur = page.nodes[leafHitId];
+    while (cur) {
+      chain.unshift(cur.id);
+      cur = cur.parentId ? page.nodes[cur.parentId] : null;
+    }
+
+    // In standard design tools (Figma/Sketch), composite containers (groups and boolean groups)
+    // act as atomic selection units unless they or one of their children are already selected.
+    for (let i = 0; i < chain.length - 1; i++) {
+      const ancestorId = chain[i];
+      const ancestor = page.nodes[ancestorId];
+      if (ancestor && (ancestor.type === 'group' || ancestor.type === 'boolean_group')) {
+        const isSelectedOrChildSelected = chain.slice(i).some(id => currentSelection.includes(id));
+        if (!isSelectedOrChildSelected) {
+          return ancestorId;
+        }
+      }
+    }
+
+    return leafHitId;
   }
 
   drillInSelection() {
@@ -5399,8 +5853,25 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       this.showToast('Select 2 or more shape layers to perform a boolean operation.', 'warning');
       return;
     }
-    this.engine.booleanGroup(sel, op);
-    this.renderer.render();
+    const groupId = this.engine.booleanGroup(sel, op);
+    if (groupId) {
+      this.renderer.render();
+      this.updateLayersTree();
+      this.updateInspector();
+      this.showToast(`Applied Boolean ${op.charAt(0).toUpperCase() + op.slice(1)}`);
+    }
+  }
+
+  flattenSelected() {
+    const sel = this.engine.getSelection();
+    if (!sel || sel.length === 0) return;
+    const res = this.engine.flattenSelection(sel);
+    if (res) {
+      this.renderer.render();
+      this.updateLayersTree();
+      this.updateInspector();
+      this.showToast('Flattened selection to vector shape');
+    }
   }
 
   detachSelected() {

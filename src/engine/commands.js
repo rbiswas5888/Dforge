@@ -471,37 +471,144 @@ export class CommandEngine {
     const page = this.getActivePage();
     const node = page?.nodes?.[nodeId];
     const target = page?.nodes?.[targetId];
-    if (!node || !target || nodeId === targetId || node.parentId !== target.parentId) return false;
+    if (!node || !target || nodeId === targetId) return false;
 
-    const list = node.parentId && page.nodes[node.parentId]
-      ? page.nodes[node.parentId].childIds
-      : page.rootIds;
-    const fromIndex = list.indexOf(nodeId);
-    if (fromIndex === -1 || !list.includes(targetId)) return false;
+    const isDescendant = (ancestorId, descendantId) => {
+      let curr = page.nodes[descendantId];
+      while (curr && curr.parentId) {
+        if (curr.parentId === ancestorId) return true;
+        curr = page.nodes[curr.parentId];
+      }
+      return false;
+    };
+    if (isDescendant(nodeId, targetId)) return false;
 
-    const next = [...list];
-    next.splice(fromIndex, 1);
-    const targetIndex = next.indexOf(targetId);
-    next.splice(targetIndex + (position === 'after' ? 1 : 0), 0, nodeId);
-    if (next.every((id, index) => id === list[index])) return false;
+    // Sibling reordering (Same parent)
+    if (node.parentId === target.parentId && position !== 'inside') {
+      const list = node.parentId && page.nodes[node.parentId]
+        ? page.nodes[node.parentId].childIds
+        : page.rootIds;
+      const fromIndex = list.indexOf(nodeId);
+      if (fromIndex === -1 || !list.includes(targetId)) return false;
 
-    const applyOrder = (order, description) => ({
-      type: 'reorder-node',
+      const next = [...list];
+      next.splice(fromIndex, 1);
+      const targetIndex = next.indexOf(targetId);
+      next.splice(targetIndex + (position === 'after' ? 1 : 0), 0, nodeId);
+      if (next.every((id, index) => id === list[index])) return false;
+
+      const applyOrder = (order, description) => ({
+        type: 'reorder-node',
+        description,
+        execute: (engine) => {
+          const currentPage = engine.doc.pages.find(item => item.id === this.activePageId);
+          const currentNode = currentPage?.nodes?.[nodeId];
+          if (!currentPage || !currentNode) return null;
+          const currentList = currentNode.parentId && currentPage.nodes[currentNode.parentId]
+            ? currentPage.nodes[currentNode.parentId].childIds
+            : currentPage.rootIds;
+          const previousOrder = [...currentList];
+          currentList.splice(0, currentList.length, ...order);
+          return applyOrder(previousOrder, `Undo ${description}`);
+        }
+      });
+
+      this.execute(applyOrder(next, `Reorder ${node.name}`));
+      return true;
+    }
+
+    // Dropping inside a container node
+    if (position === 'inside') {
+      if (!Array.isArray(target.childIds)) target.childIds = [];
+      const oldParentId = node.parentId;
+      const oldList = oldParentId && page.nodes[oldParentId] ? page.nodes[oldParentId].childIds : page.rootIds;
+      const oldIndex = oldList.indexOf(nodeId);
+      if (oldIndex === -1) return false;
+
+      const moveInsideCmd = (fromParentId, fromIdx, toParentId, description) => ({
+        type: 'reparent-node',
+        description,
+        execute: (engine) => {
+          const p = engine.getActivePage();
+          const n = p?.nodes?.[nodeId];
+          const dest = p?.nodes?.[toParentId];
+          if (!n || !dest) return null;
+
+          const srcList = n.parentId && p.nodes[n.parentId] ? p.nodes[n.parentId].childIds : p.rootIds;
+          const curIdx = srcList.indexOf(nodeId);
+          if (curIdx !== -1) srcList.splice(curIdx, 1);
+
+          n.parentId = toParentId;
+          if (!Array.isArray(dest.childIds)) dest.childIds = [];
+          dest.childIds.push(nodeId);
+
+          return {
+            type: 'reparent-node',
+            description: `Undo ${description}`,
+            execute: (eng) => {
+              const curP = eng.getActivePage();
+              const currN = curP?.nodes?.[nodeId];
+              if (!currN) return null;
+              dest.childIds = dest.childIds.filter(id => id !== nodeId);
+              currN.parentId = fromParentId;
+              const restoreList = fromParentId && curP.nodes[fromParentId] ? curP.nodes[fromParentId].childIds : curP.rootIds;
+              restoreList.splice(fromIdx, 0, nodeId);
+              return moveInsideCmd(fromParentId, fromIdx, toParentId, description);
+            }
+          };
+        }
+      });
+
+      this.execute(moveInsideCmd(oldParentId, oldIndex, targetId, `Move ${node.name} into ${target.name}`));
+      return true;
+    }
+
+    // Cross-parent reordering (target.parentId !== node.parentId)
+    const oldParentId = node.parentId;
+    const newParentId = target.parentId;
+    const oldList = oldParentId && page.nodes[oldParentId] ? page.nodes[oldParentId].childIds : page.rootIds;
+    const oldIndex = oldList.indexOf(nodeId);
+    if (oldIndex === -1) return false;
+
+    const reparentBetweenCmd = (fromPId, fromIdx, toPId, refTargetId, pos, description) => ({
+      type: 'reparent-node',
       description,
       execute: (engine) => {
-        const currentPage = engine.doc.pages.find(item => item.id === this.activePageId);
-        const currentNode = currentPage?.nodes?.[nodeId];
-        if (!currentPage || !currentNode) return null;
-        const currentList = currentNode.parentId && currentPage.nodes[currentNode.parentId]
-          ? currentPage.nodes[currentNode.parentId].childIds
-          : currentPage.rootIds;
-        const previousOrder = [...currentList];
-        currentList.splice(0, currentList.length, ...order);
-        return applyOrder(previousOrder, `Undo ${description}`);
+        const p = engine.getActivePage();
+        const n = p?.nodes?.[nodeId];
+        if (!n) return null;
+
+        const srcList = n.parentId && p.nodes[n.parentId] ? p.nodes[n.parentId].childIds : p.rootIds;
+        const curIdx = srcList.indexOf(nodeId);
+        if (curIdx !== -1) srcList.splice(curIdx, 1);
+
+        n.parentId = toPId;
+        const destList = toPId && p.nodes[toPId] ? p.nodes[toPId].childIds : p.rootIds;
+        let tIdx = destList.indexOf(refTargetId);
+        if (tIdx === -1) tIdx = destList.length;
+        destList.splice(tIdx + (pos === 'after' ? 1 : 0), 0, nodeId);
+
+        return {
+          type: 'reparent-node',
+          description: `Undo ${description}`,
+          execute: (eng) => {
+            const curP = eng.getActivePage();
+            const currN = curP?.nodes?.[nodeId];
+            if (!currN) return null;
+            const curDestList = currN.parentId && curP.nodes[currN.parentId] ? curP.nodes[currN.parentId].childIds : curP.rootIds;
+            const dIdx = curDestList.indexOf(nodeId);
+            if (dIdx !== -1) curDestList.splice(dIdx, 1);
+
+            currN.parentId = fromPId;
+            const restoreList = fromPId && curP.nodes[fromPId] ? curP.nodes[fromPId].childIds : curP.rootIds;
+            restoreList.splice(fromIdx, 0, nodeId);
+            return reparentBetweenCmd(fromPId, fromIdx, toPId, refTargetId, pos, description);
+          }
+        };
       }
     });
 
-    this.execute(applyOrder(next, `Reorder ${node.name}`));
+    this.execute(reparentBetweenCmd(oldParentId, oldIndex, newParentId, targetId, position, `Move ${node.name}`));
     return true;
   }
 
@@ -984,6 +1091,13 @@ export class CommandEngine {
     };
 
     const parentId = nodes[0].parentId;
+    const originalPositions = nodes.map(n => ({
+      id: n.id,
+      x: n.transform.x,
+      y: n.transform.y,
+      parentId: n.parentId
+    }));
+
     const booleanNode = createNode('boolean_group', {
       name: opNames[operation] || 'Boolean Group',
       parentId,
@@ -994,27 +1108,78 @@ export class CommandEngine {
         width: Math.max(maxX - minX, 10),
         height: Math.max(maxY - minY, 10)
       },
-      childIds: nodeIds
+      style: {
+        fills: nodes[0].style?.fills ? JSON.parse(JSON.stringify(nodes[0].style.fills)) : [{ type: 'solid', color: '#0d99ff' }],
+        strokes: nodes[0].style?.strokes ? JSON.parse(JSON.stringify(nodes[0].style.strokes)) : []
+      },
+      childIds: [...nodeIds]
     });
 
-    for (const n of nodes) {
-      n.parentId = booleanNode.id;
-      n.transform.x -= minX;
-      n.transform.y -= minY;
-    }
+    const command = {
+      type: 'boolean-group',
+      description: opNames[operation] || 'Boolean Group',
+      execute: (engine) => {
+        const p = engine.getActivePage();
+        for (const n of nodes) {
+          n.parentId = booleanNode.id;
+          n.transform.x -= minX;
+          n.transform.y -= minY;
+        }
+        p.nodes[booleanNode.id] = booleanNode;
+        if (parentId && p.nodes[parentId]) {
+          p.nodes[parentId].childIds = p.nodes[parentId].childIds.filter(id => !nodeIds.includes(id));
+          p.nodes[parentId].childIds.push(booleanNode.id);
+        } else {
+          p.rootIds = p.rootIds.filter(id => !nodeIds.includes(id));
+          p.rootIds.push(booleanNode.id);
+        }
+        engine.setSelection([booleanNode.id]);
+        return {
+          type: 'undo-boolean-group',
+          description: `Undo ${opNames[operation]}`,
+          execute: (eng) => {
+            const curP = eng.getActivePage();
+            delete curP.nodes[booleanNode.id];
+            if (parentId && curP.nodes[parentId]) {
+              curP.nodes[parentId].childIds = curP.nodes[parentId].childIds.filter(id => id !== booleanNode.id);
+              curP.nodes[parentId].childIds.push(...nodeIds);
+            } else {
+              curP.rootIds = curP.rootIds.filter(id => id !== booleanNode.id);
+              curP.rootIds.push(...nodeIds);
+            }
+            for (const pos of originalPositions) {
+              const item = curP.nodes[pos.id];
+              if (item) {
+                item.parentId = pos.parentId;
+                item.transform.x = pos.x;
+                item.transform.y = pos.y;
+              }
+            }
+            eng.setSelection(nodeIds);
+            return command;
+          }
+        };
+      }
+    };
 
-    page.nodes[booleanNode.id] = booleanNode;
-    if (parentId && page.nodes[parentId]) {
-      page.nodes[parentId].childIds = page.nodes[parentId].childIds.filter(id => !nodeIds.includes(id));
-      page.nodes[parentId].childIds.push(booleanNode.id);
-    } else {
-      page.rootIds = page.rootIds.filter(id => !nodeIds.includes(id));
-      page.rootIds.push(booleanNode.id);
-    }
-
-    this.setSelection([booleanNode.id]);
-    this.notify('document-change');
+    this.execute(command);
     return booleanNode.id;
+  }
+
+  flattenSelection(nodeIds) {
+    const page = this.getActivePage();
+    if (!nodeIds || nodeIds.length === 0) return null;
+    const targetId = nodeIds[0];
+    const node = page.nodes[targetId];
+    if (!node) return null;
+    if (node.type === 'boolean_group') {
+      this.updateNode(node.id, {
+        type: 'vector',
+        name: (node.name || 'Boolean Group').replace('Selection', 'Shape').replace('Group', 'Vector')
+      }, 'Flatten Selection');
+      return page.nodes[node.id];
+    }
+    return null;
   }
 
   setThemeMode(mode = 'dark') {

@@ -152,6 +152,9 @@ export class CanvasRenderer {
     // 7. Render Selection Overlays, Bounding Boxes & Resize Handles
     this.drawSelection(ctx, page, boundsCache);
 
+    // 7.2 Render Hover Highlight Outline (Tree <-> Canvas sync)
+    this.drawHoverOutline(ctx, page, boundsCache);
+
     // 7.5 Render Distance Measurements (Alt/Option measurement mode)
     this.drawDistanceMeasurement(ctx, page, boundsCache);
 
@@ -263,6 +266,13 @@ export class CanvasRenderer {
     // Check if Frame requires title header rendered above it
     if (node.type === 'frame' && !node.parentId) {
       this.drawFrameHeader(ctx, node, bounds);
+    }
+
+    // Special rendering for Boolean Groups (Union, Subtract, Intersect, Exclude)
+    if (node.type === 'boolean_group') {
+      this.renderBooleanGroup(ctx, page, node, bounds, boundsCache);
+      ctx.restore();
+      return;
     }
 
     // Shadows
@@ -430,6 +440,116 @@ export class CanvasRenderer {
       ? element.readyState >= 2
       : media.ready;
     if (ready) ctx.drawImage(element, bounds.x, bounds.y, bounds.width, bounds.height);
+  }
+
+  renderBooleanGroup(ctx, page, node, bounds, boundsCache) {
+    if (!node.childIds || node.childIds.length === 0) return;
+
+    let offscreen = null;
+    const w = Math.max(1, Math.ceil(bounds.width));
+    const h = Math.max(1, Math.ceil(bounds.height));
+
+    if (typeof OffscreenCanvas !== 'undefined') {
+      try {
+        offscreen = new OffscreenCanvas(w, h);
+      } catch (e) {}
+    }
+    if (!offscreen && typeof document !== 'undefined' && document.createElement) {
+      try {
+        offscreen = document.createElement('canvas');
+        offscreen.width = w;
+        offscreen.height = h;
+      } catch (e) {}
+    }
+
+    if (!offscreen || !offscreen.getContext) {
+      for (const cid of node.childIds) {
+        this.renderNodeRecursive(ctx, page, cid, boundsCache);
+      }
+      return;
+    }
+
+    const bCtx = offscreen.getContext('2d');
+    if (!bCtx) return;
+
+    const op = (node.booleanOperation || 'union').toLowerCase();
+    const compOp = op === 'subtract' ? 'destination-out' :
+                   op === 'intersect' ? 'source-in' :
+                   op === 'exclude' ? 'xor' : 'source-over';
+
+    for (let i = 0; i < node.childIds.length; i++) {
+      const child = page.nodes[node.childIds[i]];
+      if (!child || child.visible === false) continue;
+
+      bCtx.save();
+      bCtx.globalCompositeOperation = i === 0 ? 'source-over' : compOp;
+      this.renderShapeToBuffer(bCtx, child);
+      bCtx.restore();
+    }
+
+    if (this.outlineViewOnly) {
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = Math.max(0.75, 1 / (this.zoom || 1));
+      ctx.setLineDash([4 / (this.zoom || 1), 2 / (this.zoom || 1)]);
+      ctx.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
+    } else {
+      ctx.save();
+      ctx.drawImage(offscreen, bounds.x, bounds.y, bounds.width, bounds.height);
+      ctx.restore();
+    }
+  }
+
+  renderShapeToBuffer(bCtx, node) {
+    const t = node.transform || { x: 0, y: 0, width: 100, height: 100 };
+    const radius = node.style?.cornerRadius !== undefined ? node.style.cornerRadius : 0;
+
+    bCtx.save();
+    if (t.rotation) {
+      const cx = t.x + t.width / 2;
+      const cy = t.y + t.height / 2;
+      bCtx.translate(cx, cy);
+      bCtx.rotate((t.rotation * Math.PI) / 180);
+      bCtx.translate(-cx, -cy);
+    }
+
+    bCtx.beginPath();
+    if (node.type === 'ellipse') {
+      bCtx.ellipse(t.x + t.width / 2, t.y + t.height / 2, Math.max(0, t.width / 2), Math.max(0, t.height / 2), 0, 0, Math.PI * 2);
+    } else if (node.type === 'star') {
+      const cx = t.x + t.width / 2;
+      const cy = t.y + t.height / 2;
+      const outerR = Math.min(t.width, t.height) / 2;
+      this.drawStarPath(bCtx, cx, cy, 5, outerR, outerR * 0.45);
+    } else if (node.type === 'polygon') {
+      const cx = t.x + t.width / 2;
+      const cy = t.y + t.height / 2;
+      this.drawPolygonPath(bCtx, cx, cy, 3, Math.min(t.width, t.height) / 2);
+    } else if (radius > 0 || (typeof radius === 'object' && radius !== null)) {
+      this.roundRectPath(bCtx, t.x, t.y, t.width, t.height, radius);
+    } else {
+      bCtx.rect(t.x, t.y, t.width, t.height);
+    }
+
+    const fills = node.style?.fills && node.style.fills.length > 0
+      ? node.style.fills
+      : [{ type: 'solid', color: '#0d99ff' }];
+
+    for (const fill of fills) {
+      if (fill.visible === false) continue;
+      bCtx.fillStyle = fill.color || '#0d99ff';
+      bCtx.fill();
+    }
+
+    if (node.style?.strokes && node.style.strokes.length > 0) {
+      for (const stroke of node.style.strokes) {
+        if (stroke.visible === false) continue;
+        bCtx.strokeStyle = stroke.color || '#38bdf8';
+        bCtx.lineWidth = stroke.width || 1;
+        bCtx.stroke();
+      }
+    }
+
+    bCtx.restore();
   }
 
   drawTextNode(ctx, node, bounds) {
@@ -753,6 +873,23 @@ export class CanvasRenderer {
       }
       ctx.stroke();
     }
+    ctx.restore();
+  }
+
+  drawHoverOutline(ctx, page, boundsCache) {
+    if (!this.hoveredNodeId) return;
+    const selectedIds = this.engine.getSelection();
+    if (selectedIds.includes(this.hoveredNodeId)) return;
+
+    const bounds = computeWorldBounds(page, this.hoveredNodeId, boundsCache);
+    const node = page.nodes[this.hoveredNodeId];
+    if (!bounds || !node) return;
+
+    ctx.save();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.5 / this.zoom;
+    ctx.setLineDash([4 / this.zoom, 2 / this.zoom]);
+    ctx.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
     ctx.restore();
   }
 

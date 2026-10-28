@@ -118,7 +118,13 @@ export class ShortcutRegistry {
       macKey: 'V / Esc',
       winKey: 'V / Esc',
       match: (e) => !e.metaKey && !e.ctrlKey && !e.shiftKey && (e.key.toLowerCase() === 'v' || e.key === 'Escape'),
-      handler: () => this.app.setTool('select')
+      handler: () => {
+        if (this.app.isVectorEditMode) {
+          this.app.drillOutSelection();
+        } else {
+          this.app.setTool('select');
+        }
+      }
     });
 
     this.register({
@@ -531,6 +537,56 @@ export class ShortcutRegistry {
       winKey: 'Ctrl+Alt+I',
       match: (e) => (isMac ? (e.metaKey && e.altKey) : (e.ctrlKey && e.altKey)) && e.key.toLowerCase() === 'i',
       handler: () => this.app.openImportModal()
+    });
+
+    this.register({
+      id: 'booleanUnion',
+      name: 'Boolean Union',
+      category: 'Object',
+      macKey: '⌥⌘U',
+      winKey: 'Alt+Ctrl+U',
+      match: (e) => (isMac ? (e.metaKey && e.altKey) : (e.ctrlKey && e.altKey)) && e.key.toLowerCase() === 'u',
+      handler: () => this.app.booleanSelected?.('union')
+    });
+
+    this.register({
+      id: 'booleanSubtract',
+      name: 'Boolean Subtract',
+      category: 'Object',
+      macKey: '⌥⌘S',
+      winKey: 'Alt+Ctrl+S',
+      match: (e) => (isMac ? (e.metaKey && e.altKey) : (e.ctrlKey && e.altKey)) && e.key.toLowerCase() === 's',
+      handler: () => this.app.booleanSelected?.('subtract')
+    });
+
+    this.register({
+      id: 'booleanIntersect',
+      name: 'Boolean Intersect',
+      category: 'Object',
+      macKey: '⌥⌘I',
+      winKey: 'Alt+Ctrl+I',
+      match: (e) => (isMac ? (e.metaKey && e.altKey) : (e.ctrlKey && e.altKey)) && e.key.toLowerCase() === 'i' && !e.shiftKey,
+      handler: () => this.app.booleanSelected?.('intersect')
+    });
+
+    this.register({
+      id: 'booleanExclude',
+      name: 'Boolean Exclude',
+      category: 'Object',
+      macKey: '⌥⌘X',
+      winKey: 'Alt+Ctrl+X',
+      match: (e) => (isMac ? (e.metaKey && e.altKey) : (e.ctrlKey && e.altKey)) && e.key.toLowerCase() === 'x',
+      handler: () => this.app.booleanSelected?.('exclude')
+    });
+
+    this.register({
+      id: 'flatten',
+      name: 'Flatten Selection',
+      category: 'Object',
+      macKey: '⌘E',
+      winKey: 'Ctrl+E',
+      match: (e) => (isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'e',
+      handler: () => this.app.flattenSelected?.()
     });
   }
 

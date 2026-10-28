@@ -228,9 +228,11 @@ const server = http.createServer(async (req, res) => {
   }
 
   const filePath = path.join(__dirname, reqPath);
+  const resolvedDir = path.resolve(__dirname);
+  const resolvedFile = path.resolve(filePath);
 
   // Prevent directory traversal
-  if (!filePath.startsWith(__dirname)) {
+  if (!resolvedFile.startsWith(resolvedDir)) {
     res.writeHead(403, { 'Content-Type': 'text/plain' });
     res.end('403 Forbidden');
     return;
