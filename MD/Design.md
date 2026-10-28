@@ -1640,8 +1640,8 @@ Report counts and affected object IDs so users can find issues.
 #### Current import coverage
 
 - Standard `.sketch` ZIP archives are parsed from their document and page JSON entries. Unsupported archive variants or compression methods are reported rather than silently treated as valid designs.
-- Figma REST/API interchange JSON (`.figma.json`), SVG, and static React JSX/TSX source have import adapters. React source is parsed as static markup and supported inline styles; uploaded code is never executed.
-- React project folders can be analyzed from selected source files. Canvas conversion chooses a static JSX entry component; design-system import statically analyzes supported JSON, CSS, JS, JSX, TS, and TSX files. npm/CLI commands and uploaded project scripts are not executed.
+- Figma REST/API interchange JSON (`.figma.json`), SVG, and static React JSX/TSX source have import adapters. The import dialog can also request a Figma file through the official REST API using a user-provided personal access token. The request is made directly by the browser; the token is not persisted and is cleared after the request. React source is parsed as static markup and supported inline styles; uploaded code is never executed.
+- React project folders can be analyzed from selected source files. Canvas conversion chooses a static JSX entry component; design-system import statically analyzes supported JSON, CSS, JS, JSX, TS, and TSX files. `package.json` files contribute package name/version, entry points, export paths, dependency names, and script names to the report; package scripts and uploaded project code are not executed.
 - Native Figma-family binaries (`.fig`, `.jam`, `.deck`, `.buzz`, `.site`, `.make`) and Adobe XD `.xd` files are recognized by the upload flow but are not decoded. Users must provide a supported interchange export; file selection does not imply native-format support.
 
 ### 15.4 Export targets

@@ -44,7 +44,7 @@ import {
   globalSecurityManager,
   globalAuditLogger
 } from './mcp/index.js';
-import { ImportManager } from './engine/importer/index.js';
+import { ImportManager, fetchFigmaFile } from './engine/importer/index.js';
 import {
   DesignSystemRegistry,
   AITokenWizard,
@@ -3002,10 +3002,43 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const fileInput = document.getElementById('externalDesignFileInput');
     const reactFolderInput = document.getElementById('reactProjectFolderInput');
     const btnCommit = document.getElementById('btnCommitImport');
+    const btnImportFigmaApi = document.getElementById('btnImportFigmaApi');
+    const figmaUrlInput = document.getElementById('figmaApiFileUrl');
+    const figmaTokenInput = document.getElementById('figmaApiToken');
+    const figmaStatus = document.getElementById('figmaApiStatus');
+    const clearFigmaToken = () => {
+      if (figmaTokenInput) figmaTokenInput.value = '';
+    };
     let pendingImportResult = null;
 
     dropZone?.addEventListener('click', () => fileInput?.click());
     document.getElementById('btnImportReactFolder')?.addEventListener('click', () => reactFolderInput?.click());
+    document.getElementById('btnCloseImportModal')?.addEventListener('click', clearFigmaToken);
+    modal?.querySelector('button[onclick*="modalImportDesign"]')?.addEventListener('click', clearFigmaToken);
+
+    btnImportFigmaApi?.addEventListener('click', async () => {
+      const fileUrl = figmaUrlInput?.value.trim() || '';
+      const accessToken = figmaTokenInput?.value || '';
+      pendingImportResult = null;
+      if (btnCommit) btnCommit.style.display = 'none';
+      if (btnImportFigmaApi) btnImportFigmaApi.disabled = true;
+      if (figmaStatus) figmaStatus.textContent = 'Requesting file from Figma...';
+      try {
+        const { fileKey, fileData } = await fetchFigmaFile(fileUrl, accessToken);
+        const result = await this.importer.processImport(fileData, {
+          format: 'figma',
+          fileName: `${fileKey}.figma.api.json`
+        });
+        pendingImportResult = result;
+        renderFidelityPreview(result);
+        if (figmaStatus) figmaStatus.textContent = 'Figma file loaded. Review the fidelity report, then commit the import.';
+      } catch (error) {
+        if (figmaStatus) figmaStatus.textContent = `Figma import failed: ${error.message}`;
+      } finally {
+        clearFigmaToken();
+        if (btnImportFigmaApi) btnImportFigmaApi.disabled = false;
+      }
+    });
 
     dropZone?.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -3124,12 +3157,19 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       if (statInters) statInters.textContent = rep.metrics.interactionsCount;
 
       if (list) {
+        const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        })[char]);
         list.innerHTML = `
           <div style="font-weight: 600; color: #f8fafc; margin-bottom: 4px;">Preserved Features:</div>
-          ${rep.preservedFeatures.map(f => `<div>✓ ${f}</div>`).join('')}
+          ${rep.preservedFeatures.map(f => `<div>✓ ${escapeHtml(f)}</div>`).join('')}
           ${rep.warnings.length > 0 ? `
             <div style="font-weight: 600; color: #fbbf24; margin-top: 8px; margin-bottom: 4px;">Diagnostics & Fallbacks:</div>
-            ${rep.warnings.map(w => `<div style="color: #cbd5e1;">⚠️ ${w}</div>`).join('')}
+            ${rep.warnings.map(w => `<div style="color: #cbd5e1;">⚠️ ${escapeHtml(w)}</div>`).join('')}
           ` : ''}
         `;
       }

@@ -317,13 +317,26 @@ export class DesignSystemUIController {
         const reportBox = document.getElementById('importReportBox');
         const summary = document.getElementById('importReportSummary');
         if (reportBox && summary) {
+          const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+          })[char]);
+          const packages = report.packages || (report.packageInfo ? [report.packageInfo] : []);
           reportBox.style.display = 'block';
           summary.innerHTML = `
             <div><strong>Format Detected:</strong> ${report.format.toUpperCase()} (Confidence: ${report.confidence}%)</div>
             <div><strong>Discovered Tokens:</strong> ${report.discoveredTokens.length}</div>
             <div><strong>Discovered Components:</strong> ${report.discoveredComponents.length}</div>
             <div><strong>Fidelity Score:</strong> ${report.fidelityScore}%</div>
-            ${report.warnings.length ? `<div style="color: #f59e0b; margin-top: 4px;">⚠️ ${report.warnings.join(', ')}</div>` : ''}
+            ${packages.map(info => `
+              <div><strong>Package:</strong> ${escapeHtml(info.name)}${info.version ? `@${escapeHtml(info.version)}` : ''} · ${info.exports.length} export path(s) · ${info.dependencies.length} dependency reference(s)</div>
+              ${info.entryPoints.length ? `<div><strong>Entry points:</strong> ${info.entryPoints.map(entry => `${escapeHtml(entry.kind)}: ${escapeHtml(entry.path)}`).join(', ')}</div>` : ''}
+              ${info.scriptNames.length ? `<div style="color: #fbbf24;">Package scripts detected (${info.scriptNames.map(escapeHtml).join(', ')}) but will not be run.</div>` : ''}
+            `).join('')}
+            ${report.warnings.length ? `<div style="color: #f59e0b; margin-top: 4px;">⚠️ ${report.warnings.map(escapeHtml).join(', ')}</div>` : ''}
           `;
         }
         if (status) status.textContent = 'Analysis complete.';
@@ -336,7 +349,14 @@ export class DesignSystemUIController {
         if (this.lastImportReport) {
           const status = document.getElementById('importAnalysisStatus');
           try {
-            const result = this.importer.commitImportedSystem(this.lastImportReport);
+            const packages = this.lastImportReport.packages || (this.lastImportReport.packageInfo ? [this.lastImportReport.packageInfo] : []);
+            const packageName = packages.length === 1
+              ? packages[0].name.replace(/[^a-zA-Z0-9._@/ -]/g, '').slice(0, 100)
+              : '';
+            const collectionName = packages.length === 1
+              ? `${packageName || 'Imported Package'} Design System`
+              : 'Imported React System';
+            const result = this.importer.commitImportedSystem(this.lastImportReport, collectionName);
             closeImp();
             this.updateHeaderInfo();
             this.renderView(this.activeView);
@@ -423,6 +443,7 @@ export class DesignSystemUIController {
       fidelityScore: Math.round(reports.reduce((sum, report) => sum + report.fidelityScore, 0) / reports.length),
       discoveredTokens: uniqueBy(tokens, token => `${token.name}:${JSON.stringify(token.value)}`),
       discoveredComponents: uniqueBy(components, component => component.name),
+      packages: uniqueBy(reports.map(report => report.packageInfo).filter(Boolean), info => `${info.name}@${info.version}`),
       unsupportedConstructs: uniqueBy(reports.flatMap(report => report.unsupportedConstructs), item => item),
       warnings: uniqueBy(reports.flatMap(report => report.warnings), item => item)
     };
@@ -480,6 +501,10 @@ export class DesignSystemUIController {
   openImportModal() {
     const modal = document.getElementById('modalImportReactSystem');
     if (!modal) return;
+    this.pendingReactSourceFiles = [];
+    this.lastImportReport = null;
+    const status = document.getElementById('importAnalysisStatus');
+    if (status) status.textContent = 'Waiting for input...';
     document.getElementById('importReportBox').style.display = 'none';
     document.getElementById('btnCommitImportReact').style.display = 'none';
     modal.style.display = 'flex';

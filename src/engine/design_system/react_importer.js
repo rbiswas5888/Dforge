@@ -15,7 +15,7 @@ export class ReactDesignSystemImporter {
    * Static analysis of untrusted React package code, DTCG JSON, or Tailwind config
    */
   async analyzeAndParse(sourceInput, options = {}) {
-    const { sourceName = 'react-library', sourceType = 'auto' } = options;
+    const { sourceName = 'react-library' } = options;
 
     let parsed = null;
     let format = 'unknown';
@@ -45,8 +45,16 @@ export class ReactDesignSystemImporter {
       discoveredTokens: [],
       discoveredComponents: [],
       unsupportedConstructs: [],
-      warnings: []
+      warnings: [],
+      packageInfo: null
     };
+
+    if (this.isPackageManifest(parsed, sourceName)) {
+      report.format = 'react-package';
+      report.packageInfo = this.readPackageManifest(parsed);
+      report.warnings.push('Package metadata and selected source files are analyzed statically; package scripts and code are never executed.');
+      return report;
+    }
 
     // 1. DTCG / W3C Token Format or Flat JSON Tokens
     if (format === 'dtcg' || format === 'json-tokens') {
@@ -58,6 +66,45 @@ export class ReactDesignSystemImporter {
     }
 
     return report;
+  }
+
+  isPackageManifest(parsed, sourceName) {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return false;
+    }
+    const isPackageJson = /(?:^|\/)package\.json$/i.test(String(sourceName).replace(/\\/g, '/'));
+    const hasPackageMetadata = typeof parsed.name === 'string' || typeof parsed.version === 'string'
+      || parsed.exports || parsed.dependencies || parsed.peerDependencies || parsed.scripts;
+    return Boolean(hasPackageMetadata && (isPackageJson || (
+      parsed.version && (parsed.exports || parsed.dependencies || parsed.peerDependencies || parsed.scripts)
+    )));
+  }
+
+  readPackageManifest(manifest) {
+    const exportEntries = manifest.exports && typeof manifest.exports === 'object'
+      ? Object.keys(manifest.exports).slice(0, 200)
+      : [];
+    const sourceDependencies = {
+      ...manifest.dependencies,
+      ...manifest.peerDependencies
+    };
+    const dependencies = Object.entries(sourceDependencies)
+      .filter(([name, version]) => typeof name === 'string' && typeof version === 'string')
+      .slice(0, 200)
+      .map(([name, version]) => ({ name, version }));
+    return {
+      name: typeof manifest.name === 'string' ? manifest.name.slice(0, 200) : 'Unnamed package',
+      version: typeof manifest.version === 'string' ? manifest.version.slice(0, 100) : '',
+      description: typeof manifest.description === 'string' ? manifest.description.slice(0, 500) : '',
+      entryPoints: ['main', 'module', 'types', 'typings']
+        .filter(key => typeof manifest[key] === 'string')
+        .map(key => ({ kind: key, path: manifest[key].slice(0, 300) })),
+      exports: exportEntries,
+      dependencies,
+      scriptNames: manifest.scripts && typeof manifest.scripts === 'object'
+        ? Object.keys(manifest.scripts).slice(0, 100)
+        : []
+    };
   }
 
   detectJsonFormat(obj) {

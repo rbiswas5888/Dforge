@@ -6,8 +6,10 @@
 import assert from 'node:assert';
 import { deflateRawSync } from 'node:zlib';
 import { ImportManager } from '../src/engine/importer/import_manager.js';
+import { extractFigmaFileKey, fetchFigmaFile } from '../src/engine/importer/figma_api.js';
 import { SOURCE_CAPABILITY_REGISTRY } from '../src/engine/importer/types.js';
 import { ReactDesignSystemImporter } from '../src/engine/design_system/react_importer.js';
+import { DesignSystemUIController } from '../src/engine/design_system/ui_controller.js';
 
 console.log('⚡ Starting External Design Import Engine Verification Suite (MD/Design.md)...\n');
 
@@ -313,6 +315,67 @@ console.log('   ✓ Fidelity Report emitted: Score %d/100 (%s), %d features pres
   sketchResult.fidelityReport.preservedFeatures.length);
 
 const reactTokenImporter = new ReactDesignSystemImporter({});
+const packageReport = await reactTokenImporter.analyzeAndParse(JSON.stringify({
+  name: '@example/design-system',
+  version: '2.1.0',
+  main: 'dist/index.js',
+  exports: { '.': './dist/index.js', './tokens': './dist/tokens.js' },
+  dependencies: { '@rneui/base': '^5.0.0' },
+  scripts: { postinstall: 'echo should-not-run' }
+}), { sourceName: 'packages/design-system/package.json' });
+assert.strictEqual(packageReport.format, 'react-package');
+assert.strictEqual(packageReport.packageInfo.name, '@example/design-system');
+assert.deepStrictEqual(packageReport.packageInfo.exports, ['.', './tokens']);
+assert.deepStrictEqual(packageReport.packageInfo.scriptNames, ['postinstall']);
+assert.ok(packageReport.warnings.some(warning => warning.includes('never executed')));
+assert.deepStrictEqual(packageReport.discoveredTokens, []);
+const designSystemUi = new DesignSystemUIController({ reactDsImporter: reactTokenImporter });
+const folderReport = await designSystemUi.analyzeSourceFiles([
+  {
+    name: 'package.json',
+    webkitRelativePath: 'ui-kit/package.json',
+    text: async () => JSON.stringify({ name: 'ui-kit', version: '1.0.0', dependencies: { react: '^19.0.0' } })
+  },
+  {
+    name: 'tokens.css',
+    webkitRelativePath: 'ui-kit/src/tokens.css',
+    text: async () => ':root { --brand: #123456; }'
+  }
+]);
+assert.strictEqual(folderReport.format, 'project-folder');
+assert.strictEqual(folderReport.packages.length, 1);
+assert.ok(folderReport.discoveredTokens.some(token => token.name === 'brand'));
+
+assert.strictEqual(extractFigmaFileKey('https://www.figma.com/design/abc123/My-file'), 'abc123');
+assert.throws(() => extractFigmaFileKey('https://evil.example/file/abc123'), /HTTPS Figma/);
+await assert.rejects(fetchFigmaFile('https://www.figma.com/design/abc123/Test', ''), /personal access token/);
+let capturedFigmaRequest;
+const figmaResponse = await fetchFigmaFile(
+  'https://www.figma.com/design/abc123/Test',
+  'transient-token',
+  async (url, options) => {
+    capturedFigmaRequest = { url, options };
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ document: { type: 'DOCUMENT', children: [] } })
+    };
+  }
+);
+assert.strictEqual(figmaResponse.fileKey, 'abc123');
+assert.match(capturedFigmaRequest.url, /\/v1\/files\/abc123$/);
+assert.strictEqual(capturedFigmaRequest.options.headers['X-Figma-Token'], 'transient-token');
+await assert.rejects(fetchFigmaFile('https://www.figma.com/file/abc123/Test', 'token', async () => ({
+  ok: false,
+  status: 403,
+  json: async () => ({ err: 'Access denied' })
+})), /request failed \(HTTP 403\): Access denied/);
+await assert.rejects(fetchFigmaFile('https://www.figma.com/file/abc123/Test', 'token', async () => ({
+  ok: true,
+  status: 200,
+  json: async () => ({ name: 'No document' })
+})), /did not contain a design document/);
+
 const reactTokenReport = await reactTokenImporter.analyzeAndParse(`
   export const colors = { primary: '#123456' };
   :root { --space-md: 16px; }
