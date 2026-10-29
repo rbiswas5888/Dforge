@@ -173,11 +173,11 @@ console.log('   ✓ Dirty tracking and confirmation prompt successfully protect 
 
 // 5. Shortcut Registration
 console.log('5. Testing Shortcut Registration for Tabs...');
-const shortcutManager = new ShortcutManager(app);
-assert.ok(shortcutManager.shortcuts.has('newDocumentTab'), 'newDocumentTab shortcut registered');
-assert.ok(shortcutManager.shortcuts.has('nextDocumentTab'), 'nextDocumentTab shortcut registered');
-assert.ok(shortcutManager.shortcuts.has('prevDocumentTab'), 'prevDocumentTab shortcut registered');
-assert.ok(shortcutManager.shortcuts.has('closeDocumentTab'), 'closeDocumentTab shortcut registered');
-console.log('   ✓ All document tab shortcuts registered in ShortcutManager.');
+const shortcutRegistry = new ShortcutRegistry(app);
+assert.ok(shortcutRegistry.shortcuts.some(s => s.id === 'newDocumentTab'), 'newDocumentTab shortcut registered');
+assert.ok(shortcutRegistry.shortcuts.some(s => s.id === 'nextDocumentTab'), 'nextDocumentTab shortcut registered');
+assert.ok(shortcutRegistry.shortcuts.some(s => s.id === 'prevDocumentTab'), 'prevDocumentTab shortcut registered');
+assert.ok(shortcutRegistry.shortcuts.some(s => s.id === 'closeDocumentTab'), 'closeDocumentTab shortcut registered');
+console.log('   ✓ All document tab shortcuts registered in ShortcutRegistry.');
 
 console.log('\n✅ All Multi-Document Tab Bar & Session Switcher tests PASSED!\n');
