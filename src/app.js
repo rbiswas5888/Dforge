@@ -392,7 +392,25 @@ export class DesignForgeApp {
     this.workspaceProjectFilter = 'all';
     this.selectedProjectId = this.workspaceStore.getActiveProjectId();
     this.updateTopbarProjectCrumb();
-    this.renderWorkspaceDashboard();
+
+    // Persist active view on window unload so re-opening respects previous session
+    window.addEventListener('beforeunload', () => {
+      try {
+        const viewToSave = this.workspaceShellView === 'editor' ? 'editor' : 'workspace';
+        this.workspaceStore.setLastActiveView(viewToSave);
+      } catch {
+        // ignore
+      }
+    });
+
+    // Landing navigation rule:
+    // User should always land on workspace unless they closed the application while design file was on.
+    const lastActiveView = this.workspaceStore.getLastActiveView();
+    if (lastActiveView === 'editor') {
+      this.showWorkspaceView('editor');
+    } else {
+      this.showWorkspaceView('projects');
+    }
   }
 
   workspaceEscape(value) {
@@ -412,6 +430,16 @@ export class DesignForgeApp {
     document.getElementById('workspaceNewProjectModal').hidden = true;
     document.getElementById('workspaceNewFileModal').hidden = true;
     document.getElementById('workspaceFileSwitcherModal').hidden = true;
+
+    // Persist last active view state:
+    // If user is in 'editor', persist 'editor'.
+    // If in workspace/projects or settings, persist 'workspace'.
+    try {
+      this.workspaceStore.setLastActiveView(view === 'editor' ? 'editor' : 'workspace');
+    } catch {
+      // ignore storage errors
+    }
+
     if (view === 'projects') {
       if (!this.storage.flushAutosave(this.doc)) {
         this.showToast('The current document could not be fully saved before opening the dashboard.', 'error');

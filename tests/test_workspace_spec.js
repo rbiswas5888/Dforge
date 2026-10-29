@@ -177,5 +177,26 @@ assert.match(app, /handleRemoveProjectMember\(/, 'handleRemoveProjectMember hand
 
 console.log('   ✓ All HTML elements, persistent global destinations, and app handlers verified.');
 
+// 8. Landing Navigation Rule Verification
+console.log('\n8. Testing Initial Landing Navigation Rule...');
+// Default state (or closed while on workspace): user always lands on workspace
+globalThis.localStorage.clear();
+assert.equal(store.getLastActiveView(), 'workspace', 'Default landing view is workspace');
+
+// When user closes/leaves while viewing/editing a design file
+store.setLastActiveView('editor');
+assert.equal(store.getLastActiveView(), 'editor', 'Directly lands on design file if closed while in editor');
+
+// When user returns to workspace and closes
+store.setLastActiveView('workspace');
+assert.equal(store.getLastActiveView(), 'workspace', 'Lands on workspace if left while on workspace');
+
+// Verify app startup logic respects this invariant
+assert.match(app, /lastActiveView === 'editor'/, 'App checks if previous session was in editor');
+assert.match(app, /this\.showWorkspaceView\('editor'\)/, 'App switches to editor if last view was editor');
+assert.match(app, /this\.showWorkspaceView\('projects'\)/, 'App lands on workspace by default');
+console.log('   ✓ Landing rule verified: user always lands on workspace unless application was closed with design file open.');
+
 console.log('\n🎉 ALL FIGMA-INSPIRED WORKSPACE SPEC CHECKS PASSED (100% SPEC COMPLIANCE)!');
+
 

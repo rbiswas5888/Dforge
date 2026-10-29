@@ -8,6 +8,7 @@ const PROFILE_INDEX_KEY = 'designforge_workspace_profiles_v1';
 const ACTIVE_PROFILE_KEY = 'designforge_workspace_active_profile_v1';
 const NOTIFICATIONS_KEY = 'designforge_workspace_notifications_v1';
 const REACT_LIBRARIES_KEY = 'designforge_workspace_react_libraries_v1';
+const LAST_VIEW_KEY = 'designforge_last_active_view';
 
 export const VALID_PROJECT_ROLES = ['Project Lead', 'Designer', 'Viewer'];
 
@@ -17,6 +18,22 @@ export class WorkspaceStore {
       throw new Error('Workspace persistence is unavailable in this browser context.');
     }
     return localStorage;
+  }
+
+  getLastActiveView() {
+    try {
+      return this.requireStorage().getItem(LAST_VIEW_KEY) || 'workspace';
+    } catch {
+      return 'workspace';
+    }
+  }
+
+  setLastActiveView(view) {
+    try {
+      this.requireStorage().setItem(LAST_VIEW_KEY, view);
+    } catch (err) {
+      console.warn('Could not persist last active view:', err);
+    }
   }
 
   readJson(key, fallback) {
