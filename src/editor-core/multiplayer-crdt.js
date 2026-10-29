@@ -34,7 +34,7 @@ export class PresenceBroadcaster {
     this.localUserMeta = {
       name: localUserMeta.name || 'Anonymous Designer',
       color: localUserMeta.color || '#3B82F6',
-      avatar: localUserMeta.avatar || '🎨'
+      avatar: localUserMeta.avatar || 'DF'
     };
 
     this.remotePeers = new Map(); // peerId -> { cursor, name, color, selection, lastSeen }

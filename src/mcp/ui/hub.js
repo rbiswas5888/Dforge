@@ -212,7 +212,7 @@ export class McpHubController {
             </div>
             <div style="display: flex; gap: 8px;">
               ${isConnected ? `
-                <button class="mcp-btn-secondary btn-test-ping" data-id="${s.id}">⚡ Ping</button>
+                <button class="mcp-btn-secondary btn-test-ping" data-id="${s.id}"><span data-icon="Zap" data-icon-size="14"></span> Ping</button>
                 <button class="mcp-btn-secondary btn-disconnect-server" data-id="${s.id}" style="color: #f43f5e;">Disconnect</button>
               ` : `
                 <button class="mcp-btn-primary btn-reconnect-server" data-id="${s.id}">Connect</button>
@@ -382,7 +382,7 @@ export class McpHubController {
             <div style="font-size: 11px; color: #38bdf8; margin: 4px 0;"><code>${r.uri}</code></div>
             <div style="font-size: 11px; color: #64748b;">${r.description || 'No description'} • Server: ${r.serverName}</div>
           </div>
-          <button class="mcp-btn-secondary btn-preview-resource" data-server="${r.serverId}" data-uri="${r.uri}">Inspect Preview ↗</button>
+          <button class="mcp-btn-secondary btn-preview-resource" data-server="${r.serverId}" data-uri="${r.uri}">Inspect Preview <span data-icon="ArrowUpRight" data-icon-size="13"></span></button>
         </div>
       </div>
     `).join('');
@@ -642,7 +642,7 @@ export class McpHubController {
                     <strong>Steps (${wf.steps.length}):</strong> ${wf.steps.map(s => s.name).join(' → ')}
                   </div>
                 </div>
-                <button class="mcp-btn-primary btn-run-workflow" data-id="${wf.id}">⚡ Run Workflow</button>
+                <button class="mcp-btn-primary btn-run-workflow" data-id="${wf.id}"><span data-icon="Zap" data-icon-size="14"></span> Run Workflow</button>
               </div>
               <div class="mcp-workflow-tracker" id="tracker_${wf.id}" style="display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06);"></div>
             </div>

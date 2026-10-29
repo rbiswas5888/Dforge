@@ -121,6 +121,8 @@ export class ColorPickerPopover {
     this.onInputCallback = null;
     this.onChangeCallback = null;
     this.documentColors = [];
+    this.recentColors = this.loadRecentColors();
+    this.hasPendingChange = false;
     this.designTokens = [];
 
     this.container = null;
@@ -164,9 +166,9 @@ export class ColorPickerPopover {
         <div class="cp-header-actions">
           ${typeof window !== 'undefined' && 'EyeDropper' in window ? `
           <button class="cp-icon-btn" id="cpBtnEyedropper" title="Pick color from screen">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m2 22 1-1h3l9-9"/><path d="M14 6l4 4"/><path d="m19 9 2-2a2.828 2.828 0 1 0-4-4l-2 2"/></svg>
+            <span data-icon="Pipette" data-icon-size="13"></span>
           </button>` : ''}
-          <button class="cp-icon-btn" id="cpBtnClose" title="Close">✕</button>
+          <button class="cp-icon-btn" id="cpBtnClose" title="Close"><span data-icon="X" data-icon-size="13"></span></button>
         </div>
       </div>
 
@@ -220,6 +222,15 @@ export class ColorPickerPopover {
 
       <!-- Document & Theme Preset Swatches -->
       <div class="cp-palette-section">
+        <div class="cp-recent-colors" id="cpRecentColors" style="display: ${this.recentColors.length ? 'block' : 'none'};">
+          <div class="cp-palette-title">Recent Colors</div>
+          <div class="cp-swatches-grid" id="cpRecentSwatches">
+            ${this.recentColors.map(color => `
+              <div class="cp-palette-swatch" data-color="${color}" style="background: ${color};" title="${color}"></div>
+            `).join('')}
+          </div>
+        </div>
+
         <div class="cp-palette-title">Document Colors</div>
         <div class="cp-swatches-grid" id="cpDocSwatches">
           ${this.documentColors.slice(0, 14).map(c => `
@@ -277,6 +288,7 @@ export class ColorPickerPopover {
     this.drawSBCanvas();
     this.updateThumbPositions();
     this.attachInteractiveListeners();
+    this.bindRecentSwatches();
   }
 
   drawSBCanvas() {
@@ -335,6 +347,7 @@ export class ColorPickerPopover {
   }
 
   notifyInput() {
+    this.hasPendingChange = true;
     const rgb = hsvToRgb(this.h, this.s, this.v);
     const hex = rgbToHex(rgb.r, rgb.g, rgb.b, this.a);
     this.currentColor = hex;
@@ -367,9 +380,62 @@ export class ColorPickerPopover {
   notifyChange() {
     const hex = this.currentColor;
     const rgb = hexToRgb(hex);
+    this.saveRecentColor(hex);
     if (this.onChangeCallback) {
       this.onChangeCallback(hex, { r: rgb.r, g: rgb.g, b: rgb.b, a: this.a });
     }
+  }
+
+  loadRecentColors() {
+    try {
+      const stored = globalThis.localStorage?.getItem('designforge_recent_colors');
+      const colors = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(colors)) return [];
+      return [...new Set(colors.filter(isValidHexColor).map(color => {
+        const rgb = hexToRgb(color);
+        return rgbToHex(rgb.r, rgb.g, rgb.b, rgb.a);
+      }))].slice(0, 14);
+    } catch (error) {
+      console.warn('Could not load recent colors:', error);
+      return [];
+    }
+  }
+
+  saveRecentColor(color) {
+    if (!this.hasPendingChange || !isValidHexColor(color)) return;
+    this.hasPendingChange = false;
+    const rgb = hexToRgb(color);
+    const normalized = rgbToHex(rgb.r, rgb.g, rgb.b, rgb.a);
+    this.recentColors = [normalized, ...this.recentColors.filter(item => item !== normalized)].slice(0, 14);
+
+    try {
+      globalThis.localStorage?.setItem('designforge_recent_colors', JSON.stringify(this.recentColors));
+    } catch (error) {
+      console.warn('Could not save recent colors:', error);
+    }
+
+    const section = this.container?.querySelector('#cpRecentColors');
+    if (section) {
+      section.style.display = 'block';
+      const swatches = section.querySelector('#cpRecentSwatches');
+      if (swatches) {
+        swatches.innerHTML = this.recentColors.map(recentColor => `
+          <div class="cp-palette-swatch" data-color="${recentColor}" style="background: ${recentColor};" title="${recentColor}"></div>
+        `).join('');
+        this.bindRecentSwatches();
+      }
+    }
+  }
+
+  bindRecentSwatches() {
+    const swatches = this.container?.querySelectorAll('#cpRecentSwatches .cp-palette-swatch');
+    swatches?.forEach(swatch => {
+      swatch.onclick = () => {
+        this.setColor(swatch.dataset.color);
+        this.notifyInput();
+        this.notifyChange();
+      };
+    });
   }
 
   attachInteractiveListeners() {

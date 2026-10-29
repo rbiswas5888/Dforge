@@ -55,7 +55,9 @@ import {
 } from './engine/design_system/index.js';
 import { generateQRCodeSVG } from './editor-core/qr-code.js';
 import { ColorPickerPopover } from './editor-core/color-picker.js';
+import { collectDocumentColors } from './editor-core/document-colors.js';
 import { WorkspaceStore } from './engine/workspace_store.js';
+import { mountLucideIcons } from './ui/lucide-icons.js';
 
 export class DesignForgeApp {
   constructor() {
@@ -129,6 +131,7 @@ export class DesignForgeApp {
     this.colorPicker = new ColorPickerPopover();
     this.shortcuts = new ShortcutRegistry(this);
 
+    mountLucideIcons(document.body);
     this.initUI();
     this.initWorkspaceExperience();
     this.initMenus();
@@ -153,7 +156,7 @@ export class DesignForgeApp {
     if (this.workspaceInitializationError) {
       this.showToast(`Workspace setup could not be saved locally: ${this.workspaceInitializationError.message}`, 'error');
     }
-    console.log('⚡ DesignForge AI initialized successfully.');
+    console.log('DesignForge AI initialized successfully.');
   }
 
   initWorkspaceExperience() {
@@ -575,7 +578,7 @@ export class DesignForgeApp {
         <p>Add React package/source files for safe static analysis. Supported files include package.json, JSON tokens, CSS, JS, JSX, TS, and TSX. Project code and package scripts are never executed.</p>
         <div class="settings-card-actions">
           <button class="workspace-secondary-btn" type="button" data-workspace-action="choose-react-files">＋ Add React library files</button>
-          <button class="workspace-secondary-btn" type="button" data-workspace-action="choose-react-folder">📁 Add React project folder</button>
+          <button class="workspace-secondary-btn" type="button" data-workspace-action="choose-react-folder"><span data-icon="Folder"></span> Add React project folder</button>
           <input type="file" id="workspaceReactFiles" accept=".json,.css,.js,.jsx,.ts,.tsx" multiple hidden>
           <input type="file" id="workspaceReactFolder" accept=".json,.css,.js,.jsx,.ts,.tsx" webkitdirectory directory multiple hidden>
         </div>
@@ -1280,7 +1283,7 @@ export class DesignForgeApp {
           title: 'Paste Markdown Specification',
           subtitle: 'Paste your markdown design blueprint or layout spec below:',
           multiline: true,
-          icon: '📝',
+          icon: 'FileText',
           placeholder: '# Design Specification\n## Frame: Dashboard...',
           confirmText: 'Insert Spec'
         });
@@ -1355,14 +1358,18 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     const updateAiStatusDisplay = (p) => {
       if (statusLabel) {
-        if (p === 'ollama') {
-          statusLabel.textContent = '🦙 Ollama Llama 3.1 (Local AI)';
-        } else if (p === 'local') {
-          statusLabel.textContent = '⚡ Built-in Synth Engine (Offline)';
-        } else if (p === 'openai') {
-          statusLabel.textContent = '🌐 OpenAI GPT-4o';
-        } else if (p === 'gemini') {
-          statusLabel.textContent = '✨ Google Gemini 1.5/2.0';
+        const status = {
+          ollama: ['Bot', 'Ollama Llama 3.1 (Local AI)'],
+          local: ['Zap', 'Built-in Synth Engine (Offline)'],
+          openai: ['Globe', 'OpenAI GPT-4o'],
+          gemini: ['Sparkles', 'Google Gemini 1.5/2.0']
+        }[p];
+        const icon = statusLabel.querySelector('[data-icon]');
+        if (status && icon) {
+          icon.dataset.icon = status[0];
+          const label = [...statusLabel.childNodes].find(node => node.nodeType === Node.TEXT_NODE);
+          if (label) label.textContent = ` ${status[1]}`;
+          else statusLabel.append(document.createTextNode(` ${status[1]}`));
         }
       }
       if (modelBadge) {
@@ -1487,7 +1494,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         title: 'Add Design Token',
         subtitle: 'Enter token name (e.g. Color / Brand Primary or Spacing / 16):',
         defaultValue: 'Brand / Primary',
-        icon: '❖',
+        icon: 'Box',
         presets: ['Brand / Primary', 'Brand / Accent', 'Surface / Raised', 'Text / Primary'],
         confirmText: 'Next →'
       });
@@ -1496,7 +1503,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         title: 'Define Token Value',
         subtitle: 'Enter hex color (#6366F1) or pixel dimension value:',
         defaultValue: '#6366F1',
-        icon: '🎨',
+        icon: 'Palette',
         presets: ['#6366F1', '#4F46E5', '#38BDF8', '#10B981', '16px', '24px'],
         confirmText: 'Save Token'
       });
@@ -1539,13 +1546,13 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       html += `
         <div class="page-list-item ${isActive ? 'active' : ''}" data-page-id="${p.id}">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 13px;">📄</span>
+            <span style="font-size: 13px;"><span data-icon="FileText"></span></span>
             <span>${p.name}</span>
             <span style="font-size: 10px; color: var(--text-dim);">(${count})</span>
           </div>
           <div class="page-actions-group">
             <button class="btn-icon-xs btn-page-dup" data-id="${p.id}" title="Duplicate page">❐</button>
-            <button class="btn-icon-xs btn-page-ren" data-id="${p.id}" title="Rename page">✎</button>
+            <button class="btn-icon-xs btn-page-ren" data-id="${p.id}" title="Rename page"><span data-icon="Pencil"></span></button>
             ${this.doc.pages.length > 1 ? `<button class="btn-icon-xs btn-page-del" data-id="${p.id}" title="Delete page">✕</button>` : ''}
           </div>
         </div>
@@ -1582,7 +1589,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           title: 'Rename Page',
           subtitle: 'Enter a new title for this page:',
           defaultValue: page.name,
-          icon: '✏️',
+          icon: 'Pencil',
           confirmText: 'Rename Page'
         });
         if (name && name.trim()) {
@@ -1710,7 +1717,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           title: 'Add Design Review Comment',
           subtitle: `Drop pin at (${Math.round(canvasCoords.x)}, ${Math.round(canvasCoords.y)})`,
           multiline: true,
-          icon: '💬',
+          icon: 'MessageSquare',
           placeholder: 'Type your feedback, question, or design approval note...',
           confirmText: 'Post Pin'
         });
@@ -1741,7 +1748,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           document.getElementById('commentAuthorText').textContent = `${hitComment.author} (${new Date(hitComment.createdAt).toLocaleTimeString()})`;
           document.getElementById('commentContentText').textContent = hitComment.text;
           const resolveBtn = document.getElementById('btnResolveComment');
-          resolveBtn.textContent = hitComment.resolved ? '↩ Re-open Note' : '✓ Mark Resolved';
+          resolveBtn.textContent = hitComment.resolved ? 'Re-open Note' : 'Mark Resolved';
           resolveBtn.onclick = () => {
             resolveCommentInDoc(this.doc, hitComment.id);
             renderer.render();
@@ -2217,8 +2224,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   }
 
   getDocumentColorPalette() {
-    const colors = this.getDocumentColorTokens().map(token => token.value);
-    return [...new Set(colors)];
+    return collectDocumentColors(this.doc);
   }
 
   getDocumentColorTokens() {
@@ -2439,9 +2445,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         <div class="section-group">
           <div class="section-title">Responsive Artboards</div>
           <div style="display: flex; gap: 6px;">
-            <button class="btn-inspector-action" id="btnInspBpDesktop" style="font-size: 11px;">💻 Desktop (1440)</button>
-            <button class="btn-inspector-action" id="btnInspBpTablet" style="font-size: 11px;">📱 Tablet (768)</button>
-            <button class="btn-inspector-action" id="btnInspBpMobile" style="font-size: 11px;">📲 Mobile (375)</button>
+            <button class="btn-inspector-action" id="btnInspBpDesktop" style="font-size: 11px;"><span data-icon="Monitor"></span> Desktop (1440)</button>
+            <button class="btn-inspector-action" id="btnInspBpTablet" style="font-size: 11px;"><span data-icon="Tablet"></span> Tablet (768)</button>
+            <button class="btn-inspector-action" id="btnInspBpMobile" style="font-size: 11px;"><span data-icon="Tablet"></span> Mobile (375)</button>
           </div>
         </div>
 
@@ -2493,7 +2499,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           subtitle: 'Enter color hex value or select a preset swatch:',
           defaultValue: '#6366F1',
           presets: ['#6366F1', '#4F46E5', '#38BDF8', '#10B981', '#F59E0B', '#EF4444', '#FFFFFF', '#0F172A'],
-          icon: '🎨',
+          icon: 'Palette',
           confirmText: 'Add Token'
         });
         if (val) {
@@ -2537,10 +2543,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       <!-- 1. Top Alignment & Distribution Bar (Figma Inspector Header) -->
       <div class="inspector-align-bar">
         <button class="btn-align-tool" id="inspAlignLeft" title="Align Left (⌥A)">⇤</button>
-        <button class="btn-align-tool" id="inspAlignHCenter" title="Align Horizontal Centers (⌥H)">↔</button>
+        <button class="btn-align-tool" id="inspAlignHCenter" title="Align Horizontal Centers (⌥H)"><span data-icon="ArrowLeftRight"></span></button>
         <button class="btn-align-tool" id="inspAlignRight" title="Align Right (⌥D)">⇥</button>
         <button class="btn-align-tool" id="inspAlignTop" title="Align Top (⌥W)">⤊</button>
-        <button class="btn-align-tool" id="inspAlignVCenter" title="Align Vertical Centers (⌥V)">↕</button>
+        <button class="btn-align-tool" id="inspAlignVCenter" title="Align Vertical Centers (⌥V)"><span data-icon="ArrowUpDown"></span></button>
         <button class="btn-align-tool" id="inspAlignBottom" title="Align Bottom (⌥S)">⤋</button>
         <div class="shelf-divider" style="height: 14px;"></div>
         <button class="btn-align-tool" id="inspDistH" title="Distribute Horizontal Spacing">⫿</button>
@@ -2584,7 +2590,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         </div>
         <div style="display: flex; gap: 6px; margin-bottom: 8px;">
           <button class="btn-inspector-action" id="btnExtractCompVariables" style="font-size: 11px; color: #10b981; border: 1px solid rgba(16,185,129,0.4);" title="Extract Reusable Variables with AI (Section 11)">
-            <span>🔤 Extract Variables (AI)</span>
+            <span><span data-icon="Type"></span> Extract Variables (AI)</span>
           </button>
         </div>
         <div class="props-row">
@@ -2603,7 +2609,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             <input type="text" class="prop-input" id="propW" value="${Math.round(t.width)}">
           </div>
           <button class="btn-aspect-ratio ${this.aspectRatioLocked ? 'locked' : ''}" id="btnLockAspectRatio" title="Constrain Proportions">
-            ${this.aspectRatioLocked ? '🔒' : '🔓'}
+            ${this.aspectRatioLocked ? '<span data-icon="LockKeyhole"></span>' : '<span data-icon="LockOpen"></span>'}
           </button>
           <div class="prop-field">
             <span class="prop-label scrubbable" id="lblH">H</span>
@@ -2633,8 +2639,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         </div>` : ''}
 
         <div style="display: flex; gap: 6px; margin-top: 8px;">
-          <button class="btn-inspector-action" id="btnFlipH" style="font-size: 11px; flex: 1;">↔ Flip Horizontal</button>
-          <button class="btn-inspector-action" id="btnFlipV" style="font-size: 11px; flex: 1;">↕ Flip Vertical</button>
+          <button class="btn-inspector-action" id="btnFlipH" style="font-size: 11px; flex: 1;"><span data-icon="ArrowLeftRight"></span> Flip Horizontal</button>
+          <button class="btn-inspector-action" id="btnFlipV" style="font-size: 11px; flex: 1;"><span data-icon="ArrowUpDown"></span> Flip Vertical</button>
         </div>
       </div>
 
@@ -2729,8 +2735,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         <div class="section-title">
           <span>Appearance</span>
           <div style="display: flex; gap: 6px;">
-            <button class="btn-icon-xs" id="btnToggleVis" title="Toggle Visibility">${node.visible !== false ? '👁' : '🚫'}</button>
-            <button class="btn-icon-xs" id="btnToggleLock" title="Toggle Lock">${node.locked ? '🔒' : '🔓'}</button>
+            <button class="btn-icon-xs" id="btnToggleVis" title="Toggle Visibility"><span data-icon="${node.visible !== false ? 'Eye' : 'EyeOff'}"></span></button>
+            <button class="btn-icon-xs" id="btnToggleLock" title="Toggle Lock"><span data-icon="${node.locked ? 'LockKeyhole' : 'LockOpen'}"></span></button>
           </div>
         </div>
         <div class="props-row">
@@ -3299,7 +3305,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           subtitle: 'Select from available design tokens or type token name:',
           defaultValue: colorTokens[0]?.name || '',
           presets: colorTokens.map(t => t.name),
-          icon: '❖',
+          icon: 'Box',
           confirmText: 'Bind Token'
         });
         if (chosen) {
@@ -3430,7 +3436,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           subtitle: `Replace color ${targetHex} with new hex:`,
           defaultValue: targetHex,
           presets: ['#6366F1', '#4F46E5', '#38BDF8', '#10B981', '#F59E0B', '#EF4444', '#FFFFFF', '#0F172A'],
-          icon: '🎨',
+          icon: 'Palette',
           confirmText: 'Replace Color'
         });
         if (newHex && newHex !== targetHex) {
@@ -3478,10 +3484,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
               ${startingFrames.map((f, i) => `
                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 6px;">
                   <div>
-                    <div style="font-size: 11px; font-weight: 600; color: #38bdf8;">▶ ${this.escapeAttr(f.flowName || f.name || `Flow ${i + 1}`)}</div>
+                    <div style="font-size: 11px; font-weight: 600; color: #38bdf8;"><span data-icon="Play"></span> ${this.escapeAttr(f.flowName || f.name || `Flow ${i + 1}`)}</div>
                     <div style="font-size: 10px; color: var(--text-dim);">Frame: ${this.escapeAttr(f.name)}</div>
                   </div>
-                  <button class="btn-icon-xs btn-play-flow" data-frame-id="${f.id}" title="Play this flow" style="color: #10b981;">▶</button>
+                  <button class="btn-icon-xs btn-play-flow" data-frame-id="${f.id}" title="Play this flow" style="color: #10b981;"><span data-icon="Play"></span></button>
                 </div>
               `).join('')}
             </div>
@@ -3528,7 +3534,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         </div>
 
         <div style="margin-top: 14px;">
-          <button class="btn-primary" id="btnLaunchProtoSim" style="width: 100%; font-size: 11px;">▶ Launch Prototype Simulator (⌥⌘P)</button>
+          <button class="btn-primary" id="btnLaunchProtoSim" style="width: 100%; font-size: 11px;"><span data-icon="Play"></span> Launch Prototype Simulator (⌥⌘P)</button>
         </div>
       `;
 
@@ -3609,7 +3615,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       ${interactions.map((int, idx) => `
       <div class="proto-interaction-card" style="padding: 10px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 6px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;">
         <div class="proto-row" style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: 600; color: #38bdf8;">⚡ Interaction ${idx + 1}</span>
+          <span style="font-weight: 600; color: #38bdf8;"><span data-icon="Zap"></span> Interaction ${idx + 1}</span>
           <button class="btn-icon-xs btn-remove-interaction" data-index="${idx}" title="Remove interaction">✕</button>
         </div>
 
@@ -3783,7 +3789,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       `).join('')}
 
       <div style="margin-top: 14px;">
-        <button class="btn-primary" id="btnLaunchProtoSim" style="width: 100%; font-size: 11px;">▶ Launch Prototype Simulator (⌥⌘P)</button>
+        <button class="btn-primary" id="btnLaunchProtoSim" style="width: 100%; font-size: 11px;"><span data-icon="Play"></span> Launch Prototype Simulator (⌥⌘P)</button>
       </div>
     `;
 
@@ -4097,8 +4103,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     document.getElementById('btnCopyInspectSnippet').onclick = () => {
       navigator.clipboard.writeText(codeOut.textContent);
       const btn = document.getElementById('btnCopyInspectSnippet');
-      btn.textContent = '✓ Copied!';
-      setTimeout(() => { btn.textContent = '📋 Copy'; }, 1500);
+      btn.textContent = '<span data-icon="Check"></span> Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
     };
   }
 
@@ -4126,7 +4132,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         <div style="background: var(--bg-surface); padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
           <div class="section-title">Production Code</div>
           <button class="btn-primary" id="btnExportAllReactBtn" style="width: 100%; margin-top: 8px; font-size: 11px;">
-            ⚡ Compile to React Vite Bundle (⌘⇧E)
+          <span data-icon="Zap"></span> Compile to React Vite Bundle (⌘⇧E)
           </button>
         </div>
       </div>
@@ -4162,7 +4168,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       list.innerHTML = items.map((item, i) => `
         <div class="palette-result-item ${i === selectedIdx ? 'selected' : ''}" data-index="${i}">
           <div class="palette-result-left">
-            <span class="palette-result-icon">${item.icon}</span>
+            <span class="palette-result-icon"><span data-icon="${item.icon}"></span></span>
             <span class="palette-result-title">${item.title}</span>
             <span class="palette-result-category">${item.category}</span>
           </div>
@@ -4245,7 +4251,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     btnAutoBind?.addEventListener('click', () => {
       const { issues } = this.linter.lint();
       const fixed = this.linter.autoBindAll(issues);
-      this.showToast(`⚡ Successfully auto-bound ${fixed} properties to Design Tokens!`, 'success');
+      this.showToast(`<span data-icon="Zap"></span> Successfully auto-bound ${fixed} properties to Design Tokens!`, 'success');
       this.renderLinterResults();
       this.renderAll();
     });
@@ -4421,10 +4427,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         })[char]);
         list.innerHTML = `
           <div style="font-weight: 600; color: #f8fafc; margin-bottom: 4px;">Preserved Features:</div>
-          ${rep.preservedFeatures.map(f => `<div>✓ ${escapeHtml(f)}</div>`).join('')}
+          ${rep.preservedFeatures.map(f => `<div><span data-icon="Check"></span> ${escapeHtml(f)}</div>`).join('')}
           ${rep.warnings.length > 0 ? `
             <div style="font-weight: 600; color: #fbbf24; margin-top: 8px; margin-bottom: 4px;">Diagnostics & Fallbacks:</div>
-            ${rep.warnings.map(w => `<div style="color: #cbd5e1;">⚠️ ${escapeHtml(w)}</div>`).join('')}
+            ${rep.warnings.map(w => `<div style="color: #cbd5e1;"><span data-icon="TriangleAlert"></span> ${escapeHtml(w)}</div>`).join('')}
           ` : ''}
         `;
       }
@@ -4544,7 +4550,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     if (!list) return;
 
     if (issues.length === 0) {
-      list.innerHTML = `<div style="padding: 24px; text-align: center; color: #10b981; font-size: 13px;">✓ Zero design system drift! All colors and spacing are 100% compliant.</div>`;
+      list.innerHTML = `<div style="padding: 24px; text-align: center; color: #10b981; font-size: 13px;"><span data-icon="Check"></span> Zero design system drift! All colors and spacing are 100% compliant.</div>`;
       return;
     }
 
@@ -4636,7 +4642,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     if (covList && plan.specCoverage) {
       covList.innerHTML = plan.specCoverage.map(c => `
         <div style="padding: 8px 12px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; font-size: 11px; display: flex; align-items: center; justify-content: space-between;">
-          <span>✓ ${c.requirement}</span>
+          <span><span data-icon="Check"></span> ${c.requirement}</span>
           <span style="color: #10b981; font-weight: 600;">Covered (${c.mappedNodeName})</span>
         </div>
       `).join('');
@@ -4645,7 +4651,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     if (ambList && plan.ambiguities) {
       ambList.innerHTML = plan.ambiguities.map(a => `
         <div style="padding: 8px 12px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 6px; font-size: 11px;">
-          <div style="font-weight: 600; color: #f59e0b;">⚠️ ${a.topic}</div>
+          <div style="font-weight: 600; color: #f59e0b;"><span data-icon="TriangleAlert"></span> ${a.topic}</div>
           <div style="color: var(--text-muted); margin-top: 2px;">${a.assumption}</div>
         </div>
       `).join('');
@@ -4966,8 +4972,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           <span class="layer-icon" title="${node.type}">${icon}</span>
           ${nameHtml}
           <div class="layer-actions">
-            <button class="layer-btn toggle-lock" data-action="toggle-lock" data-node-id="${node.id}" title="${node.locked ? 'Unlock Layer' : 'Lock Layer'}">${node.locked ? '🔒' : '🔓'}</button>
-            <button class="layer-btn toggle-vis" data-action="toggle-vis" data-node-id="${node.id}" title="${node.visible ? 'Hide Layer' : 'Show Layer'}">${node.visible ? '👁' : '🚫'}</button>
+            <button class="layer-btn toggle-lock" data-action="toggle-lock" data-node-id="${node.id}" title="${node.locked ? 'Unlock Layer' : 'Lock Layer'}">${node.locked ? '<span data-icon="LockKeyhole"></span>' : '<span data-icon="LockOpen"></span>'}</button>
+            <button class="layer-btn toggle-vis" data-action="toggle-vis" data-node-id="${node.id}" title="${node.visible ? 'Hide Layer' : 'Show Layer'}">${node.visible ? '<span data-icon="Eye"></span>' : '<span data-icon="EyeOff"></span>'}</button>
           </div>
         </div>
       `;
@@ -5323,7 +5329,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           subtitle: `Renaming ${sel.length} layer(s). Use '$n' for sequential numbers:`,
           defaultValue: 'Card / $n',
           presets: ['Card / $n', 'Item $n', 'Row $n', 'Column $N'],
-          icon: '🔤',
+          icon: 'Type',
           confirmText: 'Rename Layers'
         });
         if (pattern) this.applyBulkRename(pattern);
@@ -5516,7 +5522,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         // Append to conversation
         if (stream) {
           stream.innerHTML += `
-            <div class="ai-chat-bubble user">📝 Specification: ${parsed.title}</div>
+            <div class="ai-chat-bubble user"><span data-icon="FileText"></span> Specification: ${parsed.title}</div>
             <div class="ai-chat-bubble assistant">${parsed.summary}</div>
           `;
           stream.scrollTop = stream.scrollHeight;
@@ -5545,7 +5551,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         diffBox.style.display = 'block';
         const ops = this.pendingAiPlan.operations || [];
         diffBox.innerHTML = `
-          <div style="font-weight: 700; color: #c084fc; margin-bottom: 4px;">✨ Proposed: ${this.pendingAiPlan.intent}</div>
+          <div style="font-weight: 700; color: #c084fc; margin-bottom: 4px;"><span data-icon="Sparkles"></span> Proposed: ${this.pendingAiPlan.intent}</div>
           <div style="font-size: 11px; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;">${this.pendingAiPlan.explanation}</div>
           <div style="font-size: 10px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center;">
             <span>${ops.length} atomic operation(s)</span>
@@ -5553,7 +5559,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           </div>
           ${this.pendingAiPlan.specCoverage ? `
             <div style="margin-top: 8px;">
-              <button class="menu-dropdown-btn-sm" id="btnViewSpecReportInDiff" style="color: #38bdf8; font-size: 10px;">📋 View Spec Coverage & Ambiguity Report</button>
+              <button class="menu-dropdown-btn-sm" id="btnViewSpecReportInDiff" style="color: #38bdf8; font-size: 10px;"><span data-icon="Copy"></span> View Spec Coverage & Ambiguity Report</button>
             </div>
           ` : ''}
         `;
@@ -5594,7 +5600,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     if (report.findings.length === 0) {
       diffBox.innerHTML = `
-        <div style="color: #10b981; font-weight: 700;">🎉 All Design Checks Passed!</div>
+        <div style="color: #10b981; font-weight: 700;"><span data-icon="Check"></span> All Design Checks Passed!</div>
         <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Zero layout overflow, WCAG contrast compliant, and 100% token consistency across all elements.</div>
       `;
       return;
@@ -5610,13 +5616,13 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             ${f.fix ? `<button class="menu-dropdown-btn btn-quick-fix" data-fix-idx="${idx}" style="font-size: 9px; padding: 1px 4px; color: #10b981;">Fix</button>` : ''}
           </div>
           <div style="font-size: 11px; color: var(--text-main); margin-top: 2px;">${f.message}</div>
-          <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">💡 ${f.suggestion}</div>
+          <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;"><span data-icon="Lightbulb"></span> ${f.suggestion}</div>
         </div>
       `;
     });
 
     diffBox.innerHTML = `
-      <div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;">🔍 Design Audit (${report.findings.length} findings)</div>
+      <div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;"><span data-icon="Search"></span> Design Audit (${report.findings.length} findings)</div>
       <div style="max-height: 180px; overflow-y: auto;">
         ${itemsHtml}
       </div>
@@ -5628,7 +5634,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         const finding = report.findings[idx];
         if (finding && finding.fix) {
           this.engine.updateNode(finding.fix.nodeId, finding.fix.patch, `Auto-fix: ${finding.category}`);
-          btn.textContent = '✓ Fixed';
+          btn.textContent = '<span data-icon="Check"></span> Fixed';
           btn.disabled = true;
           btn.style.opacity = '0.5';
         }
@@ -5691,7 +5697,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         try {
           await navigator.clipboard.writeText(code);
           const orig = copyBtn.textContent;
-          copyBtn.textContent = '✓ Copied!';
+          copyBtn.textContent = '<span data-icon="Check"></span> Copied!';
           setTimeout(() => { copyBtn.textContent = orig; }, 1800);
         } catch (error) {
           this.showToast(`Could not copy code: ${error.message}`, 'error');
@@ -5721,7 +5727,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     previewTab.className = 'code-file-item active';
     previewTab.style.color = '#38bdf8';
     previewTab.style.fontWeight = 'bold';
-    previewTab.textContent = '⚡ LIVE REACT PREVIEW';
+    previewTab.textContent = 'LIVE REACT PREVIEW';
     previewTab.addEventListener('click', () => {
       fileListEl.querySelectorAll('.code-file-item').forEach(i => i.classList.remove('active'));
       previewTab.classList.add('active');
@@ -5736,7 +5742,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       diagTab.className = 'code-file-item';
       diagTab.style.color = '#a855f7';
       diagTab.style.fontWeight = '600';
-      diagTab.textContent = '🔍 DIAGNOSTICS & AUDIT';
+      diagTab.textContent = 'DIAGNOSTICS & AUDIT';
       diagTab.addEventListener('click', () => {
         fileListEl.querySelectorAll('.code-file-item').forEach(i => i.classList.remove('active'));
         diagTab.classList.add('active');
@@ -5913,7 +5919,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     const btn = document.getElementById('btnToggleTheme');
     if (btn) {
-      btn.textContent = next === 'axiom-light' ? '☀️' : (next === 'high-contrast' ? '👁' : '🌙');
+      const themeIcon = btn.querySelector('#themeModeIcon');
+      if (themeIcon) themeIcon.dataset.icon = next === 'axiom-light' ? 'Sun' : (next === 'high-contrast' ? 'Eye' : 'Moon');
       btn.title = `Theme: ${next.replace('-', ' ').toUpperCase()} (Click to cycle themes)`;
     }
     this.renderer.render();
@@ -5926,7 +5933,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         title: 'Add New Page',
         subtitle: 'Enter name for the new document page:',
         defaultValue: `Page ${this.doc.pages.length + 1}`,
-        icon: '📄',
+        icon: 'FileText',
         confirmText: 'Create Page'
       });
     }
@@ -6092,7 +6099,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
       if (titleEl) titleEl.textContent = options.title || 'Input Required';
       if (subtitleEl) subtitleEl.textContent = options.subtitle || 'Please enter a value:';
-      if (iconEl) iconEl.textContent = options.icon || '✏️';
+      if (iconEl) {
+        const promptIcon = iconEl.querySelector('[data-icon]');
+        if (promptIcon) promptIcon.dataset.icon = options.icon || 'Pencil';
+      }
       if (confirmLabel) confirmLabel.textContent = options.confirmText || 'Apply';
 
       const isMultiline = Boolean(options.multiline);
@@ -6149,12 +6159,12 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     const toast = document.createElement('div');
     toast.className = `figma-toast toast-${type}`;
-    const icon = type === 'success' ? '✓' : (type === 'error' ? '✕' : (type === 'warning' ? '⚠️' : '⚡'));
+    const icon = type === 'success' ? 'Check' : (type === 'error' ? 'TriangleAlert' : (type === 'warning' ? 'TriangleAlert' : 'Info'));
 
     toast.innerHTML = `
-      <span class="figma-toast-icon">${icon}</span>
+      <span class="figma-toast-icon"><span data-icon="${icon}"></span></span>
       <span class="figma-toast-msg">${message}</span>
-      <button class="figma-toast-close" title="Dismiss">✕</button>
+      <button class="figma-toast-close" title="Dismiss"><span data-icon="X"></span></button>
     `;
 
     toast.querySelector('.figma-toast-close')?.addEventListener('click', () => {
@@ -6265,7 +6275,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     document.body.className = `theme-${savedTheme}`;
     const themeBtn = document.getElementById('btnToggleTheme');
     if (themeBtn) {
-      themeBtn.textContent = savedTheme === 'axiom-light' ? '☀️' : (savedTheme === 'high-contrast' ? '👁' : '🌙');
+      const themeIcon = themeBtn.querySelector('#themeModeIcon');
+      if (themeIcon) themeIcon.dataset.icon = savedTheme === 'axiom-light' ? 'Sun' : (savedTheme === 'high-contrast' ? 'Eye' : 'Moon');
     }
   }
 
@@ -6333,7 +6344,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       if (el) {
         const findings = this.linter?.lint?.()?.findings || [];
         if (findings.length === 0) {
-          el.innerHTML = '<div style="color: var(--status-success);">✓ Zero design system or contrast issues found. Document is 100% compliant.</div>';
+          el.innerHTML = '<div style="color: var(--status-success);"><span data-icon="Check"></span> Zero design system or contrast issues found. Document is 100% compliant.</div>';
         } else {
           el.innerHTML = findings.slice(0, 10).map(f => `<div style="padding: 6px 10px; margin-bottom: 6px; background: var(--surface-input); border-radius: 4px; border-left: 3px solid ${f.level === 'error' ? 'var(--status-danger)' : 'var(--status-warning)'};"><strong>${f.level.toUpperCase()}:</strong> ${f.message}</div>`).join('');
         }
@@ -6402,7 +6413,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         navigator.clipboard?.writeText(input.value);
         const btn = document.getElementById('btnCopyShareLink');
         if (btn) {
-          btn.textContent = '✓ Copied!';
+          btn.textContent = '<span data-icon="Check"></span> Copied!';
           setTimeout(() => { btn.textContent = 'Copy Link'; }, 2000);
         }
       }
@@ -6474,7 +6485,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         const watched = this.learning.isTutorialWatched(t.id);
         return `
           <div style="display: flex; gap: 14px; padding: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
-            <div style="font-size: 24px;">▶️</div>
+            <div style="font-size: 24px;"><span data-icon="Play"></span></div>
             <div style="flex: 1;">
               <div style="display: flex; align-items: center; justify-content: space-between;">
                 <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #f8fafc;">${t.title}</h4>
@@ -6483,7 +6494,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
               <div style="font-size: 11px; color: #94a3b8; margin-bottom: 6px;">By ${t.creator} • Topic: <strong>${t.feature}</strong></div>
               <p style="font-size: 11px; line-height: 1.4; color: #cbd5e1; margin: 0 0 10px 0;">${t.topics}</p>
               <div style="display: flex; align-items: center; gap: 12px;">
-                <a href="${t.url}" target="_blank" rel="noopener" style="font-size: 11px; color: #a855f7; text-decoration: none; font-weight: 600;">Watch on YouTube ↗</a>
+                <a href="${t.url}" target="_blank" rel="noopener" style="font-size: 11px; color: #a855f7; text-decoration: none; font-weight: 600;">Watch on YouTube <span data-icon="ArrowUpRight"></span></a>
                 <label style="font-size: 11px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 4px;">
                   <input type="checkbox" class="cb-learn-tutorial" data-id="${t.id}" ${watched ? 'checked' : ''}>
                   Mark Completed
@@ -6552,7 +6563,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             <span style="font-size: 11px; font-weight: 700; color: #a855f7; margin-right: 8px;">[${d.section}]</span>
             <span style="font-size: 12px; color: #e2e8f0;">${d.title}</span>
           </div>
-          <a href="${d.url}" target="_blank" rel="noopener" style="font-size: 11px; color: #38bdf8; text-decoration: none;">Read Docs ↗</a>
+          <a href="${d.url}" target="_blank" rel="noopener" style="font-size: 11px; color: #38bdf8; text-decoration: none;">Read Docs <span data-icon="ArrowUpRight"></span></a>
         </div>
       `).join('');
     }
@@ -6608,7 +6619,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       document.getElementById('tourStepContent').textContent = step.content;
       document.getElementById('tourStepCounter').textContent = `Step ${this.tourCurrentStep + 1} of ${ONBOARDING_TOUR_STEPS.length}`;
       document.getElementById('btnTourPrev').style.display = this.tourCurrentStep === 0 ? 'none' : 'block';
-      document.getElementById('btnTourNext').textContent = this.tourCurrentStep === ONBOARDING_TOUR_STEPS.length - 1 ? 'Finish 🏁' : 'Next →';
+      document.getElementById('btnTourNext').textContent = this.tourCurrentStep === ONBOARDING_TOUR_STEPS.length - 1 ? 'Finish' : 'Next →';
     };
 
     document.getElementById('btnCloseTour').onclick = () => { card.style.display = 'none'; };
@@ -6670,7 +6681,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         description: 'Repository diff inspection and controlled handoff staging'
       });
 
-      console.log('⚡ DesignForge MCP Ecosystem online: 4 servers connected.');
+      console.log('DesignForge MCP Ecosystem online: 4 servers connected.');
     } catch (err) {
       console.warn('MCP bootstrap warning:', err);
     }

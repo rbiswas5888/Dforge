@@ -336,7 +336,7 @@ export class DesignSystemUIController {
               ${info.entryPoints.length ? `<div><strong>Entry points:</strong> ${info.entryPoints.map(entry => `${escapeHtml(entry.kind)}: ${escapeHtml(entry.path)}`).join(', ')}</div>` : ''}
               ${info.scriptNames.length ? `<div style="color: #fbbf24;">Package scripts detected (${info.scriptNames.map(escapeHtml).join(', ')}) but will not be run.</div>` : ''}
             `).join('')}
-            ${report.warnings.length ? `<div style="color: #f59e0b; margin-top: 4px;">⚠️ ${report.warnings.map(escapeHtml).join(', ')}</div>` : ''}
+            ${report.warnings.length ? `<div style="color: #f59e0b; margin-top: 4px;"><span data-icon="TriangleAlert" data-icon-size="13"></span> ${report.warnings.map(escapeHtml).join(', ')}</div>` : ''}
           `;
         }
         if (status) status.textContent = 'Analysis complete.';
@@ -698,7 +698,7 @@ export class DesignSystemUIController {
     container.innerHTML = `
       <div class="ds-table-controls">
         <div class="ds-search-bar">
-          <span>🔍</span>
+          <span data-icon="Search" data-icon-size="14"></span>
           <input type="text" id="tokenSearchInput" placeholder="Search tokens by name, category, or value..." value="${this.tokenSearchQuery}">
         </div>
         <div class="ds-filter-tabs">
@@ -738,7 +738,7 @@ export class DesignSystemUIController {
               <td style="color: var(--text-dim); font-size: 11px;">${t.type}</td>
               <td><span style="font-size: 10px; padding: 2px 6px; border-radius: 9999px; background: var(--bg-surface);">${t.usageCount || 0} uses</span></td>
               <td>
-                <button class="menu-dropdown-btn-sm" onclick="window.designForgeApp.dsUi.deleteTokenPrompt('${t.id}')" title="Delete Token">🗑</button>
+                <button class="menu-dropdown-btn-sm" onclick="window.designForgeApp.dsUi.deleteTokenPrompt('${t.id}')" title="Delete Token"><span data-icon="Trash2" data-icon-size="14"></span></button>
               </td>
             </tr>
           `).join('')}
@@ -779,7 +779,7 @@ export class DesignSystemUIController {
     container.innerHTML = `
       <div class="ds-table-controls">
         <div class="ds-search-bar">
-          <span>🔍</span>
+          <span data-icon="Search" data-icon-size="14"></span>
           <input type="text" placeholder="Search variables...">
         </div>
       </div>
@@ -946,7 +946,7 @@ export class DesignSystemUIController {
           DesignForge AI supports importing and bi-directional synchronization with W3C DTCG Token JSON, Tailwind configurations, and React component packages.
         </p>
         <button class="ds-action-btn" onclick="window.designForgeApp.dsUi.openImportModal()">
-          📥 Import New React or DTCG System
+          <span data-icon="Upload" data-icon-size="14"></span> Import New React or DTCG System
         </button>
       </div>
     `;

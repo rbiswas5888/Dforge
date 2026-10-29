@@ -630,7 +630,7 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     const frames = getFrames();
     flowSelect.innerHTML = frames.map(f => {
       const name = f.flowName || f.name;
-      const isStart = f.isFlowStart ? ' ▶ ' : '';
+      const isStart = f.isFlowStart ? ' [Start] ' : '';
       return '<option value="' + f.id + '" ' + (f.id === currentFrameId ? 'selected' : '') + '>' + isStart + escapeText(name) + '</option>';
     }).join('');
 
@@ -2051,10 +2051,10 @@ export class PrototypeEngine {
           <option value="100">100% Actual Size</option>
           <option value="width">Fit Width</option>
         </select>
-        <button class="btn-player" id="btnPrevFrame" title="Previous Screen (Left Arrow)">◀</button>
-        <button class="btn-player" id="btnNextFrame" title="Next Screen (Right Arrow)">▶</button>
-        <button class="btn-player" id="btnToggleHints" title="Toggle Hotspot Hints (H)">💡 Hints</button>
-        <button class="btn-player" id="btnToggleDebugger" title="Toggle Variables & Event Debugger (D)">🐞 Debugger</button>
+        <button class="btn-player" id="btnPrevFrame" title="Previous Screen (Left Arrow)"><span data-icon="ChevronLeft"></span></button>
+        <button class="btn-player" id="btnNextFrame" title="Next Screen (Right Arrow)"><span data-icon="ChevronRight"></span></button>
+        <button class="btn-player" id="btnToggleHints" title="Toggle Hotspot Hints (H)"><span data-icon="Lightbulb"></span> Hints</button>
+        <button class="btn-player" id="btnToggleDebugger" title="Toggle Variables & Event Debugger (D)"><span data-icon="Bug"></span> Debugger</button>
         <button class="btn-player" id="btnRestart">↺ Restart (R)</button>
       </div>
     </div>

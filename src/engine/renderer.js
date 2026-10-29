@@ -741,7 +741,7 @@ export class CanvasRenderer {
       if (frame && frame.type === 'frame' && (frame.isFlowStart || frame.flowName)) {
         const b = computeWorldBounds(page, rid, boundsCache);
         if (!b) continue;
-        const flowTitle = '▶ ' + (frame.flowName || 'Flow 1');
+        const flowTitle = frame.flowName || 'Flow 1';
         ctx.save();
         ctx.font = `600 ${Math.max(9, 11 / this.zoom)}px 'Inter', sans-serif`;
         const textW = ctx.measureText(flowTitle).width;

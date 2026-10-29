@@ -44,7 +44,7 @@ export const ONBOARDING_TOUR_STEPS = [
     step: 6,
     title: '6. Native AI Assistant & React Compiler',
     targetSelector: '#btnExportReactTop',
-    content: 'Prompt the native AI Assistant (⌘⇧K) with natural language or Markdown PRD specs. When ready, click ⚡ Export to compile into a production-grade React + TypeScript project!',
+    content: 'Prompt the native AI Assistant (⌘⇧K) with natural language or Markdown PRD specs. When ready, click Export to compile into a production-grade React + TypeScript project!',
     actionHint: 'Click Export or open the AI Assistant'
   }
 ];

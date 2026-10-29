@@ -169,6 +169,22 @@ body, html {
   font-weight: 800;
 }
 
+.app-icon {
+  display: inline-flex;
+  width: 1em;
+  height: 1em;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+.app-icon > svg {
+  display: block;
+  width: var(--icon-size, 1em);
+  height: var(--icon-size, 1em);
+}
+
 .project-title-input {
   background: transparent;
   border: 1px solid transparent;
