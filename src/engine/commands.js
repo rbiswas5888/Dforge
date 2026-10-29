@@ -212,6 +212,55 @@ export class CommandEngine {
     });
   }
 
+  updateNodes(updates, description = 'Update Nodes') {
+    const pageId = this.activePageId;
+    const validUpdates = updates
+      .filter(update => update && typeof update.nodeId === 'string' && update.patch && this.getActivePage()?.nodes?.[update.nodeId])
+      .map(update => ({ nodeId: update.nodeId, patch: JSON.parse(JSON.stringify(update.patch)) }));
+    if (validUpdates.length === 0) return false;
+
+    const applyUpdates = (changes, commandDescription) => ({
+      type: 'update-nodes',
+      description: commandDescription,
+      execute: engine => {
+        const page = engine.doc.pages.find(item => item.id === pageId);
+        if (!page) return null;
+
+        const inverse = [];
+        for (const change of changes) {
+          const current = page.nodes[change.nodeId];
+          if (!current) continue;
+          inverse.push({ nodeId: change.nodeId, node: JSON.parse(JSON.stringify(current)) });
+          if (change.node) {
+            page.nodes[change.nodeId] = JSON.parse(JSON.stringify(change.node));
+            continue;
+          }
+
+          const merge = (destination, source) => {
+            for (const [key, value] of Object.entries(source)) {
+              if (key === 'tokenBindings') {
+                destination[key] = JSON.parse(JSON.stringify(value));
+              } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+                if (!destination[key] || typeof destination[key] !== 'object' || Array.isArray(destination[key])) {
+                  destination[key] = {};
+                }
+                merge(destination[key], value);
+              } else {
+                destination[key] = JSON.parse(JSON.stringify(value));
+              }
+            }
+          };
+          merge(current, change.patch);
+        }
+
+        return applyUpdates(inverse, `Undo ${commandDescription}`);
+      }
+    });
+
+    this.execute(applyUpdates(validUpdates, description));
+    return true;
+  }
+
   updateNodeCommand(nodeId, patch, description) {
     return {
       type: 'update-node',

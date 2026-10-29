@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node serve.js",
     "build": "vite build",
-    "test": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_export_engine.js && node tests/test_figma_functional_map.js && node tests/test_design_system.js && node tests/test_workspace.js && node tests/test_advanced_figma_prototyping.js && node tests/test_boolean_and_drilldown.js && node tests/test_color_picker.js && node tests/test_document_colors.js",
+    "test": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_export_engine.js && node tests/test_figma_functional_map.js && node tests/test_design_system.js && node tests/test_workspace.js && node tests/test_advanced_figma_prototyping.js && node tests/test_boolean_and_drilldown.js && node tests/test_color_picker.js && node tests/test_document_colors.js && node tests/test_selection_colors.js",
     "test:color": "node tests/test_color_picker.js",
     "test:boolean": "node tests/test_boolean_and_drilldown.js",
     "test:export": "node tests/test_export_engine.js",

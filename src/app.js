@@ -56,6 +56,7 @@ import {
 import { generateQRCodeSVG } from './editor-core/qr-code.js';
 import { ColorPickerPopover } from './editor-core/color-picker.js';
 import { collectDocumentColors } from './editor-core/document-colors.js';
+import { buildSelectionColorUpdates, collectSelectionColors } from './editor-core/selection-colors.js';
 import { WorkspaceStore } from './engine/workspace_store.js';
 import { mountLucideIcons } from './ui/lucide-icons.js';
 
@@ -2359,36 +2360,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
   // Extract all distinct colors from selection for Selection Colors section
   extractSelectionColors(selectedIds, page) {
-    const colorMap = new Map();
-    const visit = (nodeId) => {
-      const node = page.nodes[nodeId];
-      if (!node) return;
-      if (node.style?.fills) {
-        for (const f of node.style.fills) {
-          if (f.color && f.color !== 'transparent') {
-            const hex = f.color.toLowerCase();
-            colorMap.set(hex, (colorMap.get(hex) || 0) + 1);
-          }
-        }
-      }
-      if (node.style?.strokes) {
-        for (const s of node.style.strokes) {
-          if (s.color) {
-            const hex = s.color.toLowerCase();
-            colorMap.set(hex, (colorMap.get(hex) || 0) + 1);
-          }
-        }
-      }
-      if (node.text?.color) {
-        const hex = node.text.color.toLowerCase();
-        colorMap.set(hex, (colorMap.get(hex) || 0) + 1);
-      }
-      if (node.childIds) {
-        for (const cid of node.childIds) visit(cid);
-      }
-    };
-    for (const id of selectedIds) visit(id);
-    return Array.from(colorMap.entries()).map(([hex, count]) => ({ hex, count }));
+    return collectSelectionColors(page, selectedIds, this.dsRegistry.getAllTokens());
   }
 
   // --- Contextual Figma-Identical Design Tab Inspector (Section 4.1 & Appendix A2.2) ---
@@ -2933,14 +2905,19 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           <span>Selection Colors (${selectionColors.length})</span>
         </div>
         <div class="selection-colors-list">
-          ${selectionColors.map(sc => `
+          ${selectionColors.map((sc, index) => `
           <div class="selection-color-item">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <div class="color-swatch-box" style="background: ${sc.hex}; width: 16px; height: 16px;"></div>
-              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">${sc.hex}</span>
+              <div class="color-swatch-box" style="background: ${sc.color}; width: 16px; height: 16px;"></div>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">${sc.color}</span>
               <span style="color: var(--text-dim); font-size: 10px;">×${sc.count}</span>
+              <span style="color: var(--text-muted); font-size: 9px;">${this.escapeAttr(sc.kinds.join(', '))}</span>
             </div>
-            <button class="menu-dropdown-btn-sm btn-recolor-hex" data-hex="${sc.hex}">Change</button>
+            <div style="display: flex; gap: 4px; align-items: center;">
+              ${sc.tokenName ? `<span class="token-chip-badge" title="${sc.unresolved ? 'Unresolved color resource' : 'Linked color resource'}">${sc.unresolved ? 'Unresolved: ' : ''}${this.escapeAttr(sc.tokenName)}</span>` : ''}
+              <button class="menu-dropdown-btn-sm btn-select-color-matches" data-color-index="${index}" title="Select matching objects">Select matches</button>
+              <button class="menu-dropdown-btn-sm btn-recolor-selection-color" data-color-index="${index}">${sc.tokenId || sc.tokenName || sc.unresolved ? 'Detach & Change' : 'Change'}</button>
+            </div>
           </div>
           `).join('')}
         </div>
@@ -3427,25 +3404,49 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       this.engine.updateNode(node.id, { text: { textAlign: 'right' } }, 'Align Text Right');
     });
 
-    // 9. Recolor Hex
-    document.querySelectorAll('.btn-recolor-hex').forEach(btn => {
+    // 9. Recolor the exact visible properties represented by each selection color.
+    document.querySelectorAll('.btn-select-color-matches').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const entry = selectionColors[Number(btn.dataset.colorIndex)];
+        if (!entry) return;
+        const pageEntries = collectSelectionColors(page, page.rootIds || [], this.dsRegistry.getAllTokens());
+        const matching = pageEntries.find(candidate => candidate.key === entry.key);
+        const nodeIds = matching?.nodeIds || entry.nodeIds;
+        if (nodeIds.length > 0) {
+          this.engine.setSelection(nodeIds);
+          this.showToast(`Selected ${nodeIds.length} matching object${nodeIds.length === 1 ? '' : 's'}`, 'info');
+        }
+      });
+    });
+    document.querySelectorAll('.btn-recolor-selection-color').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const targetHex = btn.dataset.hex;
+        const entry = selectionColors[Number(btn.dataset.colorIndex)];
+        if (!entry) return;
         const newHex = await this.showPromptModal({
-          title: 'Recolor Selection',
-          subtitle: `Replace color ${targetHex} with new hex:`,
-          defaultValue: targetHex,
+          title: entry.tokenId || entry.tokenName || entry.unresolved ? 'Detach and Recolor Selection' : 'Recolor Selection',
+          subtitle: entry.tokenId || entry.tokenName || entry.unresolved
+            ? `Replace ${entry.color} locally and detach ${entry.tokenName || 'the linked color resource'} from these selected properties.`
+            : `Replace matching ${entry.color} values in the current selection:`,
+          defaultValue: entry.color,
           presets: ['#6366F1', '#4F46E5', '#38BDF8', '#10B981', '#F59E0B', '#EF4444', '#FFFFFF', '#0F172A'],
           icon: 'Palette',
           confirmText: 'Replace Color'
         });
-        if (newHex && newHex !== targetHex) {
-          const curFills = JSON.parse(JSON.stringify(s.fills || []));
-          for (const f of curFills) {
-            if (f.color?.toLowerCase() === targetHex.toLowerCase()) f.color = newHex;
+        if (!newHex) return;
+        const color = this.normalizeHexColor(newHex, '');
+        if (!color) {
+          this.showToast('Enter a valid HEX color before applying the recolor.', 'error');
+          return;
+        }
+        if (color.toLowerCase() === entry.color.toLowerCase()) return;
+
+        try {
+          const updates = buildSelectionColorUpdates(page, entry.targets, color, { detachBindings: Boolean(entry.tokenId || entry.tokenName || entry.unresolved) });
+          if (this.engine.updateNodes(updates, 'Recolor Selection')) {
+            this.showToast(`Recolored ${entry.count} matching color properties`, 'success');
           }
-          this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Recolor Selection');
-          this.showToast(`Recolored ${targetHex} ➔ ${newHex}`, 'success');
+        } catch (error) {
+          this.showToast(`Could not recolor selection: ${error.message}`, 'error');
         }
       });
     });

@@ -1,9 +1,12 @@
-# DesignForge AI — Vector Editing and Color Management Requirements
+# Part. 1
+# DesignForge AI — Complete Vector Editor & Color System Roadmap
 
-**Document type:** Product requirements + interaction specification + IDE implementation contract  
-**Version:** 1.0  
+**Document type:** Comprehensive product roadmap + tool taxonomy + interaction specification + IDE implementation contract  
+**Version:** 1.2  
 **Status:** Implementation reference  
 **Product area:** DesignForge AI vector editor, canvas interactions, appearance inspector, color picker, design tokens and color libraries
+
+**Document map:** Sections 0–31 define the core requirements, color system, implementation priorities and original acceptance criteria. Section 32 expands the tool-by-tool interaction roadmap, including recommended tool grouping, double-click/edit-mode behavior, Boolean Add/Subtract semantics and transform pivots. Section 33 closes with the IDE agent's implementation contract.
 
 ---
 
@@ -1163,6 +1166,1110 @@ These links are reference material for expected behavior. They do not override D
 
 ---
 
-## Final Instruction to the IDE Agent
+## 31. Preservation Reminder Before the Expanded Roadmap
 
 **Treat this document as an additive requirements specification for the existing DesignForge AI codebase. First understand the current implementation, then fulfill the gaps with the smallest safe, testable changes. Preserve all existing working functionality, document structure, visual conventions and user data. Do not rewrite or remove unrelated functionality.**
+
+---
+
+## 32. Comprehensive Vector & Color Roadmap — IDE Implementation Addendum
+
+
+**Purpose:** This addendum expands the original specification into a tool-by-tool implementation and interaction roadmap. It covers what each tool is for, how to use it, what it changes in vector geometry, how selection and double-click behave, how to add/subtract geometry, how pivot/reference points work, and how color properties interact with vectors.
+
+**Reference approach:** Use Figma and Sketch as interaction benchmarks, not as instructions to copy proprietary UI or undocumented behavior. Figma's documented vector editing includes vector networks, Move, Pen, Variable Width, Shape Builder, Cut, Bend, Eraser, Lasso and Paint tools; its Boolean operations are non-destructive. Sketch documents point types, point editing, Boolean operations, Offset Path, pixel snapping and color variables. Sources are listed at the end. Product behavior below is a DesignForge AI specification and should be validated against the current codebase.
+
+### 32.1 Recommended Tool Grouping and Toolbar Architecture
+
+This is the recommended logical grouping for DesignForge AI. It defines **where tools belong and when they should appear**, not a requirement to replace the application's current toolbar layout. The IDE agent must map these groups onto the existing UI and preserve its established shell, navigation, visual language, and shortcut behavior.
+
+#### Grouping principles
+
+1. Keep the always-visible toolbar compact. Frequently used creation and navigation tools belong in the primary toolbar; related or specialist tools belong in labeled flyouts.
+2. Show point-level operations only while vector-edit mode is active. Do not permanently display every anchor, cut, bend, and region-paint tool when the user is arranging whole objects.
+3. Prefer contextual controls for operations that require a specific selection. Boolean actions should appear when compatible objects are selected; point-type controls should appear when anchors are selected; gradient handles should appear when a gradient is being edited.
+4. Put detailed numeric properties in the Inspector, not into a crowded toolbar. The toolbar starts an action; the Inspector specifies exact values.
+5. Keep color picking attached to Fill/Stroke and other color-bearing properties. Do not make users leave the current workflow to reach a separate color application.
+6. Use menus/overflow for advanced, infrequent tools. A feature must not be represented as enabled unless its operation is implemented.
+7. A group may be visually represented by one icon and a flyout, but every item must have an accessible name, tooltip, keyboard route and clear active/disabled state.
+
+#### A. Recommended tool groups
+
+| Group | Placement | Tools included | Why they belong together / availability |
+|---|---|---|---|
+| **1. Select & Move** | Primary toolbar | Select/Move, marquee selection, group selection; Direct Selection appears as a related tool or contextual mode | The starting point for choosing and manipulating objects. Whole-object selection must be distinct from anchor/segment editing. |
+| **2. Frame & Artboard** | Primary toolbar or Insert flyout | Frame/container creation, Artboard creation/selection/resizing | Defines design surfaces and containment; separate from drawing a visible vector shape. Keep this group only to the extent these document concepts exist in the app. |
+| **3. Shape tools** | Shape flyout | Rectangle, Rounded Rectangle, Ellipse/Oval, Line, Arrow, Polygon, Star, Arc, Spiral, Rectangular Grid, Polar Grid, Flare where supported | These tools create live primitives with relevant parameters. The flyout prevents the main toolbar becoming overloaded while preserving quick access to common shapes. |
+| **4. Draw & Edit Vectors** | Primary Pen/Vector tool plus a contextual vector-edit toolbar | Pen, Curvature/Bend, Pencil, Move Point, Direct Selection, Add/Delete Anchor, point-type conversion, handle editing, close/open path, Join/Split, Reverse Path, Smooth, Simplify | All operations that create or directly modify path geometry. Show the detailed point-edit toolbar only after entering vector-edit mode. |
+| **5. Boolean & Shape Construction** | Contextual toolbar, Inspector, and Object/Path menu | Union/Add, Subtract, Intersect, Exclude/Difference, Divide, Trim/Merge/Crop where supported, Shape Builder, Compound Path, Outline Stroke, Expand Appearance | Operations combine or derive geometry. Show Boolean actions only when the selection is valid. Keep Boolean Add/Combine distinct from Shape Builder's region-add mode and from adding an anchor point. |
+| **6. Cut & Path Repair** | Vector-edit flyout / contextual toolbar | Scissors, Knife, Path Eraser, Eraser, Join, Close/Open, Split Path, delete segment | These operations remove or separate geometry. Their labels and previews must explain whether they cut a stroke, split a path, delete a region or remove an entire object. |
+| **7. Transform & Reshape** | Selection handles, contextual toolbar, and Inspector | Move, Resize/Scale, Rotate, Reflect/Flip, Shear, Free Transform, Reshape, custom Pivot/Transform Origin, Variable Width, Warp, Twirl, Pucker, Bloat, Scallop, Crystallize, Wrinkle, Puppet Warp, Envelope distortion | Standard transforms should be immediately available through selection handles and numeric properties. Specialized deformations should be grouped in a Transform/Reshape flyout or advanced menu. Pivot controls appear when a transform supports them. |
+| **8. Paint & Region Fill** | Paint/Appearance flyout; region tools also in vector-edit mode | Paintbrush, Blob Brush, Live Paint/Region Fill, Mesh, Gradient tool, Eyedropper/Sampler | These tools paint strokes, fill closed regions or edit color transitions. Distinguish creating a brush stroke from filling an existing vector region. |
+| **9. Color & Appearance** | Right Inspector with anchored color popovers | Fill stack, Stroke stack, Color Picker, HEX/RGB/HSL/HSB/CSS entry, Opacity, Blend Mode, gradients, pattern/image fills, brushes, effects, swatches, recent/document colors, Color Styles, Variables/Tokens, Libraries, Selection Colors | Color is primarily a property of selected objects. Clicking a fill/stroke swatch opens the color picker in context. Keep the full resource browser in the picker/Inspector rather than consuming permanent toolbar space. |
+| **10. Text & Typography** | Primary toolbar plus text-context Inspector | Point Text, Area Text, Type on Path, Vertical Type where supported, Touch Type/character transforms, text formatting, Outline Text | Text needs a clear tool entry and a dedicated editing state. Conversion to outlines is an explicit operation and must warn that ordinary text editing is lost. |
+| **11. Layers, Groups & Reusable Assets** | Layers panel and Object/Insert menus | Group/Ungroup, enter/exit group, layer ordering/lock/hide, Components/Symbols, symbol instances, Repeats, Patterns, Objects on Path, reusable styles | These manage hierarchy and reuse rather than drawing primitive geometry. Maintain stable IDs and relationships when objects move within the hierarchy. |
+| **12. Align, Distribute & Arrange** | Contextual toolbar and Inspector/menu | Align, Distribute, spacing, key-object alignment, bring forward/back, bring to front/back, flip | These actions position objects or selected points. They should become available when their selection requirements are met and should not unexpectedly resize objects. |
+| **13. Navigate & Measure** | Persistent navigation controls, View menu and shortcuts | Hand/Pan, Zoom, Fit Selection/Artboard, Rotate View, Rulers, Guides, Grid, Smart Guides/Snapping, Pixel Grid/Snapping, Measure, Dimension annotations | Navigation should not edit artwork. Measurement and view rotation must remain distinct from object transforms. |
+| **14. Import, Trace & Export** | File menu, Insert menu, Export panel, and advanced tools menu | Place/import assets, Image Trace/vectorization, Artboards, Slices, export selection/artboard/region, SVG and supported vector formats | These are document and production workflows, not everyday path-drawing tools. Present progress/errors and warn when output cannot preserve editability. |
+| **15. Specialist & Advanced Tools** | Advanced/More tools flyout and contextual panels | Perspective Grid/Selection, Graph tools, Symbol manipulation tools, Flare, advanced mesh/warp operations, specialized measurement/dimension features | Keep available for advanced workflows without crowding core drawing controls. Each specialist tool needs its own contextual controls and documented supported object types. |
+| **16. AI-assisted Vector & Color** | Existing AI panel/command surface, with contextual actions on selected objects | Prompt-to-vector, path cleanup, semantic recoloring, palette generation, token suggestions, explainable batch edits | AI is an assistive workflow, not a replacement for direct tools. Always preview changes, identify affected objects/tokens and require acceptance before applying a broad change. |
+
+#### B. Suggested physical layout (adapt to the existing application)
+
+- **Primary toolbar:** Select/Move, Frame/Artboard (if applicable), Shapes flyout, Pen/Vector, Text, Hand/Pan and Zoom. If the existing app places tools elsewhere, preserve that layout and apply the same logical grouping rather than moving the whole interface.
+- **Vector-edit secondary toolbar:** Move Point, Pen/Add Point, Bend, point types/corners, Join/Close/Open, Boolean/Shape Builder where applicable, Cut/Scissors, Eraser, Lasso, Paint/Region Fill, Variable Width. This toolbar is visible only in vector-edit mode or when vector objects are selected.
+- **Contextual selection controls:** Align/Distribute, Boolean operations, transform pivot, flip/rotate, group/ungroup and relevant object actions. Hide or disable actions that do not apply to the current selection.
+- **Right Inspector:** Transform, Constraints/Resize behavior if supported, Geometry, selected-point properties, Fill, Stroke, Effects, Color Variables/Styles and Export. Sections must be selection-aware and preserve user-entered values when moving between compatible objects.
+- **Color popover:** A swatch click opens the picker anchored to the relevant Fill/Stroke/gradient stop. Provide visual field, hue, alpha, direct color-model input, eyedropper, recent/document colors, styles/variables and library access without leaving the current property context.
+- **Layers/Assets panel:** Layers, groups, masks, Boolean groups, components/symbols and reusable resources. A hierarchy operation must preserve the visual position of child objects unless local-coordinate behavior is explicitly intended.
+- **Advanced/More menu:** Perspective, graphs, image trace, slices, specialist deformation tools, advanced path operations and infrequently used utilities. Searchable command access is recommended if the app already has a command palette or menu search.
+- **Menus/command search:** Keep file/document actions, path operations, arrange, view/precision options, import/export and shortcuts discoverable. Do not duplicate every operation as a permanent toolbar icon.
+
+#### C. Tool availability and contextual behavior
+
+| Context | Tools/actions that should be emphasized | Tools that should not hijack the context |
+|---|---|---|
+| Nothing selected | Document settings, shape creation, Pen/Vector, Text, navigation | Object-specific fill/stroke changes, Boolean actions, anchor editing |
+| Whole object selected | Move/resize/rotate, pivot, geometry, Fill/Stroke, align/arrange, duplicate | Point-level editing controls unless the user enters vector-edit mode |
+| Vector edit mode | Anchor/segment selection, handles, point-type conversion, add/delete point, join/split, close/open, Bend | Whole-object commands that would unexpectedly exit point editing |
+| Two or more compatible shapes selected | Union, Subtract, Intersect, Exclude, align/distribute, shared appearance, Selection Colors | Boolean operations that do not support the current object mix |
+| Boolean group selected | Operation hierarchy, editable children, parent appearance, expand/flatten as explicit actions | Silent destructive flattening or per-child appearance controls if parent appearance governs them |
+| Fill/Stroke swatch active | Color picker, direct color values, eyedropper, variables/styles, recent colors | Unrelated transform or layer commands taking keyboard focus |
+| Gradient editing active | Gradient type, stop selection, stop position/color/alpha, on-canvas geometry | Object selection changes caused by clicking a gradient handle |
+| Text editing active | Text content and typography controls | Canvas shortcuts that intercept ordinary text input |
+| Locked or hidden object | Unlock/reveal actions from hierarchy | Dragging, point-editing or color editing through the locked/hidden state |
+
+#### D. Avoid ambiguous “Add” and “Subtract” controls
+
+DesignForge AI must name and visually distinguish these actions according to context:
+
+- **Boolean Add/Union:** combine the filled areas of selected objects into a composite shape/group.
+- **Add/Combine Paths:** place multiple paths in one editable container without calculating a Boolean union; useful for open paths and independent contours.
+- **Shape Builder Add:** add highlighted regions to the constructed result.
+- **Add Anchor Point:** insert a new point into an existing path segment.
+- **Add Fill/Stroke:** add an appearance row to the selected object's Fill or Stroke stack.
+- **Subtract Boolean:** subtract one or more selected operands from the designated base shape according to the documented stacking rule.
+- **Shape Builder Subtract:** remove highlighted region(s) from the constructed result.
+- **Delete Anchor/Segment:** remove a point or segment while reconstructing the remaining path; it does not mean Boolean Subtract.
+- **Remove Fill/Stroke:** remove an appearance row, not vector geometry.
+
+Every Add/Subtract action must show a hover/selection preview when possible, indicate the target and resulting operation, respect layer order where relevant, and create one coherent undo step.
+
+#### E. Reference behavior and product adaptation
+
+Figma documents a dedicated vector-edit mode with Move, Pen, Variable Width, Shape Builder, Cut, Bend, Eraser, Lasso and Paint tools. Sketch documents entering vector edit mode by double-click or Return, inserting points by clicking a path, changing point types, and using non-destructive Boolean operations. Use these as references for mode separation and interaction predictability, while preserving DesignForge AI's established UI and architecture.
+
+- Figma vector editing: https://help.figma.com/hc/en-us/articles/360039957634-Edit-vector-layers
+- Figma vector networks: https://help.figma.com/hc/en-us/articles/360040450213-Vector-networks
+- Figma Boolean operations: https://help.figma.com/hc/en-us/articles/360039957534-Boolean-operations
+- Sketch vector editing: https://www.sketch.com/docs/designing/vector-editing/
+- Sketch Boolean operations: https://www.sketch.com/docs/designing/shapes/boolean-operations/
+- Sketch shapes: https://www.sketch.com/docs/designing/shapes/
+
+---
+
+### 32.2 Non-negotiable preservation contract for the IDE agent
+
+Before changing code, the IDE agent MUST:
+
+1. Inspect the current repository, package scripts, app entry points, routing, editor/canvas architecture, state management, rendering engine, selection model, property inspector, toolbar, shortcuts, persistence, import/export and tests.
+2. Identify which listed tools already exist, including partial implementations, and map them to existing components and data structures.
+3. Create a gap analysis: `Implemented`, `Partial`, `Missing`, `Broken`, `Blocked by architecture`.
+4. Preserve existing UI styling, layout, design tokens, routes, file navigation, project/file behavior, saved documents, keyboard shortcuts, working features and integrations unless a change is explicitly required and approved.
+5. Prefer extending existing components and services over introducing parallel implementations. Do not replace the canvas renderer, state manager, router, data model, or component system merely to match this document.
+6. Make small, reversible changes. Add or update tests before broad refactoring. Keep each change isolated and easy to review.
+7. Never fabricate a working tool with a visual-only button. A tool must perform the behavior it advertises, or be visibly marked as unavailable/roadmapped.
+8. Do not silently rasterize vectors, flatten groups, destroy editable geometry, change unrelated object styles, or rewrite existing files/data.
+9. Keep document operations transactional. A single user gesture should create a coherent undo step unless the current application has a documented different convention.
+10. Run existing tests and relevant new tests after each milestone. Report actual commands/results; do not claim tests passed if they were not run.
+11. If a requested feature conflicts with the existing architecture or would break a current workflow, explain the conflict and implement the smallest compatible alternative rather than deleting existing behavior.
+12. Do not add dependencies without checking whether the repository already provides equivalent functionality, whether the dependency is compatible, and whether its licensing and bundle cost are acceptable.
+
+#### Required agent deliverables before implementation
+
+- Repository and architecture summary.
+- Tool inventory with current status.
+- Interaction/shortcut conflicts list.
+- Proposed implementation sequence with files/components likely to change.
+- Regression test plan.
+- Explicit list of out-of-scope changes.
+
+The agent may then implement in milestones. Do not attempt to implement every advanced feature in one giant unreviewable change.
+
+### 32.3 Core interaction vocabulary and state machine
+
+All vector tools must use shared interaction infrastructure rather than implement incompatible pointer logic independently.
+
+#### Pointer/keyboard events
+
+Support pointer down/move/up/cancel, double-click/double-tap where appropriate, hover, modifier-key changes during a gesture, keyboard focus, Escape/cancel, and pointer capture while dragging. If the pointer leaves the canvas during a drag, the operation must continue or cancel predictably; it must not leave a stuck drag state.
+
+#### Common states
+
+- `idle`: no active gesture.
+- `hovering`: a valid object, anchor, segment, handle, control, guide or Boolean region is under the pointer.
+- `armed`: pointer-down target has been identified; no document mutation yet.
+- `previewing`: live geometry or style preview is being shown.
+- `committing`: validate and apply the operation as a single transaction.
+- `cancelled`: restore the pre-gesture state.
+- `editing-object`: object-specific controls are available.
+- `editing-vector`: anchors, handles, segments and path operations are active.
+- `editing-text`: text editing owns keyboard input.
+- `editing-gradient`: gradient handles and stops are active.
+- `editing-mask` / `editing-boolean`: user is explicitly editing a nested source object.
+
+#### Target priority and hit testing
+
+Use screen-space hit tolerances so anchors and handles remain usable at different zoom levels. Hit-test in a deterministic order: active drag handle/control; selected anchor or handle; visible anchor/segment in vector edit mode; object transform handle; object body/stroke; canvas background. This order may be adjusted for a tool's explicit mode, but must be consistent and documented.
+
+When several objects overlap, provide a predictable way to cycle or reach obscured objects via layer hierarchy/context menus. Locked objects must not be modified through canvas gestures. Hidden objects must not be hit-tested unless the user deliberately targets them through a supported hierarchy action.
+
+#### Gesture lifecycle
+
+1. Resolve the target and operation before mutating document state.
+2. Capture a pre-gesture snapshot or create a transaction boundary.
+3. Render a preview during pointer movement; do not repeatedly commit history entries per frame.
+4. On pointer-up, validate geometry, constraints, permissions and object references.
+5. Commit one operation and one undo record.
+6. On Escape, pointer cancellation or invalid operation, restore the pre-gesture state.
+7. Restore the previous tool after temporary tools (for example, eyedropper or hand) where that is the established interaction pattern.
+
+### 32.4 Tool catalogue: creation and drawing
+
+The list below is the intended product coverage. Some tools may share an implementation or live under a tool flyout. A tool should only appear enabled when its action is implemented for the active object/context.
+
+#### A. Select / Move tool
+
+**Purpose:** Select and transform whole objects, groups, text layers, images, vector paths, Boolean groups and components.
+
+**Use:** Click an object; drag it to move; drag bounding-box handles to resize; use numeric properties for precise position and size.
+
+**Vector behavior:** Moves/transforms the object's transform, not its individual path anchors, unless the object is in vector edit mode or the selected handle explicitly edits geometry.
+
+**Required options:** single select, modifier multi-select, marquee select, move, duplicate-drag, align/snap feedback, transform box toggle, transform origin, numeric X/Y/W/H/rotation, constrain proportions, flip, lock aspect ratio.
+
+**Double-click:** Enter the object's supported nested editing mode only when the object type supports it (e.g., vector edit mode, text edit mode, group/component entry). Double-clicking an ordinary shape must not unexpectedly create a second object or alter geometry. Provide an unambiguous visual state and a reliable exit action.
+
+#### B. Direct Selection / Vector Point Selection
+
+**Purpose:** Edit geometry within an existing vector object.
+
+**Use:** Enter vector-edit mode, click one anchor/segment, Shift-click to add/remove points, drag a marquee to select points, drag a selected point or handle, use arrow keys for nudging, and use the inspector for exact coordinates.
+
+**Vector behavior:** Selected anchors and their connected segments change; unrelated anchors remain fixed unless the geometry operation requires a local adjacent adjustment. A selected anchor may affect its incoming/outgoing handles according to its point type.
+
+**Required options:** point selection, segment selection, handle selection, multi-point selection, invert/select all points, point navigation, point-type controls, point coordinates, handle coordinates, point alignment/distribution, close/open path.
+
+**Double-click:** Double-clicking a supported anchor toggles or cycles its point type only if that action is clearly signaled; recommended baseline is double-click to toggle corner ↔ smooth/mirrored, with a contextual inspector control for exact types. Do not assign this behavior to the object body.
+
+#### C. Pen tool
+
+**Purpose:** Create precise paths and vector networks using anchors and Bézier curves.
+
+**Use:** Click for a corner/straight segment; click-drag to create a curved point and handles; click a valid starting anchor to close a contour; Escape to finish/cancel according to whether a valid path has already been created.
+
+**Vector behavior:** Adds points and segments to a new path/network or continues an open path when an endpoint is explicitly targeted. Closing a path creates a fillable contour, subject to fill rule.
+
+**Required options:** straight segment, curve segment, close path, continue path from either endpoint, add point on path, create independent handles using modifier, snap angle, preview next segment, finish open path, cancel in-progress path.
+
+**Double-click:** Double-clicking an existing path/shape enters vector edit mode; double-clicking an anchor may convert its point type only when the anchor itself is the hit target. It must not create a duplicate path.
+
+#### D. Bend / Curvature tool
+
+**Purpose:** Add or refine curvature with fewer explicit handle operations.
+
+**Use:** Click/drag a path segment or point; drag to control curve amount; use handles/inspector for precision.
+
+**Vector behavior:** Adjusts local segment curvature, adding handles/anchors only when necessary. Preserve the surrounding contour as closely as possible.
+
+**Required options:** bend segment, adjust curvature, convert straight segment to curved, local smoothing, preview, cancel.
+
+#### E. Pencil / Freehand Vector tool
+
+**Purpose:** Draw paths by pointer/stylus movement.
+
+**Use:** Press and drag to draw, release to finish; use pressure data where supported.
+
+**Vector behavior:** Samples pointer input and fits a path with configurable fidelity/smoothing. It should avoid excessive anchor creation and retain a useful editable path.
+
+**Required options:** fidelity, smoothing, pressure sensitivity, close path when near start, edit selected path, replace selected path only when explicitly enabled.
+
+#### F. Brush / Paint tool
+
+**Purpose:** Create expressive vector strokes or paint selected vector regions, depending on the tool mode.
+
+**Use:** Drag a stroke; configure brush, width, pressure, color and smoothing. In vector-edit mode, Paint may target vector regions only if the app supports the relevant vector-network/region model.
+
+**Vector behavior:** A stroke is stored as editable path geometry plus brush/style metadata where supported. Do not silently convert it to a raster image.
+
+**Required options:** brush presets, size, pressure, smoothing, opacity, color, erase/paint mode, edit stroke path, expand/outline stroke as explicit conversion.
+
+#### G. Rectangle / Rounded Rectangle
+
+**Purpose:** Create box geometry and UI-oriented shapes.
+
+**Use:** Drag diagonally; use modifier for square; use center-draw modifier where supported; edit width/height and corner radii in the inspector or on-canvas controls.
+
+**Vector behavior:** Retain live rectangle parameters until conversion is requested. Individual corner radii must be preserved where supported.
+
+**Double-click:** Enter shape-specific editing only if there are live controls to expose; otherwise enter vector-edit mode. Never rasterize the shape.
+
+#### H. Ellipse / Oval / Arc
+
+**Purpose:** Create circles, ovals, arcs and pie/wedge forms.
+
+**Use:** Drag bounds; constrain to circle; edit start/end angle and inner/outer radius for arc/pie forms when implemented.
+
+**Vector behavior:** Preserve ellipse/arc parameters until explicit path conversion.
+
+#### I. Polygon / Star
+
+**Purpose:** Create regular polygons and star shapes.
+
+**Use:** Drag to set size/rotation; adjust sides, points, inner radius, outer radius and corner rounding through live controls.
+
+**Vector behavior:** Keep construction parameters editable; conversion to path is explicit.
+
+#### J. Line / Arrow / Arc / Spiral / Grid
+
+**Purpose:** Build line-based diagrams, arrows, arcs, spirals, rectangular grids and polar grids.
+
+**Use:** Drag endpoints or bounds; set angles, turns, divisions, spacing and arrowheads in the inspector.
+
+**Vector behavior:** Lines remain open paths; arrowheads are appearance attributes until converted to outlines. Grids/spirals retain parameters when possible.
+
+#### K. Shape Builder
+
+**Purpose:** Combine or remove selected vector regions by dragging across them.
+
+**Use:** Select eligible shapes; activate Shape Builder; hover to highlight the current region; drag across regions to add/merge; use an explicit subtract mode/modifier to remove regions; click a region to act on it if click-to-apply is supported.
+
+**Vector behavior:** Preview the resulting regions before commit. Preserve source geometry in an editable operation or retain an undoable original. Do not remove source objects before the operation validates.
+
+**Add/subtract interaction:** A visible mode control must state `Add/Merge` or `Subtract/Remove`. A modifier may temporarily reverse the mode, but the current mode must be visibly indicated. Clicking empty space must not delete anything.
+
+#### L. Eraser
+
+**Purpose:** Remove portions of vector paths or regions.
+
+**Use:** Drag across geometry. Offer clearly separated modes such as erase path segment, erase whole object, or erase filled region if supported.
+
+**Vector behavior:** Split or trim geometry; preserve remaining valid subpaths. Preview the affected geometry and commit as one operation.
+
+#### M. Scissors / Cut
+
+**Purpose:** Split paths at selected points or where a cut line intersects them.
+
+**Use:** Click a segment/anchor with Scissors to create a split; for Cut tool, draw a line across the target geometry.
+
+**Vector behavior:** Produces open endpoints or separate subpaths as specified. Must not create invisible zero-length fragments or unexpectedly delete a segment.
+
+#### N. Offset Path
+
+**Purpose:** Expand or contract a path contour to create borders, insets, outlines or parallel paths.
+
+**Use:** Enter an offset distance; preview outward/inward result; choose whether to replace or duplicate original; confirm or cancel.
+
+**Vector behavior:** Generates new geometry. Preserve the source unless replace mode is explicitly selected. Define joins/corners and self-intersection handling.
+
+#### O. Simplify / Smooth / Reshape
+
+**Purpose:** Reduce unnecessary anchors, smooth irregular contours, or reshape a local path region.
+
+**Use:** Adjust tolerance/smoothing; preview the result; confirm.
+
+**Vector behavior:** Preserve the silhouette within tolerance; avoid topology changes unless requested; show before/after where helpful.
+
+#### P. Variable Width / Width tool
+
+**Purpose:** Create non-uniform stroke width along a path.
+
+**Use:** Add width points along the stroke; drag handles to increase/decrease width; set width numerically.
+
+**Vector behavior:** Store width profile along the path or create editable outline geometry where the rendering model requires it. Converting to outlines must be explicit.
+
+#### Q. Rotate / Scale / Reflect / Shear / Free Transform
+
+**Purpose:** Apply geometric transforms to selected objects or selected points.
+
+**Use:** Drag handles, numeric controls or enter values in inspector. Use reference point/pivot controls to choose the transform origin.
+
+**Vector behavior:** Transform matrix changes object placement/geometry according to the app's established model. Avoid applying transform twice (once to matrix and again to points).
+
+#### R. Warp / Twirl / Pucker / Bloat / Wrinkle / Puppet Warp
+
+**Purpose:** Advanced contour deformation.
+
+**Use:** Apply a configurable brush or pins to the selected artwork; preview; confirm or cancel.
+
+**Vector behavior:** Preserve editable geometry or retain a live effect. For complex deformation, make the cost and reversibility clear. Do not flatten to raster.
+
+#### S. Gradient tool
+
+**Purpose:** Create and edit gradient fills/strokes.
+
+**Use:** Drag gradient axis/handles; select stops; change color, alpha and position; use inspector for exact values.
+
+**Vector behavior:** Store gradient geometry and stops as appearance data, separate from base path geometry.
+
+#### T. Eyedropper
+
+**Purpose:** Sample color or supported appearance from artwork.
+
+**Use:** Activate; hover to preview sample; click to apply. Provide a clear switch between sampling rendered pixel color and source object color when both are available.
+
+**Vector behavior:** Changes only the active appearance property unless the user chooses a broader style-copy action.
+
+#### U. Text / Type on Path / Area Text / Outline Text
+
+**Purpose:** Create editable typography and text shaped by paths.
+
+**Use:** Click for point text, drag area text box, select path for type-on-path; adjust typography and path placement in inspector.
+
+**Vector behavior:** Text remains editable until explicit conversion to outlines. Outlined text becomes vector contours and loses ordinary text editing; warn before irreversible conversion.
+
+#### V. Layers / Groups / Components / Symbols
+
+**Purpose:** Organize artwork, preserve hierarchy and reuse design elements.
+
+**Use:** Group/ungroup, reorder, rename, lock/hide, enter group, create component/symbol, edit master/source and manage instances/overrides.
+
+**Vector behavior:** Child geometry stays intact. Moving a child between groups must preserve its visual position unless the user explicitly requests local-coordinate changes.
+
+#### W. Align / Distribute / Arrange
+
+**Purpose:** Align objects or selected anchors and manage stacking order.
+
+**Use:** Choose alignment target (selection, key object, artboard); choose distribute centers/gaps; arrange front/back.
+
+**Vector behavior:** Changes transforms/positions only; must not change dimensions unless the selected command is explicitly resize/distribute-spacing.
+
+#### X. Mask / Clipping Mask / Compound Path
+
+**Purpose:** Hide artwork outside a boundary, or make multiple contours behave as a single filled path.
+
+**Use:** Select mask and content; create mask; enter mask editing to reposition content or mask; release mask to restore access to source artwork.
+
+**Vector behavior:** Masking is non-destructive. Compound path uses an explicit fill rule (`nonzero`/`evenodd`) and preserves its contours.
+
+#### Y. Blend / Repeat / Pattern / Objects on Path
+
+**Purpose:** Generate intermediate shapes, repeated layouts, pattern fills or objects distributed along a path.
+
+**Use:** Select source objects/path; specify steps, spacing, orientation and alignment; preview and commit.
+
+**Vector behavior:** Prefer editable generated/repeat structures. Provide an explicit expand-to-independent-objects command.
+
+#### Z. Image Trace / Perspective / Graph / Slice / Dimension tools
+
+**Purpose:** Specialist workflows for raster-to-vector conversion, perspective construction, data graphs, export regions and measurement annotations.
+
+**Use:** Provide contextual panels for trace thresholds, perspective plane selection, graph data, slice bounds and dimension settings.
+
+**Vector behavior:** Trace creates editable paths; graphs retain data where feasible; dimensions remain annotations where supported; slices define output regions rather than modifying source artwork.
+
+### 32.5 Double-click and enter/exit editing behavior
+
+Double-click behavior must be consistent, discoverable, and context-aware. Do not use a single ambiguous double-click behavior for every object type.
+
+| Current target | Single click | Double-click / Enter | Exit |
+|---|---|---|---|
+| Ordinary shape | Select whole shape | Enter vector edit mode or live-shape edit mode | Escape or click outside according to current app convention |
+| Custom vector path | Select path | Show anchors, segments and handles | Escape/Enter or select another tool |
+| Group | Select group | Enter group and allow child selection | Breadcrumb/back or Escape |
+| Text object | Select text layer | Enter text-edit mode and place caret | Escape or click outside |
+| Boolean group | Select combined result | Enter nested Boolean edit mode or expand source layers | Exit edit mode; retain Boolean operation |
+| Gradient-filled object | Select object | If double-clicking the gradient control, enter gradient editing; object-body double-click still follows object type | Done/Escape |
+| Component/symbol instance | Select instance | Enter instance editing only if supported; otherwise expose instance overrides | Return to parent context |
+| Anchor point | Select point | Toggle point type only if pointer hit-test resolves specifically to anchor | Continue editing or exit vector mode |
+| Empty canvas | Deselect or begin tool action | No destructive side effect | N/A |
+
+Rules:
+
+- Avoid relying on double-click alone; provide keyboard alternatives and a visible edit-mode indicator.
+- Double-click timing must be configurable or use platform-standard thresholds.
+- If the first click moves or selects an object, the second click must not accidentally duplicate, delete or commit a destructive operation.
+- Nested editing must preserve selection context and provide a way back to the parent object.
+- For touch/stylus, provide a context menu or explicit edit action because double-tap may be ambiguous.
+
+### 32.6 Add, subtract, intersect and exclude: explicit operation semantics
+
+The words **Add** and **Subtract** refer to different operations in different contexts. The UI must label the active context and avoid one generic plus/minus action that means something different in each tool.
+
+#### A. Boolean operations on whole objects
+
+- **Union:** combine filled areas into one composite result.
+- **Subtract:** remove the areas of higher-order operand(s) from the designated base/lower object according to the documented stacking rule.
+- **Intersect:** keep only the shared overlapping area.
+- **Exclude / Difference:** remove the overlapping areas, retaining non-overlapping regions.
+- **Add / Combine paths (non-Boolean):** place paths together in one container without calculating a Boolean union; preserve open paths and independent contours.
+
+For Boolean operations, display a live preview, clearly show which layer is the base/operand, and retain source children in an editable Boolean group. Provide `Flatten/Expand` as explicit actions, not silent defaults.
+
+#### B. Shape Builder region operations
+
+- **Add/Merge mode:** drag through highlighted adjacent regions to combine them.
+- **Subtract/Remove mode:** click or drag across highlighted regions to remove them from the result.
+- The modifier key may temporarily switch modes, but must be shown in cursor/UI feedback and be configurable.
+- Hover preview must indicate the exact region(s) that will be affected.
+- An invalid/non-closed region must not be removed silently.
+
+#### C. Path point insertion/deletion
+
+- **Add anchor:** click a segment; split the segment while maintaining curve continuity as closely as possible.
+- **Delete anchor:** remove the selected anchor and reconnect neighboring segments; preserve the remaining contour.
+- **Remove segment:** split/open the path at a segment rather than deleting an entire object.
+- **Delete object:** available only when whole-object selection is active or confirmed in context.
+
+These actions must remain distinct. The Delete key must target the active editing context: selected anchors in vector mode, selected text/content where appropriate, or whole selected objects in object mode.
+
+### 32.7 Pivot / transform origin / reference point
+
+The pivot point is the reference origin used for rotation, scaling, reflection and some deformations. It is not necessarily an anchor point and must not change the object's actual geometry simply because the user moves it.
+
+#### Required pivot behaviors
+
+1. Display a pivot/reference-point control when transform mode is active.
+2. Allow the user to drag the pivot to any valid point on or around the selected object's bounds.
+3. Allow the pivot to snap to corners, edge centers, object center, selected anchor, guide, grid or a numeric coordinate.
+4. Provide a nine-point reference selector (top-left, top-center, top-right, center-left, center, center-right, bottom-left, bottom-center, bottom-right) for bounding-box-based objects.
+5. Support multi-selection pivot behavior: use a shared group bounding-box origin by default, with an explicit option to transform each object around its own origin.
+6. Allow numeric pivot X/Y coordinates in document or object-local coordinates where supported.
+7. Keep pivot position separate from object geometry and transform matrix semantics.
+8. Define persistence: pivot should remain during the current transform session; whether it persists after deselection must follow a consistent app setting.
+9. Reset pivot to object center or default reference point via an explicit command.
+10. Show a live preview of the result before committing a transform.
+
+#### Pivot use examples
+
+- **Rotate around center:** circle or object rotates around its own center.
+- **Rotate around a corner:** a door, arm or hinged component swings around the selected corner.
+- **Scale from opposite corner:** the chosen pivot remains stationary while the object expands/contracts.
+- **Reflect around custom axis:** mirror a shape around a line defined by a pivot/axis rather than its center.
+- **Multi-object rotation:** rotate a group around a shared pivot, or rotate each object around its own origin when explicitly selected.
+
+#### Pivot acceptance tests
+
+- Moving pivot alone does not change geometry.
+- Rotation around pivot keeps pivot fixed in canvas coordinates.
+- Scaling around pivot keeps the pivot fixed and changes dimensions predictably.
+- Reflection around an axis produces the expected mirrored placement.
+- Changing pivot during a live transform updates the preview without adding multiple undo entries.
+- Cancel restores both the original transform and original pivot state where appropriate.
+
+### 32.8 Point types, handles and corner behavior
+
+Support at least these point types:
+
+- **Corner/Straight:** no automatic smoothness constraint; adjacent segments may form an angle.
+- **Mirrored/Symmetric:** incoming and outgoing handles share angle and length.
+- **Aligned/Mirror-angle:** handles share a tangent direction but can differ in length.
+- **Independent/Disconnected:** incoming and outgoing handles can be adjusted independently.
+
+Support handle length/angle numeric editing where practical, handle visibility toggles, converting between types, and corner radius/smoothing where geometry supports it.
+
+#### Anchor editing behavior
+
+- Drag anchor: move anchor and connected segments.
+- Drag handle: alter curvature on its associated side; other handle responds according to point type.
+- Modifier-drag: temporarily break handle coupling if supported and clearly indicated.
+- Delete handle: convert that side to a sharp/straight condition without deleting the anchor unless the explicit command is Delete Anchor.
+- Add point on segment: insert an anchor while preserving the existing curve as closely as mathematically possible.
+- Double-click anchor: apply the documented point-type toggle, with a visible indicator.
+- Select multiple anchors: move them together, align/distribute them, or change point type where valid.
+- Move anchors with arrow keys: use configurable small/large nudges; respect axis constraints when requested.
+
+#### Corner radius and smoothing
+
+- Allow a global radius for compatible live shapes.
+- Allow per-corner radii for compatible vector shapes.
+- Support smoothing separately from radius; smoothing changes the corner transition profile rather than merely increasing radius.
+- Handle invalid or self-intersecting corners gracefully and clamp/normalize only with clear feedback.
+- Preserve per-corner values when switching selection and avoid flattening the shape unless necessary.
+
+### 32.9 Color tools and appearance operations: complete coverage
+
+The color subsystem must integrate with vector object styles, not exist as a disconnected picker.
+
+#### Color picker
+
+- Solid color, HEX, RGB, HSL, HSB/HSV and supported CSS syntax.
+- Alpha/opacity, color profile awareness, input validation, copy/paste values.
+- Recent colors, document colors, local styles, variables, shared libraries and AI suggestions clearly distinguished.
+- Eyedropper with source-color vs rendered-pixel sampling where supported.
+- Keyboard navigation and accessible contrast indicators.
+
+#### Fill tools
+
+- No fill, solid fill, linear/radial/angular/diamond gradient where supported, pattern fill, image fill, variable-bound fill.
+- Multiple fills, visibility, ordering, opacity, blend mode and removal.
+- Color variables and styles on supported fills and gradient stops.
+- Preserve fill stack through copy/paste, duplication, import/export where format allows.
+
+#### Stroke tools
+
+- Add/remove one or more strokes.
+- Color/variable/style, width, alignment/side where supported, caps, joins, miter limit, dash pattern, dash offset, arrowheads, opacity, blend mode.
+- Gradient stroke where supported by renderer.
+- Variable width profiles and brush appearance.
+- Convert/outline stroke only by explicit action.
+
+#### Gradients
+
+- Create/edit stops, stop color, alpha, position, type, angle, geometry, spread/repeat behavior where supported, reverse, duplicate, save as style.
+- On-canvas editing handles and numeric inspector values.
+- Preserve gradient geometry when the object transforms according to chosen scaling behavior.
+- Multi-selection must not silently replace different gradients unless the user confirms the intended replacement.
+
+#### Color variables and styles
+
+- Create, rename, group, search, apply, detach, update and delete variables/styles.
+- Support semantic aliases and modes (light/dark/other configured themes).
+- Detect unused variables, unresolved references and cyclic aliases.
+- Bulk recolor selected objects with an explicit scope.
+- Distinguish same raw color values from different semantic token references.
+- Offer a safe migration from literal colors to tokens with preview and undo.
+
+#### Color accessibility and AI
+
+- Contrast calculation with documented assumptions and source/background context.
+- Suggest alternatives without silently changing brand tokens.
+- Preview all AI changes; explain the target properties and rationale.
+- Require user approval for batch edits and keep them undoable.
+
+### 32.10 Object geometry, rendering and document model requirements
+
+Use the current project's data model if it already supports these concepts. The following is a logical capability model, not a mandate to replace the current schema.
+
+#### Object types
+
+- Primitive/live shapes: rectangle, rounded rectangle, ellipse, polygon, star, line, arc, spiral, grid.
+- Path: open/closed path, line/cubic Bézier segments, anchors and handles.
+- Vector network: connected paths that may branch or have multiple regions without a single linear path direction, if the renderer supports it.
+- Compound path: multiple contours plus fill rule.
+- Boolean group: ordered child operands plus operation semantics.
+- Group/frame/container: child hierarchy, clipping and transform context.
+- Text: editable text and typography properties.
+- Image: placed raster content with transforms and crop metadata.
+- Appearance resources: fill stack, stroke stack, effects, gradients, brushes and variable references.
+
+#### Geometry constraints
+
+- Keep document-space coordinates independent of screen zoom and device pixel ratio.
+- Use stable object/anchor IDs; do not identify anchors by array index alone if reordering can invalidate references.
+- Separate base geometry from transform, style, effect and rendering cache.
+- Support local and global coordinate conversion explicitly.
+- Keep the rendering preview derived from the model; do not treat rendered pixels as the source of truth for vectors.
+- Validate finite coordinates, valid path references and supported fill rules.
+- Preserve imported metadata and unsupported attributes where possible rather than silently dropping them.
+- Use robust path operations for curves, self-intersections, holes, and stroke expansion.
+
+#### History and persistence
+
+- One logical gesture = one undo transaction.
+- Undo restores geometry, styles, token references, hierarchy, visibility/lock state and pivot where applicable.
+- Autosave/recovery must not serialize transient drag previews as committed document state.
+- Reopen a document and confirm the same editable geometry and appearance.
+- If a format cannot preserve a feature, warn and offer the closest valid export option.
+
+### 32.11 Tool/context property inspector matrix
+
+The inspector must be contextual, but it should preserve familiar placement and naming in the existing application.
+
+| Selection/context | Inspector controls |
+|---|---|
+| No selection | Document settings, units, grid, guides, color profile where supported |
+| One primitive | X/Y/W/H, rotation, pivot/reference point, shape-specific parameters, fill, stroke, effects, opacity |
+| Vector path | Path closure, anchor count, selected point type, coordinates, handle values, fill rule, fill/stroke, simplify/offset |
+| Selected anchors | Point coordinates, point type, handle constraints, radius/smoothing where applicable, align/distribute |
+| Multiple objects | Shared transforms, alignment/distribution, shared fills/strokes, Selection colors, group/Boolean actions |
+| Boolean group | Operation type, ordered operands, parent appearance, expand/flatten, child visibility/editing |
+| Gradient editing | Type, stops, stop position/color/alpha, angle/geometry, variable/style binding |
+| Text | Content, font, size, line height, letter spacing, alignment, fill/stroke, text-on-path options |
+| Brush stroke | Brush type, width/profile, pressure, smoothing, outline/expand action |
+| Mask | Mask source, content transform, clipping behavior, invert/release where supported |
+| Locked/hidden object | Clear locked/hidden state and safe unlock/reveal actions; no accidental canvas edits |
+
+### 32.12 Keyboard shortcut policy
+
+Do not overwrite existing shortcuts without a conflict audit. Build a shortcut registry with platform-specific mappings and visible discoverability. Figma/Sketch shortcuts may be used as a reference but DesignForge AI's current mappings take precedence unless deliberately changed.
+
+Required shortcut categories:
+
+- Select/move, direct/vector edit, Pen, shape tools, text, hand/pan, zoom.
+- Enter/exit vector edit mode, group entry/exit, select all points, next/previous anchor.
+- Add/delete anchor, close/open path, join/split path, reverse path.
+- Union/subtract/intersect/exclude/add-path, Shape Builder add/subtract mode.
+- Undo/redo, duplicate, group/ungroup, front/back, lock/hide.
+- Nudge and large nudge; constrain to axis/angle; toggle snapping/guides/grid.
+- Temporary hand/eyedropper if supported.
+
+Every shortcut must be testable and documented. Keyboard events should not be intercepted by the canvas when a text field, color value input or text-edit mode owns focus, except for explicitly global shortcuts such as undo when safe.
+
+### 32.13 QA matrix and definition of done
+
+A feature is complete only when its interaction, data model, rendering, history, persistence and error states work together.
+
+#### P0 — Core editor reliability
+
+- Select/move/resize/rotate objects; numeric transforms; multi-selection.
+- Draw/edit paths; add/delete anchors; point types and handles; close/open/join paths.
+- Live rectangle/ellipse/polygon/star parameters.
+- Fill/stroke, HEX/RGB, opacity, eyedropper, undo/redo.
+- Snap/grid/guides; layers/groups; SVG import/export baseline.
+- Double-click/Enter edit-mode consistency and pivot behavior for standard transforms.
+
+#### P1 — Professional vector workflows
+
+- Boolean groups and source editing; Shape Builder add/subtract; Cut/Scissors/Eraser.
+- Per-corner radius/smoothing; Offset Path and Simplify.
+- Multiple fills/strokes; gradient editing; Selection colors; color variables/styles.
+- Masks, compound paths, outline strokes/text, align/distribute points.
+- Reliable persistence and keyboard shortcut conflict coverage.
+
+#### P2 — Advanced illustration and design system
+
+- Brush families, variable width, mesh gradients, advanced transforms/deformations.
+- Pattern/repeat/objects-on-path; color modes and shared libraries; advanced export.
+- Image Trace, perspective, graph/measurement tools where product scope requires them.
+- Accessibility contrast checks and color-token migration previews.
+
+#### P3 — AI-assisted creation
+
+- Prompt-to-vector generation that returns editable paths/shapes.
+- AI-assisted path cleanup, palette generation and semantic recoloring.
+- Natural-language edits with a preview of all affected objects and properties.
+- AI explanation of operations, uncertainty handling and user approval before applying batch edits.
+
+#### Definition of done for each tool
+
+- Tool has a documented purpose and supported object types.
+- Toolbar/menu/context-menu entry is wired to a real action.
+- Pointer and keyboard interactions are specified and implemented.
+- Hover, active, disabled, invalid, preview, commit and cancel states exist as applicable.
+- Geometry/style result matches the tool's documented semantics.
+- Operation is undoable and redoable.
+- Document saves/reopens without losing editability.
+- Relevant unit, integration and regression tests pass.
+- No unrelated behavior changed; existing functionality is regression-tested.
+- Unsupported cases produce a clear message rather than a silent no-op or corrupt output.
+
+### 32.14 Regression test scenarios that must never break
+
+1. Open an existing project and design file; navigate between files; save and reopen.
+2. Select/move/resize an existing object; verify no unrelated object changes.
+3. Enter vector edit mode by double-click/Enter; edit a point; exit; verify object remains selected correctly.
+4. Draw a path, cancel before commit, and verify no ghost object remains.
+5. Insert a point into a curved segment and verify shape continuity.
+6. Delete one point and verify remaining geometry is valid.
+7. Apply Boolean Subtract and edit a source operand; verify the result updates non-destructively.
+8. Change pivot and rotate; verify pivot remains fixed and geometry changes as expected.
+9. Apply a color variable; update variable; verify only linked properties update.
+10. Recolor a mixed selection; verify unrelated styles and token references remain unchanged.
+11. Edit gradient stops; save/reopen; verify stops and geometry persist.
+12. Undo/redo each operation and verify geometry, styles, hierarchy and selection context.
+13. Export SVG and reopen/import it; compare geometry, fill, stroke, gradient and masks within supported format limits.
+14. Use locked, hidden, nested, overlapping and partially transparent objects; verify hit testing is deterministic.
+15. Test keyboard shortcuts while canvas, inspector inputs and text editing each have focus.
+
+### 32.15 Recommended implementation workflow for the IDE agent
+
+**Phase 0 — Audit only:** inspect the repo, map existing features, write a gap analysis and test baseline. Do not change code.
+
+**Phase 1 — Interaction foundation:** normalize pointer gesture lifecycle, selection hit testing, editing modes, undo transactions, pivot model and shortcut registry, reusing existing services.
+
+**Phase 2 — Core path geometry:** point types, handles, add/delete point, open/close/join/split, curve continuity and vector edit mode.
+
+**Phase 3 — Shape construction and Boolean operations:** live shapes, add/subtract/intersect/exclude, Shape Builder, non-destructive child editing and explicit flatten/expand.
+
+**Phase 4 — Appearance and color:** fill/stroke stacks, picker, eyedropper, gradients, Selection colors, variables/styles and theme modes.
+
+**Phase 5 — Precision and organization:** snapping, guides, alignment/distribution, masks, compound paths, layer/group behavior, keyboard consistency.
+
+**Phase 6 — Advanced tools:** offset/simplify, brushes, variable width, mesh, deformation, repeat/pattern, specialized tools as scope allows.
+
+**Phase 7 — AI and polish:** prompt-to-vector, explainable batch edits, accessibility and design-token-aware recommendations.
+
+At each phase: implement a thin vertical slice, add tests, run regression checks, document limitations and only then proceed. If the current codebase already implements a phase, do not rewrite it; validate it and move to the missing behavior.
+
+### 32.16 Official reference documentation
+
+Use these sources to verify terminology and interaction patterns; they do not override DesignForge AI's preservation contract or existing product architecture.
+
+- Figma — Vector networks: https://help.figma.com/hc/en-us/articles/360040450213-Vector-networks
+- Figma — Edit vector layers: https://help.figma.com/hc/en-us/articles/360039957634-Edit-vector-layers
+- Figma — Boolean operations: https://help.figma.com/hc/en-us/articles/360039957534-Boolean-operations
+- Figma — Corner radius and smoothing: https://help.figma.com/hc/en-us/articles/360050986854-Adjust-corner-radius-and-smoothing
+- Figma — Stroke properties: https://help.figma.com/hc/en-us/articles/360049283914-Apply-and-adjust-stroke-properties
+- Sketch — Vector editing: https://www.sketch.com/docs/designing/vector-editing/
+- Sketch — Boolean operations: https://www.sketch.com/docs/designing/shapes/boolean-operations/
+- Sketch — Color variables: https://www.sketch.com/docs/symbols-and-styles/color-variables/
+- Sketch — General design documentation: https://www.sketch.com/docs/designing/
+
+---
+
+## 33. Final instruction to the IDE AI agent
+
+Treat this Markdown file as a **requirements and roadmap specification**, not permission to rebuild the application. Start by auditing the existing repository and producing a feature gap matrix. Preserve current functionality, existing design language, data and project workflows. Implement missing behavior in small, tested increments. Keep editable vector geometry and color resources as first-class document data. Make destructive operations explicit. Ensure double-click, point editing, Add/Subtract, pivot transforms, fills/strokes and color variables have predictable and documented behavior. Do not mark any feature complete until its interaction, rendering, undo/redo, persistence and regression tests have been verified.
+
+
+
+# Part. 2
+
+# DesignForge AI — Application Launch, Workspace Navigation & Multi-Document Switching
+
+**Document type:** Engineering requirements / implementation specification  
+**Priority:** High  
+**Primary objective:** Add a familiar, Figma-inspired application opening experience and multi-file navigation while preserving all existing DesignForge AI functionality.
+
+---
+
+## 1. Mission and non-negotiable constraint
+
+Update the application shell and document-navigation experience so users can open DesignForge AI, find their work, open multiple design files, and switch between them efficiently.
+
+**Do not regress, remove, replace, or unnecessarily refactor any existing functionality.** This is a navigation and document-session enhancement, not an editor rebuild.
+
+The implementation agent must inspect the current codebase first and reuse existing architecture wherever possible. Do not assume a framework, router, state manager, file schema, persistence mechanism, or directory structure without verifying it.
+
+### Existing functionality that must remain intact
+
+Preserve all existing capabilities, including but not limited to:
+
+- Design canvas, rendering, zoom, pan, pages, frames, and viewport behavior.
+- Selection, multi-selection, movement, resizing, alignment, constraints, and transforms.
+- Vector tools, paths, boolean operations, stroke, fill, gradients, and color controls.
+- Text editing, typography, fonts, and text-related interactions.
+- Layers panel, object hierarchy, ordering, grouping, and visibility/locking.
+- Components, component instances, variants, assets, libraries, variables, and design tokens.
+- Prototyping, connections, interactions, flows, and previews.
+- AI design generation, contextual suggestions, and AI operations.
+- Undo/redo, clipboard, keyboard shortcuts, and context menus.
+- Import, export, save, autosave, recovery, and existing file formats.
+- Collaboration, permissions, and sharing, if already implemented.
+- Current visual language, UI components, design tokens, and interaction conventions.
+
+Do not create duplicate implementations of existing capabilities.
+
+## 2. Required implementation approach
+
+Separate concerns while keeping the existing editor as the source of truth:
+
+1. **Application shell:** global navigation, workspace header, Home, Projects, Recents, and account/workspace controls.
+2. **Document navigation:** open-file tabs, file switcher, tab activation, and close behavior.
+3. **Document session coordination:** associates each open document with its own state and asynchronous operations.
+4. **Existing editor:** continues to own design editing, canvas behavior, and existing tools.
+5. **Existing persistence layer:** remains responsible for saving/loading unless codebase inspection proves a small adapter is needed.
+
+Use adapters or thin integration layers where possible. Do not rewrite the editor or persistence system simply to fit this design.
+
+## 3. Application launch behavior
+
+Implement these entry paths:
+
+### 3.1 First-time user
+- Open the workspace Home screen.
+- Present a clear **New Design** action.
+- Show useful onboarding or empty-state guidance without blocking access to the editor.
+
+### 3.2 Returning user
+- Open Home with recent files, projects, and drafts.
+- Provide a **Continue Working** action for the last active document.
+- Restore the last active document automatically only if this is consistent with the current product behavior and does not unexpectedly bypass required workspace or permission checks.
+
+### 3.3 Direct file URL or internal file link
+- Resolve the requested document ID and permissions.
+- Load the requested document directly when authorized.
+- Show a useful loading, missing-file, or permission-denied state.
+- Never display a different document as if it were the requested one.
+
+### 3.4 Reopening the application
+- Restore workspace context and open-document tabs only when the existing persistence and product expectations support it.
+- If session restoration is not currently supported, implement a safe, minimal version without changing existing document storage formats.
+- A failed restoration must fall back to Home or a recovery state, not a blank or broken editor.
+
+## 4. Workspace navigation
+
+Provide these entry points, adapting names and locations to the existing UI:
+
+- **Home:** workspace overview and recent work.
+- **Projects:** existing project/folder hierarchy.
+- **Recents:** recently opened files.
+- **Shared:** shared documents, only if sharing already exists.
+- **New Design:** calls the existing document-creation flow.
+- **Quick File Switcher:** searchable overlay for quickly locating and opening files.
+
+Navigation must not delete, reset, or silently close open documents. Returning to Home should not itself discard an editor session.
+
+Do not invent backend features such as team management, sharing, cloud storage, or permissions if they do not already exist. If a required capability is absent, expose only the UI that can be supported and document the dependency.
+
+## 5. Multi-document tab bar
+
+Add a document tab bar within the editor shell.
+
+Each open tab should:
+- Refer to a stable, unique document ID—not a file name or list index.
+- Display a readable file name, truncating long names safely.
+- Indicate unsaved changes using the application's existing status conventions.
+- Clearly distinguish the active document.
+- Provide a close control that closes the tab only, not the underlying file.
+- Support opening the same document only once per workspace session unless the existing product intentionally supports multiple views of one document.
+- Preserve a usable layout with many tabs (for example, overflow/scrolling and an accessible way to find tabs).
+
+Tab activation must switch the active document context without remounting or resetting unrelated global application services.
+
+### New tab behavior
+- The `+` action must call the existing New Design flow.
+- Use the current document creation defaults and format.
+- Do not create a separate, incompatible document schema.
+
+### Close tab behavior
+- If there are no unsaved changes, close the tab.
+- If there are unsaved changes, use the existing save/recovery flow where available. Otherwise, present a clear Save / Don't Save / Cancel confirmation.
+- **Cancel** leaves the document open and unchanged.
+- **Save** closes only after persistence succeeds or the existing system confirms the changes are safely recoverable.
+- **Don't Save** may discard edits only after explicit user confirmation and only if this is consistent with the product's existing recovery policy.
+- If saving fails, keep the tab open and preserve the user's work.
+
+## 6. Quick File Switcher
+
+Implement a searchable overlay accessible from the UI and a keyboard shortcut.
+
+Required behavior:
+- Search by file name; include project/folder names or paths when available.
+- Show useful file identity information so similarly named files can be distinguished.
+- Display recent files first where useful.
+- Selecting an already-open file activates its existing tab.
+- Selecting a file that is not open resolves permissions and opens it in a new tab.
+- Support keyboard navigation, Enter to open, and Escape to close.
+- Provide loading, no-results, and error states.
+- Do not fabricate search results or treat a failed lookup as a valid file.
+- Reuse the existing search/API layer if one exists.
+
+## 7. Keyboard shortcuts
+
+Add shortcuts only after auditing the current shortcut registry. Preserve all existing editor shortcuts and avoid conflicts with vector, text, canvas, zoom, undo/redo, and prototype interactions.
+
+Suggested defaults, subject to conflict review:
+
+| Action | macOS | Windows/Linux |
+|---|---|---|
+| Quick File Switcher | `Cmd+P` | `Ctrl+P` |
+| Next open tab | `Ctrl+Tab` | `Ctrl+Tab` |
+| Previous open tab | `Ctrl+Shift+Tab` | `Ctrl+Shift+Tab` |
+| Close active tab | `Cmd+W` | `Ctrl+W` |
+| New Design | `Cmd+N` | `Ctrl+N` |
+| Save active document | `Cmd+S` | `Ctrl+S` |
+
+Rules:
+- The existing shortcut registry is the source of truth.
+- Do not bind a shortcut if it conflicts with a currently supported action.
+- Reuse existing save and document-creation handlers.
+- Handle browser and operating-system limitations honestly; do not promise interception of shortcuts the platform does not allow.
+- Shortcut handling must respect text-editing fields and modal dialogs.
+
+## 8. Document identity and session isolation
+
+Every open document must have a stable ID. Use existing document types and session stores wherever possible; the following is conceptual only, not a requirement to replace current models:
+
+```ts
+type OpenDocument = {
+  documentId: string;
+  fileName: string;
+  projectId?: string;
+  status: "loading" | "ready" | "saving" | "error";
+  isDirty: boolean;
+  lastOpenedAt?: number;
+};
+
+type WorkspaceState = {
+  openDocumentIds: string[];
+  activeDocumentId: string | null;
+};
+```
+
+Do not add a second source of truth for document state. If the current application already has equivalent types, extend or adapt them instead of duplicating them.
+
+### State that must remain document-specific
+
+Where supported by the current editor, keep the following isolated per document:
+- Document content, layer hierarchy, vector geometry, and object IDs.
+- Active page/frame, selection, viewport zoom and pan.
+- Undo/redo history and pending operations.
+- Document-local components, variables, styles, and design-token references.
+- Prototype connections, interactions, flows, and preview state.
+- AI requests and results that depend on a document or selection.
+- Document-specific temporary editing state.
+- Save status, revision/version, and persistence operations.
+
+Global preferences such as theme and interface density may remain global. Do not move state between global and document scope without a code audit.
+
+### Asynchronous safety
+Every asynchronous operation that can update document state must be associated with the originating document ID and, where applicable, revision or operation token.
+
+Examples include:
+- Autosave and manual save.
+- AI generation and AI recommendations.
+- File loading and thumbnail generation.
+- Asset or font loading that mutates document data.
+- Background rendering or import operations.
+
+A late response for Document A must never mutate Document B just because B became active while the request was pending. Use cancellation, request IDs, revision checks, or equivalent protections appropriate to the existing architecture.
+
+## 9. Safe file-switching lifecycle
+
+Use a controlled transition:
+
+1. User requests a different document.
+2. Resolve the target document identity.
+3. If it is already open, activate its existing session.
+4. If it is not open, check access and load/validate it through the existing loader.
+5. Check the current document's dirty/pending state.
+6. Save or safely preserve pending changes according to the existing persistence policy.
+7. If saving or preservation fails, keep the current document active and show an actionable error.
+8. Deactivate the previous document context without destroying recoverable state.
+9. Activate the target document context.
+10. Restore that document's supported viewport, selection, page, and editing state.
+11. Verify the active document ID before rendering or accepting mutations.
+12. Display the target document only after its state is ready.
+
+The exact ordering may be adapted to the existing editor architecture, but the safety guarantees must remain.
+
+## 10. Persistence and recovery
+
+- Reuse existing load, save, autosave, and recovery services.
+- Do not introduce a parallel persistence implementation.
+- Never report a save as successful before the existing persistence layer confirms success.
+- Keep dirty status accurate.
+- Handle network failures, permission failures, conflicts, and invalid documents without crashing the app.
+- If the application supports offline work, preserve its current offline behavior.
+- Do not change file formats or backend schemas unless separately approved and justified.
+- Keep recovery data tied to the correct document ID and revision.
+
+## 11. Performance and resource management
+
+- Keep the application shell mounted while switching documents where the architecture allows.
+- Avoid reinitializing global services or expensive editor subsystems on every tab activation.
+- Load unopened documents on demand.
+- Use the existing rendering and caching strategy.
+- If memory pressure requires unloading inactive document sessions, first persist or otherwise safely preserve all recoverable state, then restore it on activation.
+- Prevent duplicate loads and stale render/save operations during rapid switching.
+- Keep tab interactions responsive without compromising document integrity.
+
+Do not add arbitrary tab limits or silently unload user work. If a limit is necessary, make it explicit and safe.
+
+## 12. Error and empty states
+
+Provide understandable, actionable states for:
+- No recent files.
+- File not found or deleted.
+- Permission denied.
+- File loading or validation failure.
+- Save/autosave failure.
+- Network or backend failure, where applicable.
+- Conflicting or stale document revision.
+- Failed session restoration.
+- Empty search results.
+- Unsaved changes when closing or leaving a document.
+
+Error handling must not erase the user's current work or present a different file as the requested document.
+
+## 13. Visual and interaction constraints
+
+- Follow the existing DesignForge AI design system and UI styling.
+- Reuse current components, tokens, icon library, spacing, typography, and interaction patterns.
+- Do not redesign the canvas, toolbar, left/right panels, or properties UI as part of this task.
+- The new tab bar and workspace screens must visually integrate with the existing application.
+- Support the existing responsive behavior and accessibility conventions.
+- Provide keyboard focus, visible focus states, meaningful accessible labels, and appropriate tooltips for icon-only controls.
+- Do not add decorative UI that blocks core editing work.
+
+## 14. Implementation plan
+
+### Phase 0 — Mandatory codebase audit
+Before editing, identify:
+- Application entry point and current routing.
+- Existing Home/dashboard or project-browser implementation.
+- Document model and stable document identifiers.
+- Editor mount/unmount lifecycle.
+- State management and current active-document mechanism.
+- Load/save/autosave/recovery services.
+- Undo/redo and history ownership.
+- AI request lifecycle and async mutation patterns.
+- Keyboard shortcut registry.
+- Existing UI components, tokens, and icon library.
+- Relevant tests and current known limitations.
+
+Produce a short map of existing modules and the smallest proposed changes. Do not start a broad refactor.
+
+### Phase 1 — Shell and workspace navigation
+- Add or adapt Home, Projects, Recents, and New Design entry points.
+- Reuse current file and project APIs.
+- Verify that returning to Home does not discard active sessions.
+
+### Phase 2 — Tabs and document switching
+- Add tab bar and stable document identity integration.
+- Add active-tab switching and safe close behavior.
+- Preserve per-document editor state and history.
+
+### Phase 3 — Quick File Switcher and shortcuts
+- Add searchable overlay and keyboard navigation.
+- Integrate shortcuts through the existing registry.
+- Resolve conflicts before enabling defaults.
+
+### Phase 4 — Persistence, race safety, and recovery
+- Validate dirty-state tracking and save failures.
+- Guard async operations against stale document context.
+- Verify recovery and rapid-switch behavior.
+
+### Phase 5 — Regression and release
+- Run existing tests before and after the changes.
+- Add focused tests for navigation and multi-document behavior.
+- Run the full relevant regression suite.
+- Report any test that cannot be run and why; do not claim unexecuted tests passed.
+
+## 15. Acceptance criteria
+
+The work is complete only when all applicable criteria pass:
+
+- [ ] App opens to the correct Home, restored workspace, or direct document route.
+- [ ] Existing files open using the current loader and document format.
+- [ ] Multiple files can remain open as tabs.
+- [ ] Clicking a tab activates the correct document.
+- [ ] Each document retains its own supported viewport, page, selection, history, and local editing state.
+- [ ] Undo/redo in one document does not affect another.
+- [ ] Switching does not silently discard unsaved changes.
+- [ ] Save failure keeps recoverable work available.
+- [ ] Quick File Switcher opens existing tabs or loads a new document correctly.
+- [ ] Closing a tab does not delete the underlying file.
+- [ ] Direct URLs and permission checks continue to work.
+- [ ] Rapid switching cannot cause stale async results to mutate the wrong document.
+- [ ] Existing shortcuts remain functional and conflicts are documented/resolved.
+- [ ] Existing canvas, vector, text, layers, components, tokens, AI, prototype, import/export, and persistence features pass regression tests.
+- [ ] The existing visual language remains intact.
+- [ ] No duplicate editor engine, document model, persistence layer, or shortcut manager is introduced.
+- [ ] No unrelated files or functionality are refactored without explicit justification.
+
+## 16. Required implementation-agent response
+
+Before making code changes, summarize:
+1. The relevant existing modules and their responsibilities.
+2. The current document lifecycle and persistence behavior.
+3. The smallest safe implementation plan.
+4. Any architectural gaps or risks discovered.
+
+After implementation, report:
+1. Files/modules changed and why.
+2. Existing functionality preserved.
+3. Tests executed and their actual results.
+4. Known limitations or tests not run.
+5. Any follow-up work requiring approval.
+
+Do not claim that functionality is preserved solely because the code compiles. Verify it through relevant regression tests.
+
+---
+
+## Final directive
+
+**Implement the smallest safe change that delivers the requested launch, workspace navigation, multi-file tabs, and file switching. Preserve DesignForge AI's current functionality, visual language, data model, and editor behavior. Audit first, reuse existing systems, isolate new navigation logic, and validate with regression tests. If a requirement conflicts with the current architecture, explain the conflict and propose a minimal solution rather than silently rewriting existing functionality.**
+
