@@ -170,6 +170,8 @@
             <span id="saveStatusText">Saved locally</span>
           </div>
           <button class="menu-dropdown-btn workspace-top-action" id="btnWorkspaceDashboard" type="button" title="Open Workspace Projects">Projects</button>
+          <button class="menu-dropdown-btn workspace-top-action" id="btnTopbarProjectCrumb" type="button" title="View containing project in Workspace"><span data-icon="Folder" data-icon-size="13"></span> <span id="topbarProjectCrumbName">Project</span></button>
+          <button class="menu-dropdown-btn workspace-top-action" id="btnQuickFileSwitcher" type="button" title="Switch design file (⌘P)">Switch file</button>
           <button class="menu-dropdown-btn cmd-palette-trigger" id="btnOpenCommandPalette" title="Open Command Palette (⌘K)">
             <span class="cmd-k-badge">⌘K</span>
             <span class="cmd-k-text">Find anything...</span>
@@ -1953,37 +1955,194 @@
             <div class="workspace-profile-mini" id="workspaceProfileMini"></div>
           </aside>
           <div class="projects-main">
-            <header class="workspace-header">
-              <div>
-                <div class="workspace-breadcrumb">Workspace <span>/</span> Projects</div>
-                <h1>Your projects</h1>
-                <p>Pick up where you left off or start a new design.</p>
+            <!-- 1. All Projects View (Level 2: Projects List) -->
+            <div id="workspaceProjectsView">
+              <header class="workspace-header">
+                <div>
+                  <div class="workspace-breadcrumb">Workspace <span>/</span> Projects</div>
+                  <h1>Your projects</h1>
+                  <p>Pick up where you left off or start a new project.</p>
+                </div>
+                <div class="workspace-header-actions">
+                  <button class="workspace-secondary-btn" id="workspaceSettingsButton" type="button"><span data-icon="Settings"></span> Settings</button>
+                  <button class="workspace-avatar" id="workspaceProfileButton" type="button" aria-label="Open profile"></button>
+                  <button class="workspace-primary-btn" id="workspaceNewProject" type="button">＋ New project</button>
+                </div>
+              </header>
+              <div class="projects-toolbar">
+                <div>
+                  <h2 id="workspaceProjectHeading">Recent projects</h2>
+                  <span id="workspaceProjectSubheading">Your local projects</span>
+                </div>
+                <label class="workspace-sort">Sort by
+                  <select id="workspaceProjectSort">
+                    <option value="recent">Last edited</option>
+                    <option value="name">Name</option>
+                    <option value="created">Date created</option>
+                  </select>
+                </label>
               </div>
-              <div class="workspace-header-actions">
-                <button class="workspace-secondary-btn" id="workspaceSettingsButton" type="button"><span data-icon="Settings"></span> Settings</button>
-                <button class="workspace-avatar" id="workspaceProfileButton" type="button" aria-label="Open profile"></button>
-                <button class="workspace-primary-btn" id="workspaceNewProject" type="button">＋ New project</button>
+              <div class="workspace-project-grid" id="workspaceProjectGrid"></div>
+              <div class="workspace-empty-state" id="workspaceEmptyState" hidden>
+                <div class="workspace-empty-icon">▦</div>
+                <h2>No projects found</h2>
+                <p>Create a project or try a different search.</p>
+                <button class="workspace-primary-btn" id="workspaceEmptyCreate" type="button">Create a project</button>
               </div>
-            </header>
-            <div class="projects-toolbar">
-              <div>
-                <h2 id="workspaceProjectHeading">Recent projects</h2>
-                <span id="workspaceProjectSubheading">Your local design files</span>
-              </div>
-              <label class="workspace-sort">Sort by
-                <select id="workspaceProjectSort">
-                  <option value="recent">Last edited</option>
-                  <option value="name">Name</option>
-                  <option value="created">Date created</option>
-                </select>
-              </label>
             </div>
-            <div class="workspace-project-grid" id="workspaceProjectGrid"></div>
-            <div class="workspace-empty-state" id="workspaceEmptyState" hidden>
-              <div class="workspace-empty-icon">▦</div>
-              <h2>No projects found</h2>
-              <p>Create a project or try a different search.</p>
-              <button class="workspace-primary-btn" id="workspaceEmptyCreate" type="button">Create a project</button>
+
+            <!-- 2. Project Detail View (Level 3: Design Files inside selected Project) -->
+            <div id="workspaceProjectDetailView" hidden>
+              <header class="workspace-header">
+                <div>
+                  <div class="workspace-breadcrumb">
+                    <button type="button" class="breadcrumb-link-btn" id="breadcrumbBackToProjects">Projects</button>
+                    <span>/</span>
+                    <strong id="projectDetailBreadcrumbTitle">Project Name</strong>
+                  </div>
+                  <h1 id="projectDetailTitle">Project Name</h1>
+                  <p id="projectDetailDescription">Project description</p>
+                </div>
+                <div class="workspace-header-actions">
+                  <button class="workspace-secondary-btn" id="btnOpenProjectSettings" type="button"><span data-icon="Settings"></span> Project settings</button>
+                  <button class="workspace-primary-btn" id="btnProjectNewFile" type="button">＋ New design file</button>
+                </div>
+              </header>
+              <div class="projects-toolbar">
+                <div>
+                  <h2>Design files</h2>
+                  <span id="workspaceProjectFilesCount">0 design files</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <label class="workspace-search-inline">
+                    <span aria-hidden="true">⌕</span>
+                    <input id="workspaceFileSearch" type="search" placeholder="Search files in project" aria-label="Search files">
+                  </label>
+                  <label class="workspace-sort">Sort by
+                    <select id="workspaceFileSort">
+                      <option value="recent">Last edited</option>
+                      <option value="name">Name</option>
+                      <option value="created">Date created</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <div class="workspace-project-grid" id="workspaceFileGrid"></div>
+              <div class="workspace-empty-state" id="workspaceFileEmptyState" hidden>
+                <div class="workspace-empty-icon">▣</div>
+                <h2>No design files yet</h2>
+                <p>Create a design file in this project to start designing.</p>
+                <button class="workspace-primary-btn" id="btnProjectEmptyCreateFile" type="button">Create design file</button>
+              </div>
+            </div>
+
+            <!-- 3. Project Settings View (Level 4: General and Members & Access) -->
+            <div id="workspaceProjectSettingsView" hidden>
+              <header class="workspace-header">
+                <div>
+                  <div class="workspace-breadcrumb">
+                    <button type="button" class="breadcrumb-link-btn" id="breadcrumbSettingsToProjects">Projects</button>
+                    <span>/</span>
+                    <button type="button" class="breadcrumb-link-btn" id="breadcrumbSettingsToProjectName">Project Name</button>
+                    <span>/</span>
+                    <strong>Settings</strong>
+                  </div>
+                  <h1 id="projectSettingsHeaderTitle">Project settings</h1>
+                  <p>Manage project details and members with access to this project.</p>
+                </div>
+                <div class="workspace-header-actions">
+                  <button class="workspace-secondary-btn" id="btnBackToProjectFromSettings" type="button">← Back to project</button>
+                </div>
+              </header>
+
+              <div class="project-settings-nav">
+                <button type="button" class="project-settings-tab active" data-proj-settings-tab="general">General</button>
+                <button type="button" class="project-settings-tab" data-proj-settings-tab="members">Members & access</button>
+              </div>
+
+              <div id="projectSettingsTabGeneral">
+                <section class="settings-card" style="margin-top: 20px;">
+                  <h2>General settings</h2>
+                  <p>Update the name and description of this project.</p>
+                  <form id="formProjectGeneralSettings" style="display: grid; gap: 14px; max-width: 540px; margin-top: 14px;">
+                    <label style="display: grid; gap: 6px; font-size: 12px; color: #c8cbd2;">
+                      Project name
+                      <input id="inputProjectSettingsName" type="text" maxlength="100" required style="padding: 9px 12px; background: #222429; border: 1px solid #3c3f46; border-radius: 7px; color: #fff;">
+                    </label>
+                    <label style="display: grid; gap: 6px; font-size: 12px; color: #c8cbd2;">
+                      Description (optional)
+                      <textarea id="inputProjectSettingsDesc" rows="3" maxlength="300" placeholder="What is this project about?" style="padding: 9px 12px; background: #222429; border: 1px solid #3c3f46; border-radius: 7px; color: #fff; resize: vertical;"></textarea>
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <button type="submit" class="workspace-primary-btn" id="btnSaveProjectGeneral">Save changes</button>
+                      <span id="projectGeneralStatusMsg" class="project-member-status"></span>
+                    </div>
+                  </form>
+                </section>
+
+                <section class="settings-card" style="margin-top: 24px; border-color: rgba(239, 68, 68, 0.3);">
+                  <h2 style="color: #f87171;">Danger zone</h2>
+                  <p>Permanently remove this project. A project containing design files cannot be deleted until its files are moved or removed.</p>
+                  <div style="margin-top: 14px;">
+                    <button type="button" class="workspace-secondary-btn" id="btnDeleteProject" style="color: #f87171; border-color: #7f1d1d;">Delete this project</button>
+                  </div>
+                </section>
+              </div>
+
+              <div id="projectSettingsTabMembers" hidden>
+                <section class="settings-card" style="margin-top: 20px;">
+                  <h2>Members & access</h2>
+                  <p>People with access to this project and its design files. Global organization membership remains separate and unaffected.</p>
+
+                  <div class="project-add-member-bar" style="margin: 18px 0;">
+                    <select id="selectAddProjectMember" style="padding: 8px 12px; background: #1a1c20; border: 1px solid #3c3f46; border-radius: 7px; color: #fff; font-size: 12px; min-width: 220px;">
+                      <option value="">Select an eligible member...</option>
+                      <option value="user_jordan" data-name="Jordan Lee" data-email="jordan@example.com">Jordan Lee (UX Lead)</option>
+                      <option value="user_alex" data-name="Alex Morgan" data-email="alex@example.com">Alex Morgan (Senior UX Designer)</option>
+                      <option value="user_sam" data-name="Sam Kim" data-email="sam@example.com">Sam Kim (Product UX Designer)</option>
+                      <option value="user_riley" data-name="Riley Patel" data-email="riley@example.com">Riley Patel (UX Designer)</option>
+                    </select>
+                    <select id="selectAddProjectRole" style="padding: 8px 12px; background: #1a1c20; border: 1px solid #3c3f46; border-radius: 7px; color: #fff; font-size: 12px;">
+                      <option value="Designer">Designer</option>
+                      <option value="Project Lead">Project Lead</option>
+                      <option value="Viewer">Viewer</option>
+                    </select>
+                    <button type="button" class="workspace-primary-btn" id="btnAddProjectMember">Add to project</button>
+                    <span id="projectMemberStatusMsg" class="project-member-status"></span>
+                  </div>
+
+                  <div class="project-members-table-wrap">
+                    <table class="project-members-table">
+                      <thead>
+                        <tr>
+                          <th>Member</th>
+                          <th>Project Role</th>
+                          <th>Added</th>
+                          <th style="text-align: right;">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="projectMembersTableBody"></tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <!-- 4. Recently Opened View (Level 1 destination) -->
+            <div id="workspaceRecentFilesView" hidden>
+              <header class="workspace-header">
+                <div>
+                  <div class="workspace-breadcrumb">Workspace <span>/</span> Recently opened</div>
+                  <h1>Recently opened</h1>
+                  <p>Design files you worked on recently across all projects.</p>
+                </div>
+              </header>
+              <div class="workspace-project-grid" id="workspaceRecentFilesGrid" style="margin-top: 24px;"></div>
+              <div class="workspace-empty-state" id="workspaceRecentEmptyState" hidden>
+                <div class="workspace-empty-icon">🕒</div>
+                <h2>No recently opened files</h2>
+                <p>Open a design file from any project to see it listed here.</p>
+              </div>
             </div>
           </div>
         </section>
@@ -2022,14 +2181,45 @@
             <button class="workspace-modal-close" id="workspaceNewProjectClose" type="button" aria-label="Close"><span data-icon="X"></span></button>
             <img src="assets/logo-128.png" alt="DesignForge" class="workspace-empty-icon" style="width: 48px; height: 48px; border-radius: 10px; object-fit: contain; margin: 0 auto 13px; display: block; border: none; background: transparent;">
             <h2>Create a new project</h2>
-            <p>Your new project is saved locally and remains editable in DesignForge.</p>
+            <p>Your new project organizes related design files together.</p>
             <label for="workspaceNewProjectName">Project name</label>
             <input id="workspaceNewProjectName" maxlength="100" required placeholder="e.g. Mobile app concept">
+            <label for="workspaceNewProjectDesc" style="margin-top: 10px;">Description (optional)</label>
+            <textarea id="workspaceNewProjectDesc" rows="2" maxlength="300" placeholder="Brief project summary" style="padding: 9px 12px; background: #222429; border: 1px solid #3c3f46; border-radius: 7px; color: #fff; width: 100%; box-sizing: border-box; resize: vertical;"></textarea>
             <div class="workspace-modal-actions">
               <button class="workspace-secondary-btn" id="workspaceNewProjectCancel" type="button">Cancel</button>
               <button class="workspace-primary-btn" type="submit">Create project</button>
             </div>
           </form>
+        </div>
+
+        <div class="workspace-modal-backdrop" id="workspaceNewFileModal" hidden>
+          <form class="workspace-modal" id="workspaceNewFileForm">
+            <button class="workspace-modal-close" id="workspaceNewFileClose" type="button" aria-label="Close"><span data-icon="X"></span></button>
+            <div class="workspace-empty-icon" style="font-size: 20px;">▣</div>
+            <h2>New design file</h2>
+            <p>Create a design file inside <strong id="newFileProjectNameLabel">this project</strong>.</p>
+            <label for="workspaceNewFileName">File name</label>
+            <input id="workspaceNewFileName" maxlength="100" required placeholder="e.g. Overview Dashboard">
+            <div class="workspace-modal-actions">
+              <button class="workspace-secondary-btn" id="workspaceNewFileCancel" type="button">Cancel</button>
+              <button class="workspace-primary-btn" type="submit">Create file</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="workspace-modal-backdrop" id="workspaceFileSwitcherModal" hidden>
+          <div class="file-switcher-dialog" id="workspaceFileSwitcherDialog">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #fff;">Switch design file</h3>
+              <button class="workspace-modal-close" id="workspaceFileSwitcherClose" type="button" aria-label="Close" style="position: static;"><span data-icon="X"></span></button>
+            </div>
+            <div class="file-switcher-search">
+              <span aria-hidden="true">⌕</span>
+              <input id="quickFileSwitcherInput" type="search" placeholder="Type to filter files across projects..." aria-label="Search files">
+            </div>
+            <div class="file-switcher-list" id="quickFileSwitcherList"></div>
+          </div>
         </div>
 
         <!-- Unsaved Changes Modal (Part 2: §5) -->

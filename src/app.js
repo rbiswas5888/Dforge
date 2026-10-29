@@ -209,30 +209,172 @@ export class DesignForgeApp {
     document.getElementById('workspaceNewProjectForm')?.addEventListener('submit', event => {
       event.preventDefault();
       const name = document.getElementById('workspaceNewProjectName')?.value.trim();
+      const desc = document.getElementById('workspaceNewProjectDesc')?.value.trim() || '';
       if (!name) return;
       try {
-        this.createWorkspaceProject(name);
+        this.createWorkspaceProject(name, desc);
       } catch (error) {
         this.showToast(`Could not create project: ${error.message}`, 'error');
       }
     });
 
+    // Project cards interaction
     document.getElementById('workspaceProjectGrid')?.addEventListener('click', event => {
+      const settingsButton = event.target.closest('[data-open-project-settings]');
+      if (settingsButton) {
+        event.stopPropagation();
+        this.openProjectSettings(settingsButton.dataset.openProjectSettings);
+        return;
+      }
       const projectButton = event.target.closest('[data-open-project]');
       if (!projectButton) return;
       try {
-        this.openWorkspaceProject(projectButton.dataset.openProject);
+        const projId = projectButton.dataset.openProject;
+        this.openProjectDetail(projId);
+        if (event.ctrlKey || event.metaKey) {
+          this.openWorkspaceProject(projectButton.dataset.openProject);
+        }
       } catch (error) {
         this.showToast(`Could not open project: ${error.message}`, 'error');
       }
     });
+
+    // Topbar project breadcrumb & quick file switcher
+    document.getElementById('btnTopbarProjectCrumb')?.addEventListener('click', () => {
+      const activeId = this.workspaceStore.getActiveProjectId();
+      if (activeId) {
+        this.selectedProjectId = activeId;
+        this.showWorkspaceView('projects');
+        this.showWorkspaceSubView('project-detail');
+      } else {
+        this.showWorkspaceView('projects');
+      }
+    });
+    document.getElementById('btnQuickFileSwitcher')?.addEventListener('click', () => this.openQuickFileSwitcher());
+    window.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p' && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        this.openQuickFileSwitcher();
+      }
+    });
+
+    // Breadcrumb navigation
+    document.getElementById('breadcrumbBackToProjects')?.addEventListener('click', () => this.showWorkspaceSubView('projects'));
+    document.getElementById('breadcrumbSettingsToProjects')?.addEventListener('click', () => this.showWorkspaceSubView('projects'));
+    document.getElementById('breadcrumbSettingsToProjectName')?.addEventListener('click', () => this.openProjectDetail(this.selectedProjectId));
+    document.getElementById('btnBackToProjectFromSettings')?.addEventListener('click', () => this.openProjectDetail(this.selectedProjectId));
+
+    // Project Detail Actions
+    document.getElementById('btnOpenProjectSettings')?.addEventListener('click', () => this.openProjectSettings(this.selectedProjectId));
+    document.getElementById('btnProjectNewFile')?.addEventListener('click', () => this.openNewFileDialog());
+    document.getElementById('btnProjectEmptyCreateFile')?.addEventListener('click', () => this.openNewFileDialog());
+    document.getElementById('workspaceFileSearch')?.addEventListener('input', () => this.renderProjectDetail(this.selectedProjectId));
+    document.getElementById('workspaceFileSort')?.addEventListener('change', () => this.renderProjectDetail(this.selectedProjectId));
+
+    // Design Files Grid click (open file, delete file)
+    document.getElementById('workspaceFileGrid')?.addEventListener('click', event => {
+      const delBtn = event.target.closest('[data-delete-file]');
+      if (delBtn) {
+        event.stopPropagation();
+        this.deleteWorkspaceFile(delBtn.dataset.deleteFile);
+        return;
+      }
+      const fileBtn = event.target.closest('[data-open-file]');
+      if (fileBtn) {
+        try {
+          this.openWorkspaceFile(fileBtn.dataset.openFile);
+        } catch (err) {
+          this.showToast(`Could not open file: ${err.message}`, 'error');
+        }
+      }
+    });
+
+    // New File Modal
+    document.getElementById('workspaceNewFileClose')?.addEventListener('click', () => this.closeNewFileDialog());
+    document.getElementById('workspaceNewFileCancel')?.addEventListener('click', () => this.closeNewFileDialog());
+    document.getElementById('workspaceNewFileModal')?.addEventListener('click', event => {
+      if (event.target.id === 'workspaceNewFileModal') this.closeNewFileDialog();
+    });
+    document.getElementById('workspaceNewFileForm')?.addEventListener('submit', event => {
+      event.preventDefault();
+      const fileName = document.getElementById('workspaceNewFileName')?.value.trim();
+      if (!fileName) return;
+      try {
+        this.createWorkspaceFile(this.selectedProjectId, fileName);
+      } catch (err) {
+        this.showToast(`Could not create file: ${err.message}`, 'error');
+      }
+    });
+
+    // Quick File Switcher Modal
+    document.getElementById('workspaceFileSwitcherClose')?.addEventListener('click', () => this.closeQuickFileSwitcher());
+    document.getElementById('workspaceFileSwitcherModal')?.addEventListener('click', event => {
+      if (event.target.id === 'workspaceFileSwitcherModal') this.closeQuickFileSwitcher();
+    });
+    document.getElementById('quickFileSwitcherInput')?.addEventListener('input', event => {
+      this.renderQuickFileSwitcherList(event.target.value);
+    });
+    document.getElementById('quickFileSwitcherList')?.addEventListener('click', event => {
+      const switchBtn = event.target.closest('[data-switch-file]');
+      if (switchBtn) {
+        this.openWorkspaceFile(switchBtn.dataset.switchFile);
+        this.closeQuickFileSwitcher();
+      }
+    });
+
+    // Project Settings Navigation & Actions
+    document.querySelectorAll('[data-proj-settings-tab]').forEach(tabBtn => {
+      tabBtn.addEventListener('click', () => {
+        document.querySelectorAll('[data-proj-settings-tab]').forEach(b => b.classList.toggle('active', b === tabBtn));
+        const tab = tabBtn.dataset.projSettingsTab;
+        const generalTab = document.getElementById('projectSettingsTabGeneral');
+        const membersTab = document.getElementById('projectSettingsTabMembers');
+        if (generalTab) generalTab.hidden = tab !== 'general';
+        if (membersTab) membersTab.hidden = tab !== 'members';
+      });
+    });
+    document.getElementById('formProjectGeneralSettings')?.addEventListener('submit', event => {
+      event.preventDefault();
+      this.handleSaveProjectGeneral();
+    });
+    document.getElementById('btnDeleteProject')?.addEventListener('click', () => this.handleDeleteProject());
+    document.getElementById('btnAddProjectMember')?.addEventListener('click', () => this.handleAddProjectMember());
+    document.getElementById('projectMembersTableBody')?.addEventListener('change', event => {
+      const roleSelect = event.target.closest('.project-member-role-select');
+      if (roleSelect) {
+        this.handleProjectMemberRoleChange(roleSelect.dataset.memberUserId, roleSelect.value);
+      }
+    });
+    document.getElementById('projectMembersTableBody')?.addEventListener('click', event => {
+      const removeBtn = event.target.closest('[data-remove-member]');
+      if (removeBtn) {
+        this.handleRemoveProjectMember(removeBtn.dataset.removeMember);
+      }
+    });
+
+    // Recently Opened grid click
+    document.getElementById('workspaceRecentFilesGrid')?.addEventListener('click', event => {
+      const fileBtn = event.target.closest('[data-open-file]');
+      if (fileBtn) {
+        try {
+          this.openWorkspaceFile(fileBtn.dataset.openFile);
+        } catch (err) {
+          this.showToast(`Could not open file: ${err.message}`, 'error');
+        }
+      }
+    });
+
     document.getElementById('workspaceProjectSearch')?.addEventListener('input', () => this.renderWorkspaceDashboard());
     document.getElementById('workspaceProjectSort')?.addEventListener('change', () => this.renderWorkspaceDashboard());
     document.querySelectorAll('[data-project-filter]').forEach(button => {
       button.addEventListener('click', () => {
         document.querySelectorAll('[data-project-filter]').forEach(item => item.classList.toggle('active', item === button));
         this.workspaceProjectFilter = button.dataset.projectFilter;
-        this.renderWorkspaceDashboard();
+        if (this.workspaceProjectFilter === 'recent') {
+          this.showWorkspaceSubView('recent-files');
+        } else {
+          this.showWorkspaceSubView('projects');
+        }
       });
     });
 
@@ -248,6 +390,8 @@ export class DesignForgeApp {
       if (event.target.id === 'providerModelSelect') this.setSettingsStatus('Model selection is not saved until you click Save AI settings.', 'info');
     });
     this.workspaceProjectFilter = 'all';
+    this.selectedProjectId = this.workspaceStore.getActiveProjectId();
+    this.updateTopbarProjectCrumb();
     this.renderWorkspaceDashboard();
   }
 
@@ -266,12 +410,64 @@ export class DesignForgeApp {
     document.getElementById('workspaceDashboard').hidden = view !== 'projects';
     document.getElementById('workspaceSettings').hidden = view !== 'settings';
     document.getElementById('workspaceNewProjectModal').hidden = true;
+    document.getElementById('workspaceNewFileModal').hidden = true;
+    document.getElementById('workspaceFileSwitcherModal').hidden = true;
     if (view === 'projects') {
       if (!this.storage.flushAutosave(this.doc)) {
-        this.showToast('The current project could not be fully saved before opening the dashboard.', 'error');
+        this.showToast('The current document could not be fully saved before opening the dashboard.', 'error');
       }
-      this.renderWorkspaceDashboard();
+      this.showWorkspaceSubView(this.workspaceSubView || 'projects');
     }
+  }
+
+  showWorkspaceSubView(subView) {
+    this.workspaceSubView = subView;
+    const viewProjects = document.getElementById('workspaceProjectsView');
+    const viewDetail = document.getElementById('workspaceProjectDetailView');
+    const viewSettings = document.getElementById('workspaceProjectSettingsView');
+    const viewRecent = document.getElementById('workspaceRecentFilesView');
+
+    if (viewProjects) viewProjects.hidden = subView !== 'projects';
+    if (viewDetail) viewDetail.hidden = subView !== 'project-detail';
+    if (viewSettings) viewSettings.hidden = subView !== 'project-settings';
+    if (viewRecent) viewRecent.hidden = subView !== 'recent-files';
+
+    if (subView === 'projects') {
+      this.renderWorkspaceDashboard();
+    } else if (subView === 'project-detail') {
+      this.renderProjectDetail(this.selectedProjectId);
+    } else if (subView === 'project-settings') {
+      this.renderProjectSettings(this.selectedProjectId);
+    } else if (subView === 'recent-files') {
+      this.renderRecentFiles();
+    }
+  }
+
+  openProjectDetail(projectId) {
+    if (!projectId) {
+      this.showWorkspaceSubView('projects');
+      return;
+    }
+    this.selectedProjectId = projectId;
+    this.workspaceStore.setActiveProjectId(projectId);
+    this.showWorkspaceSubView('project-detail');
+  }
+
+  openProjectSettings(projectId, tab = 'general') {
+    if (!projectId) {
+      this.showWorkspaceSubView('projects');
+      return;
+    }
+    this.selectedProjectId = projectId;
+    this.showWorkspaceSubView('project-settings');
+    document.querySelectorAll('[data-proj-settings-tab]').forEach(b => {
+      b.classList.toggle('active', b.dataset.projSettingsTab === tab);
+    });
+    const generalTab = document.getElementById('projectSettingsTabGeneral');
+    const membersTab = document.getElementById('projectSettingsTabMembers');
+    if (generalTab) generalTab.hidden = tab !== 'general';
+    if (membersTab) membersTab.hidden = tab !== 'members';
+    this.renderProjectSettings(projectId, tab);
   }
 
   openWorkspaceSettings(tab = 'account') {
@@ -287,6 +483,25 @@ export class DesignForgeApp {
   openNewProjectDialog() {
     const modal = document.getElementById('workspaceNewProjectModal');
     const input = document.getElementById('workspaceNewProjectName');
+    const desc = document.getElementById('workspaceNewProjectDesc');
+    if (modal) modal.hidden = false;
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    if (desc) desc.value = '';
+  }
+
+  closeNewProjectDialog() {
+    document.getElementById('workspaceNewProjectModal').hidden = true;
+  }
+
+  openNewFileDialog() {
+    const modal = document.getElementById('workspaceNewFileModal');
+    const input = document.getElementById('workspaceNewFileName');
+    const label = document.getElementById('newFileProjectNameLabel');
+    const project = this.workspaceStore.getProject(this.selectedProjectId);
+    if (label) label.textContent = project?.name || 'this project';
     if (modal) modal.hidden = false;
     if (input) {
       input.value = '';
@@ -294,31 +509,120 @@ export class DesignForgeApp {
     }
   }
 
-  closeNewProjectDialog() {
-    document.getElementById('workspaceNewProjectModal').hidden = true;
+  closeNewFileDialog() {
+    document.getElementById('workspaceNewFileModal').hidden = true;
   }
 
-  createWorkspaceProject(name) {
+  openQuickFileSwitcher() {
+    const modal = document.getElementById('workspaceFileSwitcherModal');
+    const input = document.getElementById('quickFileSwitcherInput');
+    if (modal) modal.hidden = false;
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    this.renderQuickFileSwitcherList('');
+  }
+
+  closeQuickFileSwitcher() {
+    document.getElementById('workspaceFileSwitcherModal').hidden = true;
+  }
+
+  renderQuickFileSwitcherList(query = '') {
+    const list = document.getElementById('quickFileSwitcherList');
+    if (!list) return;
+    const recent = this.workspaceStore.getRecentFiles(25);
+    const filterText = query.trim().toLowerCase();
+    const filtered = filterText ? recent.filter(f => f.name.toLowerCase().includes(filterText) || f.projectName.toLowerCase().includes(filterText)) : recent;
+
+    if (!filtered.length) {
+      list.innerHTML = `<div style="padding: 16px; text-align: center; color: #9ba1ab; font-size: 12px;">No matching design files found.</div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(file => `
+      <button class="file-switcher-item" type="button" data-switch-file="${this.workspaceEscape(file.id)}">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #60a5fa;">▣</span>
+          <strong>${this.workspaceEscape(file.name)}</strong>
+        </div>
+        <span class="workspace-project-pill">in ${this.workspaceEscape(file.projectName)}</span>
+      </button>
+    `).join('');
+  }
+
+  createWorkspaceProject(name, description = '') {
     if (!this.storage.flushAutosave(this.doc)) {
       throw new Error('Current project changes could not be saved; the new project was not created.');
     }
     const nextDocument = createInitialDocument(name);
-    this.workspaceStore.createProject(nextDocument);
+    const project = this.workspaceStore.createProject(nextDocument, description);
+    this.selectedProjectId = project.id;
     this.openDocumentInTab(nextDocument);
     if (!this.storage.flushAutosave(nextDocument)) {
       this.showToast('Project was created, but its latest local snapshot could not be saved.', 'error');
     }
     const titleInput = document.getElementById('projectTitleInput');
     if (titleInput) titleInput.value = nextDocument.name;
+    this.updateTopbarProjectCrumb();
     this.closeNewProjectDialog();
     this.showWorkspaceView('editor');
-    this.showToast(`Created "${name}" locally.`, 'success');
+    this.showToast(`Created project "${name}" locally.`, 'success');
+  }
+
+  createWorkspaceFile(projectId, name) {
+    if (!this.storage.flushAutosave(this.doc)) {
+      throw new Error('Current changes could not be saved; file creation cancelled.');
+    }
+    const nextDocument = createInitialDocument(name);
+    this.workspaceStore.createDesignFile(projectId, nextDocument);
+    this.selectedProjectId = projectId;
+    this.openDocumentInTab(nextDocument);
+    if (!this.storage.flushAutosave(nextDocument)) {
+      this.showToast('File was created, but its latest snapshot could not be saved.', 'error');
+    }
+    const titleInput = document.getElementById('projectTitleInput');
+    if (titleInput) titleInput.value = nextDocument.name;
+    this.updateTopbarProjectCrumb();
+    this.closeNewFileDialog();
+    this.showWorkspaceView('editor');
+    this.showToast(`Created design file "${name}".`, 'success');
+  }
+
+  openWorkspaceFile(fileId) {
+    if (!this.storage.flushAutosave(this.doc)) {
+      throw new Error('Current changes could not be saved; file switching was cancelled.');
+    }
+    const file = this.workspaceStore.getFile(fileId);
+    if (file?.projectId) {
+      this.selectedProjectId = file.projectId;
+      this.workspaceStore.setActiveProjectId(file.projectId);
+    }
+    const nextDocument = this.workspaceStore.loadDesignFile(fileId);
+    this.openDocumentInTab(nextDocument);
+    if (!this.storage.flushAutosave(nextDocument)) {
+      this.showToast('File opened, but its latest local snapshot could not be saved.', 'error');
+    }
+    const titleInput = document.getElementById('projectTitleInput');
+    if (titleInput) titleInput.value = nextDocument.name;
+    this.updateTopbarProjectCrumb();
+    this.showWorkspaceView('editor');
+  }
+
+  deleteWorkspaceFile(fileId) {
+    const file = this.workspaceStore.getFile(fileId);
+    if (!file) return;
+    if (!confirm(`Delete design file "${file.name}"? This action cannot be undone.`)) return;
+    this.workspaceStore.deleteDesignFile(fileId);
+    this.showToast(`Deleted design file "${file.name}".`, 'info');
+    this.renderProjectDetail(this.selectedProjectId);
   }
 
   openWorkspaceProject(projectId) {
     if (!this.storage.flushAutosave(this.doc)) {
       throw new Error('Current project changes could not be saved; project switching was cancelled.');
     }
+    this.selectedProjectId = projectId;
     const nextDocument = this.workspaceStore.loadProject(projectId);
     this.openDocumentInTab(nextDocument);
     if (!this.storage.flushAutosave(nextDocument)) {
@@ -326,7 +630,15 @@ export class DesignForgeApp {
     }
     const titleInput = document.getElementById('projectTitleInput');
     if (titleInput) titleInput.value = nextDocument.name;
+    this.updateTopbarProjectCrumb();
     this.showWorkspaceView('editor');
+  }
+
+  updateTopbarProjectCrumb() {
+    const activeProjectId = this.workspaceStore.getActiveProjectId() || this.selectedProjectId;
+    const project = activeProjectId ? this.workspaceStore.getProject(activeProjectId) : null;
+    const crumbEl = document.getElementById('topbarProjectCrumbName');
+    if (crumbEl) crumbEl.textContent = project?.name || 'Project';
   }
 
   renderWorkspaceDashboard() {
@@ -342,7 +654,6 @@ export class DesignForgeApp {
     const sort = document.getElementById('workspaceProjectSort')?.value || 'recent';
     const filter = this.workspaceProjectFilter || 'all';
     let visibleProjects = projects.filter(project => project.name.toLowerCase().includes(search));
-    if (filter === 'recent') visibleProjects = visibleProjects.slice(0, 6);
     visibleProjects.sort((a, b) => sort === 'name'
       ? a.name.localeCompare(b.name)
       : sort === 'created'
@@ -354,7 +665,7 @@ export class DesignForgeApp {
     if (count) count.textContent = String(projects.length);
     const heading = document.getElementById('workspaceProjectHeading');
     const subheading = document.getElementById('workspaceProjectSubheading');
-    if (heading) heading.textContent = filter === 'recent' ? 'Recently opened' : 'Recent projects';
+    if (heading) heading.textContent = 'Recent projects';
     if (subheading) subheading.textContent = `${projects.length} local project${projects.length === 1 ? '' : 's'}`;
 
     const dateText = value => {
@@ -377,9 +688,19 @@ export class DesignForgeApp {
           </div>
           <div class="workspace-project-meta">
             <span class="workspace-project-file-icon" aria-hidden="true">▣</span>
-            <span><strong>${this.workspaceEscape(project.name)}${project.id === activeId ? ' · Open' : ''}</strong><small>${dateText(project.updatedAt)}</small></span>
+            <div style="flex: 1; min-width: 0;">
+              <strong>${this.workspaceEscape(project.name)}${project.id === activeId ? ' · Active' : ''}</strong>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+                <small>${dateText(project.updatedAt)}</small>
+                <span class="workspace-project-pill">${project.fileCount || 0} file${project.fileCount === 1 ? '' : 's'}</span>
+              </div>
+            </div>
           </div>
         </button>
+        <div class="workspace-card-actions" style="padding: 0 12px 10px; display: flex; justify-content: space-between;">
+          <button class="workspace-card-action-btn" type="button" data-open-project-settings="${this.workspaceEscape(project.id)}" title="Project settings">Settings</button>
+          <button class="workspace-card-action-btn" type="button" data-open-project="${this.workspaceEscape(project.id)}" title="Open project detail">Open project →</button>
+        </div>
       </article>
     `).join('');
     const isEmpty = !visibleProjects.length;
@@ -387,6 +708,327 @@ export class DesignForgeApp {
     grid.hidden = isEmpty;
     this.renderWorkspaceProfileSummary();
   }
+
+  renderProjectDetail(projectId) {
+    const project = this.workspaceStore.getProject(projectId);
+    if (!project) {
+      this.showWorkspaceSubView('projects');
+      return;
+    }
+    const breadcrumbTitle = document.getElementById('projectDetailBreadcrumbTitle');
+    const titleEl = document.getElementById('projectDetailTitle');
+    const descEl = document.getElementById('projectDetailDescription');
+    if (breadcrumbTitle) breadcrumbTitle.textContent = project.name;
+    if (titleEl) titleEl.textContent = project.name;
+    if (descEl) descEl.textContent = project.description || 'Organize and edit design files for this project.';
+
+    let files = this.workspaceStore.getDesignFiles(projectId);
+    const search = (document.getElementById('workspaceFileSearch')?.value || '').trim().toLowerCase();
+    const sort = document.getElementById('workspaceFileSort')?.value || 'recent';
+
+    if (search) {
+      files = files.filter(f => f.name.toLowerCase().includes(search));
+    }
+    files.sort((a, b) => sort === 'name'
+      ? a.name.localeCompare(b.name)
+      : sort === 'created'
+        ? new Date(b.createdAt) - new Date(a.createdAt)
+        : new Date(b.updatedAt) - new Date(a.updatedAt));
+
+    const countEl = document.getElementById('workspaceProjectFilesCount');
+    if (countEl) countEl.textContent = `${files.length} design file${files.length === 1 ? '' : 's'}`;
+
+    const dateText = value => {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return 'Saved locally';
+      const elapsed = Math.max(0, Date.now() - date.getTime());
+      const minutes = Math.floor(elapsed / 60000);
+      if (minutes < 1) return 'Edited just now';
+      if (minutes < 60) return `Edited ${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `Edited ${hours}h ago`;
+      return `Edited ${Math.floor(hours / 24)}d ago`;
+    };
+
+    const grid = document.getElementById('workspaceFileGrid');
+    const emptyState = document.getElementById('workspaceFileEmptyState');
+    const activeFileId = this.workspaceStore.getActiveFileId();
+
+    if (grid) {
+      grid.innerHTML = files.map((file, index) => `
+        <article class="workspace-project-card">
+          <button class="workspace-project-open" type="button" data-open-file="${this.workspaceEscape(file.id)}" aria-label="Open ${this.workspaceEscape(file.name)}">
+            <div class="workspace-project-preview" style="background: ${index % 3 === 0 ? 'linear-gradient(145deg,#34445f,#202b3c)' : index % 3 === 1 ? 'linear-gradient(145deg,#34353b,#202226)' : 'linear-gradient(145deg,#314a49,#202b2c)'}">
+              <div aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            </div>
+            <div class="workspace-project-meta">
+              <span class="workspace-project-file-icon" aria-hidden="true">▣</span>
+              <div style="flex: 1; min-width: 0;">
+                <strong>${this.workspaceEscape(file.name)}${file.id === activeFileId ? ' · Open' : ''}</strong>
+                <small>${dateText(file.updatedAt)}</small>
+              </div>
+            </div>
+          </button>
+          <div class="workspace-card-actions" style="padding: 0 12px 10px; display: flex; justify-content: space-between;">
+            <button class="workspace-card-action-btn" type="button" data-open-file="${this.workspaceEscape(file.id)}">Open in editor</button>
+            <button class="workspace-card-action-btn" type="button" data-delete-file="${this.workspaceEscape(file.id)}" style="color: #f87171;" title="Delete file">Delete</button>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    const isEmpty = !files.length;
+    if (emptyState) emptyState.hidden = !isEmpty;
+    if (grid) grid.hidden = isEmpty;
+  }
+
+  renderProjectSettings(projectId, tab = 'general') {
+    const project = this.workspaceStore.getProject(projectId);
+    if (!project) {
+      this.showWorkspaceSubView('projects');
+      return;
+    }
+    const headerTitle = document.getElementById('projectSettingsHeaderTitle');
+    const crumbTitle = document.getElementById('breadcrumbSettingsToProjectName');
+    if (headerTitle) headerTitle.textContent = `Settings · ${project.name}`;
+    if (crumbTitle) crumbTitle.textContent = project.name;
+
+    // General tab inputs
+    const nameInput = document.getElementById('inputProjectSettingsName');
+    const descInput = document.getElementById('inputProjectSettingsDesc');
+    const generalStatus = document.getElementById('projectGeneralStatusMsg');
+    if (nameInput) nameInput.value = project.name;
+    if (descInput) descInput.value = project.description || '';
+    if (generalStatus) generalStatus.textContent = '';
+
+    // Members tab table
+    const tableBody = document.getElementById('projectMembersTableBody');
+    const memberStatus = document.getElementById('projectMemberStatusMsg');
+    if (memberStatus) memberStatus.textContent = '';
+
+    const dateText = value => {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return 'Recently';
+      return date.toLocaleDateString();
+    };
+
+    if (tableBody) {
+      const members = project.members || [];
+      tableBody.innerHTML = members.map(m => {
+        const initials = (m.name || 'D').split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+        return `
+          <tr>
+            <td>
+              <div class="project-member-cell">
+                <span class="workspace-profile-initials" style="width: 28px; height: 28px; font-size: 11px;">${this.workspaceEscape(initials)}</span>
+                <div>
+                  <strong>${this.workspaceEscape(m.name)}</strong>
+                  <small style="display: block; color: #9ba1ab;">${this.workspaceEscape(m.email || 'No email')}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <select class="project-member-role-select" data-member-user-id="${this.workspaceEscape(m.userId)}">
+                <option value="Project Lead" ${m.role === 'Project Lead' ? 'selected' : ''}>Project Lead</option>
+                <option value="Designer" ${m.role === 'Designer' ? 'selected' : ''}>Designer</option>
+                <option value="Viewer" ${m.role === 'Viewer' ? 'selected' : ''}>Viewer</option>
+              </select>
+            </td>
+            <td><small style="color: #9ba1ab;">${dateText(m.addedAt)}</small></td>
+            <td style="text-align: right;">
+              <button type="button" class="project-member-remove-btn" data-remove-member="${this.workspaceEscape(m.userId)}">Remove</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+  }
+
+  handleSaveProjectGeneral() {
+    const nameInput = document.getElementById('inputProjectSettingsName');
+    const descInput = document.getElementById('inputProjectSettingsDesc');
+    const statusMsg = document.getElementById('projectGeneralStatusMsg');
+    const newName = nameInput?.value.trim();
+    const newDesc = descInput?.value.trim() || '';
+
+    if (!newName) {
+      if (statusMsg) {
+        statusMsg.className = 'project-member-status error';
+        statusMsg.textContent = 'Project name cannot be empty.';
+      }
+      return;
+    }
+
+    try {
+      this.workspaceStore.updateProject(this.selectedProjectId, {
+        name: newName,
+        description: newDesc
+      });
+      if (statusMsg) {
+        statusMsg.className = 'project-member-status success';
+        statusMsg.textContent = 'Changes saved successfully.';
+      }
+      this.showToast('Project updated.', 'success');
+      this.updateTopbarProjectCrumb();
+    } catch (err) {
+      if (statusMsg) {
+        statusMsg.className = 'project-member-status error';
+        statusMsg.textContent = err.message;
+      }
+    }
+  }
+
+  handleDeleteProject() {
+    const project = this.workspaceStore.getProject(this.selectedProjectId);
+    if (!project) return;
+    const files = this.workspaceStore.getDesignFiles(this.selectedProjectId);
+    if (files.length > 0) {
+      alert(`Cannot delete "${project.name}" because it contains ${files.length} design file(s).\n\nPlease move or delete all design files first to prevent accidental data loss.`);
+      return;
+    }
+    if (!confirm(`Are you sure you want to delete project "${project.name}"?`)) return;
+
+    try {
+      this.workspaceStore.deleteProject(this.selectedProjectId);
+      this.showToast(`Project "${project.name}" deleted.`, 'info');
+      this.showWorkspaceSubView('projects');
+    } catch (err) {
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  handleAddProjectMember() {
+    const select = document.getElementById('selectAddProjectMember');
+    const roleSelect = document.getElementById('selectAddProjectRole');
+    const statusMsg = document.getElementById('projectMemberStatusMsg');
+    if (!select || !select.value) {
+      if (statusMsg) {
+        statusMsg.className = 'project-member-status error';
+        statusMsg.textContent = 'Select an organization member to add.';
+      }
+      return;
+    }
+    const option = select.options[select.selectedIndex];
+    const name = option.dataset.name || option.text;
+    const email = option.dataset.email || '';
+    const userId = select.value;
+    const role = roleSelect?.value || 'Designer';
+
+    try {
+      this.workspaceStore.addProjectMember(this.selectedProjectId, {
+        userId,
+        name,
+        email,
+        role
+      });
+      if (statusMsg) {
+        statusMsg.className = 'project-member-status success';
+        statusMsg.textContent = `Added "${name}" as ${role}.`;
+      }
+      this.showToast(`Added "${name}" to project.`, 'success');
+      select.value = '';
+      this.renderProjectSettings(this.selectedProjectId, 'members');
+    } catch (err) {
+      if (statusMsg) {
+        statusMsg.className = 'project-member-status error';
+        statusMsg.textContent = err.message;
+      }
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  handleProjectMemberRoleChange(userId, newRole) {
+    const statusMsg = document.getElementById('projectMemberStatusMsg');
+    try {
+      this.workspaceStore.updateProjectMemberRole(this.selectedProjectId, userId, newRole);
+      if (statusMsg) {
+        statusMsg.className = 'project-member-status success';
+        statusMsg.textContent = 'Role updated.';
+      }
+      this.renderProjectSettings(this.selectedProjectId, 'members');
+    } catch (err) {
+      if (statusMsg) {
+        statusMsg.className = 'project-member-status error';
+        statusMsg.textContent = err.message;
+      }
+      this.showToast(err.message, 'error');
+      this.renderProjectSettings(this.selectedProjectId, 'members');
+    }
+  }
+
+  handleRemoveProjectMember(userId) {
+    const statusMsg = document.getElementById('projectMemberStatusMsg');
+    const project = this.workspaceStore.getProject(this.selectedProjectId);
+    const member = project?.members?.find(m => m.userId === userId);
+    if (!member) return;
+
+    if (!confirm(`Remove "${member.name}" from this project?\n\nAccess to this project's files will be revoked, but their account, authored work, and organization membership remain intact.`)) {
+      return;
+    }
+
+    try {
+      this.workspaceStore.removeProjectMember(this.selectedProjectId, userId);
+      if (statusMsg) {
+        statusMsg.className = 'project-member-status success';
+        statusMsg.textContent = `Removed "${member.name}" from project.`;
+      }
+      this.showToast(`Removed "${member.name}" from project.`, 'info');
+      this.renderProjectSettings(this.selectedProjectId, 'members');
+    } catch (err) {
+      if (statusMsg) {
+        statusMsg.className = 'project-member-status error';
+        statusMsg.textContent = err.message;
+      }
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  renderRecentFiles() {
+    const grid = document.getElementById('workspaceRecentFilesGrid');
+    const emptyState = document.getElementById('workspaceRecentEmptyState');
+    if (!grid) return;
+    const recent = this.workspaceStore.getRecentFiles(24);
+
+    const dateText = value => {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return 'Recently';
+      const elapsed = Math.max(0, Date.now() - date.getTime());
+      const minutes = Math.floor(elapsed / 60000);
+      if (minutes < 1) return 'Edited just now';
+      if (minutes < 60) return `Edited ${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `Edited ${hours}h ago`;
+      return `Edited ${Math.floor(hours / 24)}d ago`;
+    };
+
+    grid.innerHTML = recent.map((file, index) => `
+      <article class="workspace-project-card">
+        <button class="workspace-project-open" type="button" data-open-file="${this.workspaceEscape(file.id)}" aria-label="Open ${this.workspaceEscape(file.name)}">
+          <div class="workspace-project-preview" style="background: ${index % 3 === 0 ? 'linear-gradient(145deg,#34445f,#202b3c)' : index % 3 === 1 ? 'linear-gradient(145deg,#34353b,#202226)' : 'linear-gradient(145deg,#314a49,#202b2c)'}">
+            <div aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="workspace-project-meta">
+            <span class="workspace-project-file-icon" aria-hidden="true">▣</span>
+            <div style="flex: 1; min-width: 0;">
+              <strong>${this.workspaceEscape(file.name)}</strong>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+                <small>${dateText(file.updatedAt)}</small>
+                <span class="workspace-project-pill">in ${this.workspaceEscape(file.projectName)}</span>
+              </div>
+            </div>
+          </div>
+        </button>
+        <div class="workspace-card-actions" style="padding: 0 12px 10px;">
+          <button class="workspace-card-action-btn" type="button" data-open-file="${this.workspaceEscape(file.id)}">Open in editor →</button>
+        </div>
+      </article>
+    `).join('');
+
+    const isEmpty = !recent.length;
+    if (emptyState) emptyState.hidden = !isEmpty;
+    grid.hidden = isEmpty;
+  }
+
 
   renderWorkspaceProfileSummary() {
     let profile = null;

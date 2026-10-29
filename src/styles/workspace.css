@@ -944,3 +944,259 @@
     padding: 0 9px;
   }
 }
+
+/* -------------------------------------------------------------
+   DesignForge Workspace Figma Hierarchy (Workspace -> Projects -> Files)
+   ------------------------------------------------------------- */
+
+.breadcrumb-link-btn {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: #9ba1ab;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+.breadcrumb-link-btn:hover {
+  color: #ffffff;
+  text-decoration-color: #ffffff;
+}
+
+.workspace-search-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #222429;
+  border: 1px solid #3c3f46;
+  border-radius: 7px;
+  color: #9da2aa;
+}
+.workspace-search-inline input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f3f4f6;
+  font: inherit;
+  font-size: 12px;
+  width: 170px;
+}
+
+.workspace-project-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(94, 156, 255, 0.12);
+  border: 1px solid rgba(94, 156, 255, 0.25);
+  color: #93c5fd;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.workspace-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.workspace-card-action-btn {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #2d3036;
+  border: 1px solid #3e424a;
+  color: #d1d5db;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.workspace-card-action-btn:hover {
+  background: #3c4049;
+  color: #ffffff;
+}
+
+.project-settings-nav {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+  border-bottom: 1px solid #383a40;
+  padding-bottom: 10px;
+}
+
+.project-settings-tab {
+  padding: 7px 14px;
+  border-radius: 6px;
+  background: transparent;
+  border: 0;
+  color: #9ba1ab;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.project-settings-tab:hover {
+  background: #2a2d33;
+  color: #f3f4f6;
+}
+.project-settings-tab.active {
+  background: #31343c;
+  color: #ffffff;
+  box-shadow: inset 0 -2px 0 #4f46e5;
+}
+
+.project-add-member-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  background: #1b1d22;
+  border: 1px solid #34373e;
+  border-radius: 8px;
+}
+
+.project-member-status {
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 6px;
+}
+.project-member-status.success { color: #86efac; }
+.project-member-status.error { color: #fca5a5; }
+
+.project-members-table-wrap {
+  overflow-x: auto;
+  margin-top: 18px;
+  background: #1e2025;
+  border: 1px solid #353840;
+  border-radius: 8px;
+}
+
+.project-members-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+
+.project-members-table th {
+  padding: 10px 14px;
+  border-bottom: 1px solid #353840;
+  background: #23262c;
+  color: #9ba1ab;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.project-members-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #2a2c33;
+  color: #e5e7eb;
+}
+
+.project-members-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.project-member-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.project-member-role-select {
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: #282a30;
+  border: 1px solid #3d4048;
+  color: #f3f4f6;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.project-member-remove-btn {
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid #522727;
+  color: #f87171;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.project-member-remove-btn:hover {
+  background: #7f1d1d;
+  color: #ffffff;
+}
+
+.file-switcher-dialog {
+  width: 520px;
+  max-width: 90vw;
+  background: #1e2025;
+  border: 1px solid #3b3f47;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.file-switcher-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #25282f;
+  border: 1px solid #41454f;
+  border-radius: 8px;
+}
+
+.file-switcher-search input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+}
+
+.file-switcher-list {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.file-switcher-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-radius: 7px;
+  background: transparent;
+  border: 0;
+  color: #e5e7eb;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease;
+}
+.file-switcher-item:hover,
+.file-switcher-item.selected {
+  background: #2d313a;
+  color: #fff;
+}
+
