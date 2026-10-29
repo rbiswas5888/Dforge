@@ -65,7 +65,7 @@ export class DesignForgeApp {
   constructor() {
     this.storage = new StorageEngine();
     const savedDoc = this.storage.loadAutosave();
-    this.doc = savedDoc || createInitialDocument('ForgePay AI — Treasury Platform');
+    this.doc = savedDoc || createInitialDocument('Untitled Experience');
     this.workspaceStore = new WorkspaceStore();
     this.auth = new AuthService(this.workspaceStore);
     this.storage.setWorkspaceStore(this.workspaceStore);
