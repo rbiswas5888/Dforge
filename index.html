@@ -163,78 +163,89 @@
       </div>
 
       <div class="top-bar-right">
-        <div class="save-badge" id="saveBadge">
-          <span class="dot"></span>
-          <span id="saveStatusText">Saved locally</span>
-        </div>
-        <button class="menu-dropdown-btn workspace-top-action" id="btnWorkspaceDashboard" type="button">Projects</button>
-        <button class="btn-icon workspace-top-action" id="btnOpenWorkspaceSettings" type="button" title="Profile and settings"><span data-icon="Settings"></span></button>
-        <button class="btn-icon workspace-top-action" id="btnWorkspaceProfile" type="button" title="Open profile"><span data-icon="UserRound"></span></button>
-
-        <button class="menu-dropdown-btn" id="btnOpenCommandPalette" title="Open Command Palette (⌘K)"
-          style="font-size: 11px; display: flex; align-items: center; gap: 6px; padding: 4px 8px;">
-          <span style="color: var(--accent-blue); font-weight: 700;">⌘K</span>
-          <span style="color: var(--text-dim);">Find anything...</span>
-        </button>
-        <!-- Responsive Breakpoints Switcher (Section 2.1 & 7) -->
-        <div class="breakpoint-selector" id="topBreakpointBar" title="Preview responsive breakpoints">
-          <button class="bp-btn active" data-bp="desktop" title="Desktop 1440px"><span data-icon="Monitor"></span> 1440</button>
-          <button class="bp-btn" data-bp="tablet" title="Tablet 768px"><span data-icon="Tablet"></span> 768</button>
-          <button class="bp-btn" data-bp="mobile" title="Mobile 375px"><span data-icon="Tablet"></span> 375</button>
-        </div>
-
-        <button class="btn-icon" id="btnUndo" title="Undo (⌘Z)"><span data-icon="Undo2"></span></button>
-        <button class="btn-icon" id="btnRedo" title="Redo (⌘⇧Z)"><span data-icon="Redo2"></span></button>
-
-        <div class="shelf-divider" style="height: 16px;"></div>
-
-        <div class="zoom-pill">
-          <button class="btn-icon-sm" id="btnZoomOut" title="Zoom Out (⌘-)"><span data-icon="ZoomOut"></span></button>
-          <span id="zoomPercentText" class="zoom-value" title="Zoom to 100% (⌘0)">85%</span>
-          <button class="btn-icon-sm" id="btnZoomIn" title="Zoom In (⌘+)"><span data-icon="ZoomIn"></span></button>
-          <button class="btn-icon-sm" id="btnZoomFit" title="Zoom to Fit (⇧1)"><span data-icon="Frame"></span></button>
-        </div>
-
-        <button class="btn-icon" id="btnToggleTheme" title="Toggle Light / Dark / High-Contrast Mode"
-          style="font-size: 13px;"><span id="themeModeIcon" data-icon="Moon"></span></button>
-        <details class="top-action-menu">
-          <summary class="top-action-menu-trigger" title="Document, preview, collaboration, and design tools">More
-            <span data-icon="ChevronDown" data-icon-size="14"></span>
-          </summary>
-          <div class="top-action-menu-panel">
-            <div class="top-action-menu-section" id="responsiveAppMenuSection">
-              <span class="top-action-menu-heading">Menu</span>
-            </div>
-            <div class="top-action-menu-section" id="responsiveWorkspaceSection">
-              <span class="top-action-menu-heading">View & Modes</span>
-            </div>
-            <div class="top-action-menu-section">
-              <span class="top-action-menu-heading">AI design</span>
-              <button class="top-action-menu-item btn-ai-sparkle" id="btnOpenFigmaAiPrompt"
-                title="Prompt Figma AI to Design (⌘J)"><span data-icon="Sparkles"></span> Prompt AI</button>
-            </div>
-            <div class="top-action-menu-section">
-              <span class="top-action-menu-heading">Document</span>
-              <button class="top-action-menu-item" id="btnImportDesignTop"><span data-icon="Upload"></span> Import Design</button>
-              <button class="top-action-menu-item" id="btnShareModal"><span data-icon="UsersRound"></span> Share & Collaborate</button>
-            </div>
-            <div class="top-action-menu-section">
-              <span class="top-action-menu-heading">Preview & inspect</span>
-              <button class="top-action-menu-item" id="btnMobilePreviewQr"><span data-icon="Tablet"></span> Mobile Preview</button>
-              <button class="top-action-menu-item" id="btnDevModeToggle"><span data-icon="SlidersHorizontal"></span> Dev Mode</button>
-              <div id="devModeBadge">DEV MODE</div>
-              <button class="top-action-menu-item" id="btnOpenLinter"><span data-icon="Zap"></span> Design Linter</button>
-            </div>
-            <div class="top-action-menu-section">
-              <span class="top-action-menu-heading">Workspace</span>
-              <button class="top-action-menu-item" id="btnOpenMcpHub"><span data-icon="Activity"></span> MCP Hub</button>
-              <button class="top-action-menu-item" id="btnOpenLearnCenter"><span data-icon="BookOpen"></span> Learn Center</button>
-            </div>
+        <!-- 1. Workspace Pod: Status, Projects, Search -->
+        <div class="top-bar-cluster" id="clusterWorkspace">
+          <div class="save-badge" id="saveBadge" title="Storage Status">
+            <span class="dot"></span>
+            <span id="saveStatusText">Saved locally</span>
           </div>
-        </details>
-        <button class="menu-dropdown-btn" id="btnPlayProtoTop" title="Play Prototype (⌥⌘P)"
-          style="color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); font-size: 11px;"><span data-icon="Play"></span> Play</button>
-        <button class="btn-primary" id="btnExportReactTop" title="Compile to Production React (⌘⇧E)"><span data-icon="Zap"></span> Export</button>
+          <button class="menu-dropdown-btn workspace-top-action" id="btnWorkspaceDashboard" type="button" title="Open Workspace Projects">Projects</button>
+          <button class="menu-dropdown-btn cmd-palette-trigger" id="btnOpenCommandPalette" title="Open Command Palette (⌘K)">
+            <span class="cmd-k-badge">⌘K</span>
+            <span class="cmd-k-text">Find anything...</span>
+          </button>
+        </div>
+
+        <div class="shelf-divider top-cluster-divider"></div>
+
+        <!-- 2. View & Canvas Controls Pod -->
+        <div class="top-bar-cluster" id="clusterView">
+          <div class="breakpoint-selector" id="topBreakpointBar" title="Preview responsive breakpoints">
+            <button class="bp-btn active" data-bp="desktop" title="Desktop 1440px"><span data-icon="Monitor"></span> 1440</button>
+            <button class="bp-btn" data-bp="tablet" title="Tablet 768px"><span data-icon="Tablet"></span> 768</button>
+            <button class="bp-btn" data-bp="mobile" title="Mobile 375px"><span data-icon="Tablet"></span> 375</button>
+          </div>
+
+          <button class="btn-icon" id="btnUndo" title="Undo (⌘Z)"><span data-icon="Undo2"></span></button>
+          <button class="btn-icon" id="btnRedo" title="Redo (⌘⇧Z)"><span data-icon="Redo2"></span></button>
+
+          <div class="zoom-pill">
+            <button class="btn-icon-sm" id="btnZoomOut" title="Zoom Out (⌘-)"><span data-icon="ZoomOut"></span></button>
+            <span id="zoomPercentText" class="zoom-value" title="Zoom to 100% (⌘0)">85%</span>
+            <button class="btn-icon-sm" id="btnZoomIn" title="Zoom In (⌘+)"><span data-icon="ZoomIn"></span></button>
+            <button class="btn-icon-sm" id="btnZoomFit" title="Zoom to Fit (⇧1)"><span data-icon="Frame"></span></button>
+          </div>
+
+          <button class="btn-icon" id="btnToggleTheme" title="Toggle Light / Dark / High-Contrast Mode"
+            style="font-size: 13px;"><span id="themeModeIcon" data-icon="Moon"></span></button>
+        </div>
+
+        <div class="shelf-divider top-cluster-divider"></div>
+
+        <!-- 3. Actions & Collaboration Pod -->
+        <div class="top-bar-cluster" id="clusterActions">
+          <button class="menu-dropdown-btn btn-play-header" id="btnPlayProtoTop" title="Play Prototype (⌥⌘P)"><span data-icon="Play"></span> Play</button>
+          <button class="btn-primary btn-export-header" id="btnExportReactTop" title="Compile to Production React (⌘⇧E)"><span data-icon="Zap"></span> Export</button>
+
+          <details class="top-action-menu">
+            <summary class="top-action-menu-trigger" title="Document, preview, collaboration, and design tools">More
+              <span data-icon="ChevronDown" data-icon-size="14"></span>
+            </summary>
+            <div class="top-action-menu-panel">
+              <div class="top-action-menu-section" id="responsiveAppMenuSection">
+                <span class="top-action-menu-heading">Menu</span>
+              </div>
+              <div class="top-action-menu-section" id="responsiveWorkspaceSection">
+                <span class="top-action-menu-heading">View & Modes</span>
+              </div>
+              <div class="top-action-menu-section">
+                <span class="top-action-menu-heading">AI design</span>
+                <button class="top-action-menu-item btn-ai-sparkle" id="btnOpenFigmaAiPrompt"
+                  title="Prompt Figma AI to Design (⌘J)"><span data-icon="Sparkles"></span> Prompt AI</button>
+              </div>
+              <div class="top-action-menu-section">
+                <span class="top-action-menu-heading">Document</span>
+                <button class="top-action-menu-item" id="btnImportDesignTop"><span data-icon="Upload"></span> Import Design</button>
+                <button class="top-action-menu-item" id="btnShareModal"><span data-icon="UsersRound"></span> Share & Collaborate</button>
+              </div>
+              <div class="top-action-menu-section">
+                <span class="top-action-menu-heading">Preview & inspect</span>
+                <button class="top-action-menu-item" id="btnMobilePreviewQr"><span data-icon="Tablet"></span> Mobile Preview</button>
+                <button class="top-action-menu-item" id="btnDevModeToggle"><span data-icon="SlidersHorizontal"></span> Dev Mode</button>
+                <div id="devModeBadge">DEV MODE</div>
+                <button class="top-action-menu-item" id="btnOpenLinter"><span data-icon="Zap"></span> Design Linter</button>
+              </div>
+              <div class="top-action-menu-section">
+                <span class="top-action-menu-heading">Workspace</span>
+                <button class="top-action-menu-item" id="btnOpenMcpHub"><span data-icon="Activity"></span> MCP Hub</button>
+                <button class="top-action-menu-item" id="btnOpenLearnCenter"><span data-icon="BookOpen"></span> Learn Center</button>
+              </div>
+            </div>
+          </details>
+
+          <button class="btn-icon workspace-top-action" id="btnOpenWorkspaceSettings" type="button" title="Profile and settings"><span data-icon="Settings"></span></button>
+          <button class="btn-icon workspace-top-action" id="btnWorkspaceProfile" type="button" title="Open profile"><span data-icon="UserRound"></span></button>
+        </div>
       </div>
     </header>
 
@@ -354,66 +365,82 @@
             <button class="mode-rail-btn" data-mode="ai" data-title="AI Assistant" title="AI Assistant (6)"><span data-icon="Sparkles"></span></button>
           </div>
           <div class="shelf-divider mode-tool-divider"></div>
-          <button class="tool-btn active" data-tool="select" title="Move / Select (V)">
-            <span data-icon="MousePointer2"></span>
-          </button>
-          <button class="tool-btn" data-tool="scale" title="Scale Proportionally (K)">
-            <span data-icon="Scaling"></span>
-          </button>
-          <button class="tool-btn" data-tool="hand" title="Hand / Pan Canvas (H or hold Space)">
-            <span data-icon="Hand"></span>
-          </button>
-          <div class="shelf-divider"></div>
-          <div class="tool-menu-group" data-tool-group="frame,section,slice">
-            <button class="tool-btn group-primary" data-tool="frame" title="Frame (F)">
-              <span data-icon="Frame"></span>
+
+          <!-- Select & Canvas Tools Pod -->
+          <div class="tool-pod" id="toolPodSelect">
+            <button class="tool-btn active" data-tool="select" title="Move / Select (V)">
+              <span data-icon="MousePointer2"></span>
             </button>
-            <button class="tool-group-toggle" type="button" aria-label="More frame tools" aria-expanded="false"><span data-icon="ChevronDown"></span></button>
-            <div class="tool-menu" role="group" aria-label="Frame tools">
-          <button class="tool-btn" data-tool="section" title="Section Tool (⇧S)">
-              <span data-icon="SquareDashed"></span>
-          </button>
-          <button class="tool-btn" data-tool="slice" title="Slice / Export Region (S)">
-              <span data-icon="Crop"></span>
-          </button>
-            </div>
+            <button class="tool-btn" data-tool="scale" title="Scale Proportionally (K)">
+              <span data-icon="Scaling"></span>
+            </button>
+            <button class="tool-btn" data-tool="hand" title="Hand / Pan Canvas (H or hold Space)">
+              <span data-icon="Hand"></span>
+            </button>
           </div>
-          <div class="tool-menu-group" data-tool-group="rectangle,ellipse,line,star,polygon">
-            <button class="tool-btn group-primary" data-tool="rectangle" title="Rectangle (R)">
-              <span data-icon="Square"></span>
-            </button>
-            <button class="tool-group-toggle" type="button" aria-label="More shape tools" aria-expanded="false"><span data-icon="ChevronDown"></span></button>
-            <div class="tool-menu" role="group" aria-label="Shape tools">
-          <button class="tool-btn" data-tool="ellipse" title="Ellipse (O)">
-              <span data-icon="Circle"></span>
-          </button>
-          <button class="tool-btn" data-tool="line" title="Line (L)">
-              <span data-icon="Minus"></span>
-          </button>
-          <button class="tool-btn" data-tool="pen" title="Pen / Vector Path Tool (P)">
+
+          <div class="shelf-divider"></div>
+
+          <!-- Creation & Vector Tools Pod -->
+          <div class="tool-pod" id="toolPodCreate">
+            <div class="tool-menu-group" data-tool-group="frame,section,slice">
+              <button class="tool-btn group-primary" data-tool="frame" title="Frame (F)">
+                <span data-icon="Frame"></span>
+              </button>
+              <button class="tool-group-toggle" type="button" aria-label="More frame tools" aria-expanded="false"><span data-icon="ChevronDown"></span></button>
+              <div class="tool-menu" role="group" aria-label="Frame tools">
+                <button class="tool-btn" data-tool="section" title="Section Tool (⇧S)">
+                  <span data-icon="SquareDashed"></span>
+                </button>
+                <button class="tool-btn" data-tool="slice" title="Slice / Export Region (S)">
+                  <span data-icon="Crop"></span>
+                </button>
+              </div>
+            </div>
+
+            <div class="tool-menu-group" data-tool-group="rectangle,ellipse,line,star,polygon">
+              <button class="tool-btn group-primary" data-tool="rectangle" title="Rectangle (R)">
+                <span data-icon="Square"></span>
+              </button>
+              <button class="tool-group-toggle" type="button" aria-label="More shape tools" aria-expanded="false"><span data-icon="ChevronDown"></span></button>
+              <div class="tool-menu" role="group" aria-label="Shape tools">
+                <button class="tool-btn" data-tool="ellipse" title="Ellipse (O)">
+                  <span data-icon="Circle"></span>
+                </button>
+                <button class="tool-btn" data-tool="line" title="Line (L)">
+                  <span data-icon="Minus"></span>
+                </button>
+                <button class="tool-btn" data-tool="star" title="Star Shape">
+                  <span data-icon="Star"></span>
+                </button>
+                <button class="tool-btn" data-tool="polygon" title="Polygon / Triangle Shape">
+                  <span data-icon="Triangle"></span>
+                </button>
+              </div>
+            </div>
+
+            <button class="tool-btn" data-tool="pen" title="Pen / Vector Path Tool (P)">
               <span data-icon="PenTool"></span>
-          </button>
-          <button class="tool-btn" data-tool="star" title="Star Shape">
-              <span data-icon="Star"></span>
-          </button>
-          <button class="tool-btn" data-tool="polygon" title="Polygon / Triangle Shape">
-              <span data-icon="Triangle"></span>
-          </button>
-          <button class="tool-btn" data-tool="shape_builder" id="toolShapeBuilder" title="Shape Builder Tool (⇧M)">
+            </button>
+            <button class="tool-btn" data-tool="text" title="Text (T)">
+              <span data-icon="Type"></span>
+            </button>
+            <button class="tool-btn" data-tool="shape_builder" id="toolShapeBuilder" title="Shape Builder Tool (⇧M)">
               <span style="font-size: 13px; font-weight: 700; line-height: 1;">◫</span>
-          </button>
-            </div>
+            </button>
           </div>
-          <button class="tool-btn" data-tool="text" title="Text (T)">
-            <span data-icon="Type"></span>
-          </button>
-          <button class="tool-btn" data-tool="comment" title="Add Review Comment (C)">
-            <span data-icon="MessageSquare"></span>
-          </button>
+
           <div class="shelf-divider"></div>
-          <button class="tool-btn" data-tool="ai" title="AI Design Assistant (⌘⇧K)" style="color: #c084fc;">
-            <span data-icon="Sparkles"></span>
-          </button>
+
+          <!-- Collaboration & AI Pod -->
+          <div class="tool-pod" id="toolPodFeedback">
+            <button class="tool-btn" data-tool="comment" title="Add Review Comment (C)">
+              <span data-icon="MessageSquare"></span>
+            </button>
+            <button class="tool-btn" data-tool="ai" title="AI Design Assistant (⌘⇧K)" style="color: #c084fc;">
+              <span data-icon="Sparkles"></span>
+            </button>
+          </div>
         </nav>
 
         <!-- Interactive Comment Pin Popup -->

@@ -1032,15 +1032,23 @@ export class DesignForgeApp {
         responsiveMenuSection.appendChild(appMenuBar);
         responsiveWorkspaceSection.appendChild(breakpointBar);
       } else {
-        topBarLeft.insertBefore(appMenuBar, projectTitleInput);
-        topBarRight.insertBefore(breakpointBar, undoButton);
+        if (projectTitleInput && projectTitleInput.parentNode) {
+          projectTitleInput.parentNode.insertBefore(appMenuBar, projectTitleInput);
+        }
+        if (breakpointBar && undoButton && undoButton.parentNode) {
+          undoButton.parentNode.insertBefore(breakpointBar, undoButton);
+        }
       }
       if (window.innerWidth <= 700) {
         responsiveWorkspaceSection.appendChild(modeRail);
         responsiveWorkspaceSection.appendChild(themeToggle);
       } else {
-        toolShelf.insertBefore(modeRail, modeToolDivider);
-        topBarRight.insertBefore(themeToggle, moreMenu);
+        if (modeRail && modeToolDivider && modeToolDivider.parentNode) {
+          modeToolDivider.parentNode.insertBefore(modeRail, modeToolDivider);
+        }
+        if (themeToggle && moreMenu && moreMenu.parentNode) {
+          moreMenu.parentNode.insertBefore(themeToggle, moreMenu);
+        }
       }
     };
     placeAppMenu();
