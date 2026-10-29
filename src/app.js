@@ -1954,7 +1954,7 @@ export class DesignForgeApp {
       if (!appMenuBar || !responsiveMenuSection || !responsiveWorkspaceSection || !topBarLeft || !topBarRight) return;
       if (window.innerWidth <= 900) {
         responsiveMenuSection.appendChild(appMenuBar);
-        responsiveWorkspaceSection.appendChild(breakpointBar);
+        if (breakpointBar) responsiveWorkspaceSection.appendChild(breakpointBar);
       } else {
         if (projectTitleInput && projectTitleInput.parentNode) {
           projectTitleInput.parentNode.insertBefore(appMenuBar, projectTitleInput);

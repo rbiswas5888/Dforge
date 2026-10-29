@@ -183,12 +183,6 @@
 
         <!-- 2. View & Canvas Controls Pod -->
         <div class="top-bar-cluster" id="clusterView">
-          <div class="breakpoint-selector" id="topBreakpointBar" title="Preview responsive breakpoints">
-            <button class="bp-btn active" data-bp="desktop" title="Desktop 1440px"><span data-icon="Monitor"></span> 1440</button>
-            <button class="bp-btn" data-bp="tablet" title="Tablet 768px"><span data-icon="Tablet"></span> 768</button>
-            <button class="bp-btn" data-bp="mobile" title="Mobile 375px"><span data-icon="Tablet"></span> 375</button>
-          </div>
-
           <button class="btn-icon" id="btnUndo" title="Undo (⌘Z)"><span data-icon="Undo2"></span></button>
           <button class="btn-icon" id="btnRedo" title="Redo (⌘⇧Z)"><span data-icon="Redo2"></span></button>
 
@@ -208,7 +202,6 @@
         <!-- 3. Actions & Collaboration Pod -->
         <div class="top-bar-cluster" id="clusterActions">
           <button class="menu-dropdown-btn btn-play-header" id="btnPlayProtoTop" title="Play Prototype (⌥⌘P)"><span data-icon="Play"></span> Play</button>
-          <button class="btn-primary btn-export-header" id="btnExportReactTop" title="Compile to Production React (⌘⇧E)"><span data-icon="Zap"></span> Export</button>
 
           <details class="top-action-menu">
             <summary class="top-action-menu-trigger" title="Document, preview, collaboration, and design tools">More
@@ -222,6 +215,11 @@
                 <span class="top-action-menu-heading">View & Modes</span>
               </div>
               <div class="top-action-menu-section">
+                <span class="top-action-menu-heading">Export & Share</span>
+                <button class="top-action-menu-item" id="btnExportReactTop" title="Compile to Production React (⌘⇧E)"><span data-icon="Download"></span> Export Code & Assets</button>
+                <button class="top-action-menu-item" id="btnShareModal"><span data-icon="UsersRound"></span> Share & Collaborate</button>
+              </div>
+              <div class="top-action-menu-section">
                 <span class="top-action-menu-heading">AI design</span>
                 <button class="top-action-menu-item btn-ai-sparkle" id="btnOpenFigmaAiPrompt"
                   title="Prompt Figma AI to Design (⌘J)"><span data-icon="Sparkles"></span> Prompt AI</button>
@@ -229,7 +227,6 @@
               <div class="top-action-menu-section">
                 <span class="top-action-menu-heading">Document</span>
                 <button class="top-action-menu-item" id="btnImportDesignTop"><span data-icon="Upload"></span> Import Design</button>
-                <button class="top-action-menu-item" id="btnShareModal"><span data-icon="UsersRound"></span> Share & Collaborate</button>
               </div>
               <div class="top-action-menu-section">
                 <span class="top-action-menu-heading">Preview & inspect</span>
@@ -239,14 +236,14 @@
                 <button class="top-action-menu-item" id="btnOpenLinter"><span data-icon="Zap"></span> Design Linter</button>
               </div>
               <div class="top-action-menu-section">
-                <span class="top-action-menu-heading">Workspace</span>
+                <span class="top-action-menu-heading">Workspace & Settings</span>
+                <button class="top-action-menu-item" id="btnOpenWorkspaceSettings" type="button" title="Profile and settings"><span data-icon="Settings"></span> Settings</button>
                 <button class="top-action-menu-item" id="btnOpenMcpHub"><span data-icon="Activity"></span> MCP Hub</button>
                 <button class="top-action-menu-item" id="btnOpenLearnCenter"><span data-icon="BookOpen"></span> Learn Center</button>
               </div>
             </div>
           </details>
 
-          <button class="btn-icon workspace-top-action" id="btnOpenWorkspaceSettings" type="button" title="Profile and settings"><span data-icon="Settings"></span></button>
           <button class="btn-icon workspace-top-action" id="btnWorkspaceProfile" type="button" title="Open profile"><span data-icon="UserRound"></span></button>
         </div>
       </div>

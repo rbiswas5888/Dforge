@@ -690,7 +690,7 @@ img.axiom-spark-icon {
 
 .top-action-menu-item {
   width: 100%;
-  padding: 7px 8px;
+  padding: 7px 10px;
   border: 0;
   border-radius: var(--radius-xs);
   color: var(--text-primary);
@@ -699,6 +699,10 @@ img.axiom-spark-icon {
   font: inherit;
   font-size: 11px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s ease;
 }
 
 .top-action-menu-item:hover {
