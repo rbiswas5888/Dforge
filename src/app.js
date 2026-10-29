@@ -6155,7 +6155,17 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   }
 
   escapeAttr(str) {
-    return String(str).replace(/[&<>"']/g, character => ({
+    return String(str ?? '').replace(/[&<>"']/g, character => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[character]);
+  }
+
+  escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, character => ({
       '&': '&amp;',
       '<': '&lt;',
       '>': '&gt;',
