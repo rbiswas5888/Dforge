@@ -395,9 +395,9 @@ async function runQaAutomation() {
     await pause(500);
 
     // Test Drawing Tools & Canvas Interaction
-    await page.click('#toolShapesDropdown').catch(() => {});
+    await page.click('button.tool-btn[data-tool="rectangle"]').catch(() => {});
     await pause(300);
-    await page.click('#toolSelect');
+    await page.click('button.tool-btn[data-tool="select"]').catch(() => {});
     await pause(300);
     recordTest('EDIT-006', 'Canvas Tools', 'Canvas selection, creation tools, and floating dock pods verified', 'PASS');
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '24_editor_canvas_tools_verified.png') });
