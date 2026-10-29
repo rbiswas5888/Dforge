@@ -9,6 +9,7 @@ const ACTIVE_PROFILE_KEY = 'designforge_workspace_active_profile_v1';
 const NOTIFICATIONS_KEY = 'designforge_workspace_notifications_v1';
 const REACT_LIBRARIES_KEY = 'designforge_workspace_react_libraries_v1';
 const LAST_VIEW_KEY = 'designforge_last_active_view';
+const AUTH_SESSION_KEY = 'designforge_auth_session_v1';
 
 export const VALID_PROJECT_ROLES = ['Project Lead', 'Designer', 'Viewer'];
 
@@ -18,6 +19,39 @@ export class WorkspaceStore {
       throw new Error('Workspace persistence is unavailable in this browser context.');
     }
     return localStorage;
+  }
+
+  getAuthSession() {
+    return this.readJson(AUTH_SESSION_KEY, null);
+  }
+
+  saveAuthSession(session) {
+    this.writeJson(AUTH_SESSION_KEY, session);
+    if (session?.user) {
+      try {
+        this.saveProfile(session.user);
+      } catch {
+        // ignore profile sync error
+      }
+    }
+  }
+
+  clearAuthSession() {
+    try {
+      this.requireStorage().removeItem(AUTH_SESSION_KEY);
+    } catch (err) {
+      console.warn('Could not clear auth session:', err);
+    }
+  }
+
+  isAuthenticated() {
+    const session = this.getAuthSession();
+    if (!session || !session.token) return false;
+    if (session.expiresAt && Date.now() > session.expiresAt) {
+      this.clearAuthSession();
+      return false;
+    }
+    return true;
   }
 
   getLastActiveView() {

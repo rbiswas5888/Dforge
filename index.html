@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="src/styles/axiom_layout.css">
   <link rel="stylesheet" href="src/styles/figma_modals.css">
   <link rel="stylesheet" href="src/styles/workspace.css">
+  <link rel="stylesheet" href="src/styles/auth.css">
 </head>
 
 <body class="theme-axiom-dark">
@@ -1935,6 +1936,182 @@
             <div class="figma-toast-container" id="figmaToastContainer"></div>
         </div>
 
+        <!-- 0. Responsive Authentication Screen (Desktop, Tablet, Mobile) -->
+        <section class="auth-screen" id="authScreen" aria-label="Sign in to DesignForge AI" hidden>
+          <div class="auth-backdrop"></div>
+          <div class="auth-container">
+            <!-- Desktop Left Showcase Pane -->
+            <div class="auth-hero-pane">
+              <div class="auth-hero-brand">
+                <img src="assets/logo-64.png" alt="DesignForge" class="auth-brand-logo" width="38" height="38">
+                <strong>DesignForge</strong>
+                <span>AI Platform</span>
+              </div>
+
+              <div class="auth-hero-content">
+                <div class="auth-hero-badge">
+                  <span data-icon="Sparkles" data-icon-size="14"></span>
+                  Next-Gen AI Canvas
+                </div>
+                <h1 class="auth-hero-title">
+                  Craft interfaces with <span>pure precision</span>.
+                </h1>
+                <p class="auth-hero-desc">
+                  Figma-grade vector tools, conditional prototyping logic, and instant production React compiler in a unified workspace.
+                </p>
+
+                <div class="auth-feature-list">
+                  <div class="auth-feature-item">
+                    <div class="auth-feature-icon">❖</div>
+                    <span>Boolean groups, shape builder & sub-pixel vector editing</span>
+                  </div>
+                  <div class="auth-feature-item">
+                    <div class="auth-feature-icon">⚡</div>
+                    <span>Advanced variables, interactive states & smart-animate flows</span>
+                  </div>
+                  <div class="auth-feature-item">
+                    <div class="auth-feature-icon">⚛</div>
+                    <span>Clean React JSX + Tailwind/CSS design token compilation</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="auth-hero-footer">
+                <span>© 2026 DesignForge AI</span>
+                <span>•</span>
+                <span>Enterprise Security</span>
+                <span>•</span>
+                <span>Local-First Persistence</span>
+              </div>
+            </div>
+
+            <!-- Right Form Pane (Desktop / Tablet / Mobile) -->
+            <div class="auth-form-pane">
+              <div class="auth-card">
+                <div class="auth-tablet-header" style="display: none;">
+                  <img src="assets/logo-64.png" alt="DesignForge" class="auth-brand-logo" width="34" height="34">
+                  <div>
+                    <strong style="font-size: 18px; color: #fff;">DesignForge AI</strong>
+                    <small style="display: block; color: #94a3b8; font-size: 11px;">Professional AI Design Platform</small>
+                  </div>
+                </div>
+
+                <div class="auth-card-header">
+                  <h2 class="auth-card-title">Sign in to DesignForge</h2>
+                  <p class="auth-card-subtitle">Enter your credentials or choose a test account.</p>
+                </div>
+
+                <!-- Quick Test Accounts -->
+                <div class="auth-demo-accounts">
+                  <span class="auth-demo-label">Designated Test Accounts:</span>
+                  <div class="auth-demo-buttons">
+                    <button type="button" class="auth-demo-btn" id="btnFillDemoLead" data-email="designer@designforge.ai" data-password="DesignForge2026!">
+                      👤 Jordan Lee (Lead)
+                    </button>
+                    <button type="button" class="auth-demo-btn" id="btnFillDemoAlex" data-email="alex@designforge.ai" data-password="DesignForge2026!">
+                      👤 Alex Morgan (UX)
+                    </button>
+                  </div>
+                </div>
+
+                <div id="authStatusAlert" class="auth-status-alert" role="status" aria-live="polite" style="display: none; margin-bottom: 16px;"></div>
+
+                <form class="auth-form" id="authLoginForm" novalidate>
+                  <div class="auth-field-group">
+                    <label class="auth-field-label" for="authEmailInput">Email or Username</label>
+                    <div class="auth-input-wrap">
+                      <input
+                        class="auth-input"
+                        id="authEmailInput"
+                        name="username"
+                        type="email"
+                        autocomplete="username"
+                        placeholder="name@company.com or username"
+                        required
+                        aria-describedby="authEmailError"
+                      >
+                    </div>
+                    <div class="auth-error-msg" id="authEmailError" aria-live="polite"></div>
+                  </div>
+
+                  <div class="auth-field-group">
+                    <label class="auth-field-label" for="authPasswordInput">Password</label>
+                    <div class="auth-input-wrap">
+                      <input
+                        class="auth-input"
+                        id="authPasswordInput"
+                        name="password"
+                        type="password"
+                        autocomplete="current-password"
+                        placeholder="Enter your password"
+                        required
+                        aria-describedby="authPasswordError"
+                      >
+                      <button type="button" class="auth-password-toggle" id="btnToggleAuthPassword" aria-label="Show password" title="Toggle password visibility">
+                        <span id="passwordEyeIcon" data-icon="Eye" data-icon-size="16"></span>
+                      </button>
+                    </div>
+                    <div class="auth-error-msg" id="authPasswordError" aria-live="polite"></div>
+                  </div>
+
+                  <div class="auth-options-row">
+                    <label class="auth-checkbox-label">
+                      <input type="checkbox" id="authRememberMe" checked>
+                      <span>Remember me for 30 days</span>
+                    </label>
+                    <button type="button" class="auth-forgot-btn" id="btnOpenForgotPassword">Forgot password?</button>
+                  </div>
+
+                  <button type="submit" class="auth-submit-btn" id="btnSubmitAuthLogin">
+                    <span id="authSubmitText">Sign in</span>
+                  </button>
+                </form>
+
+                <div class="auth-divider">
+                  <span>Or continue with SSO</span>
+                </div>
+
+                <div class="auth-sso-grid">
+                  <button type="button" class="auth-sso-btn" id="btnSsoGoogle" title="Sign in with Google">
+                    <span data-icon="Chrome" data-icon-size="14"></span> Google
+                  </button>
+                  <button type="button" class="auth-sso-btn" id="btnSsoGithub" title="Sign in with GitHub">
+                    <span data-icon="GitBranch" data-icon-size="14"></span> GitHub
+                  </button>
+                  <button type="button" class="auth-sso-btn" id="btnSsoSaml" title="Sign in with Okta/SAML">
+                    <span data-icon="KeyRound" data-icon-size="14"></span> Okta SSO
+                  </button>
+                </div>
+
+                <div class="auth-card-footer">
+                  <span data-icon="ShieldCheck" data-icon-size="12"></span>
+                  <span>Encrypted workspace session · SOC2 Type II Certified</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Forgot Password Modal -->
+        <div class="auth-modal-backdrop" id="authForgotModal" style="display: none;">
+          <div class="auth-modal">
+            <h3>Reset your password</h3>
+            <p>Enter the email address associated with your DesignForge account, and we'll send you recovery instructions.</p>
+            <div id="authForgotStatus" class="auth-status-alert" role="status" aria-live="polite" style="display: none; margin-bottom: 14px;"></div>
+            <form id="authForgotForm">
+              <div class="auth-field-group">
+                <label class="auth-field-label" for="authForgotEmail">Email address</label>
+                <input class="auth-input" id="authForgotEmail" type="email" placeholder="name@company.com" required>
+                <div class="auth-error-msg" id="authForgotEmailError"></div>
+              </div>
+              <div style="display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end;">
+                <button type="button" class="workspace-secondary-btn" id="btnCloseForgotModal">Back to sign in</button>
+                <button type="submit" class="workspace-primary-btn" id="btnSendForgotEmail">Send reset link</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
         <section class="workspace-screen projects-screen" id="workspaceDashboard" aria-label="Project dashboard" hidden>
           <aside class="projects-rail">
             <button class="workspace-wordmark" id="workspaceDashboardHome" type="button"><img src="assets/logo-64.png" alt="DesignForge" class="workspace-mark-logo" width="22" height="22"><strong>DesignForge</strong><span>AI</span></button>
@@ -1950,6 +2127,7 @@
               <span>WORKSPACE</span>
               <button type="button" id="workspaceRailSettings"><span data-icon="Settings"></span> <span>Settings</span></button>
               <button type="button" id="workspaceRailOrganization"><span data-icon="Building2"></span> <span>Organization</span></button>
+              <button type="button" id="workspaceRailSignOut"><span data-icon="LogOut"></span> <span>Sign out</span></button>
             </div>
             <div class="projects-rail-spacer"></div>
             <div class="workspace-profile-mini" id="workspaceProfileMini"></div>
