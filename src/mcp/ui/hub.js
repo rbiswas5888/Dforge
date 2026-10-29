@@ -688,7 +688,7 @@ export class McpHubController {
             }
           });
           if (tracker) {
-            tracker.innerHTML = `<div style="font-size: 12px; color: #10b981; font-weight: 600;">✓ Workflow Completed Successfully! All design nodes and React components generated.</div>`;
+            tracker.innerHTML = `<div style="font-size: 12px; color: #10b981; font-weight: 600;"><span data-icon="Check" data-icon-size="13"></span> Workflow Completed Successfully! All design nodes and React components generated.</div>`;
           }
           this.app.renderer.render();
           this.app.updateLayersTree();
@@ -696,7 +696,7 @@ export class McpHubController {
           this.renderWorkflows();
         } catch (err) {
           if (tracker) {
-            tracker.innerHTML = `<div style="font-size: 12px; color: #f43f5e; font-weight: 600;">✕ Execution Failed: ${err.message}</div>`;
+            tracker.innerHTML = `<div style="font-size: 12px; color: #f43f5e; font-weight: 600;"><span data-icon="TriangleAlert" data-icon-size="13"></span> Execution Failed: ${err.message}</div>`;
           }
         }
       };

@@ -1551,9 +1551,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             <span style="font-size: 10px; color: var(--text-dim);">(${count})</span>
           </div>
           <div class="page-actions-group">
-            <button class="btn-icon-xs btn-page-dup" data-id="${p.id}" title="Duplicate page">❐</button>
+            <button class="btn-icon-xs btn-page-dup" data-id="${p.id}" title="Duplicate page"><span data-icon="Copy"></span></button>
             <button class="btn-icon-xs btn-page-ren" data-id="${p.id}" title="Rename page"><span data-icon="Pencil"></span></button>
-            ${this.doc.pages.length > 1 ? `<button class="btn-icon-xs btn-page-del" data-id="${p.id}" title="Delete page">✕</button>` : ''}
+            ${this.doc.pages.length > 1 ? `<button class="btn-icon-xs btn-page-del" data-id="${p.id}" title="Delete page" aria-label="Delete page"><span data-icon="X"></span></button>` : ''}
           </div>
         </div>
       `;
@@ -2218,7 +2218,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
   normalizeHexColor(value, fallback = '#3B82F6') {
     const color = String(value || '').trim();
-    return /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color)
+    return /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color)
       ? color.toUpperCase()
       : fallback;
   }
@@ -2231,7 +2231,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     return (this.doc.tokens || []).flatMap(group =>
       (group.tokens || []).filter(token =>
         token.type === 'color' &&
-        /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(String(token.value))
+        /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(String(token.value))
       ).map(token => ({ name: token.name, value: token.value }))
     );
   }
@@ -2545,12 +2545,12 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         <button class="btn-align-tool" id="inspAlignLeft" title="Align Left (⌥A)">⇤</button>
         <button class="btn-align-tool" id="inspAlignHCenter" title="Align Horizontal Centers (⌥H)"><span data-icon="ArrowLeftRight"></span></button>
         <button class="btn-align-tool" id="inspAlignRight" title="Align Right (⌥D)">⇥</button>
-        <button class="btn-align-tool" id="inspAlignTop" title="Align Top (⌥W)">⤊</button>
+        <button class="btn-align-tool" id="inspAlignTop" title="Align Top (⌥W)"><span data-icon="ArrowUp"></span></button>
         <button class="btn-align-tool" id="inspAlignVCenter" title="Align Vertical Centers (⌥V)"><span data-icon="ArrowUpDown"></span></button>
-        <button class="btn-align-tool" id="inspAlignBottom" title="Align Bottom (⌥S)">⤋</button>
+        <button class="btn-align-tool" id="inspAlignBottom" title="Align Bottom (⌥S)"><span data-icon="ArrowDown"></span></button>
         <div class="shelf-divider" style="height: 14px;"></div>
-        <button class="btn-align-tool" id="inspDistH" title="Distribute Horizontal Spacing">⫿</button>
-        <button class="btn-align-tool" id="inspDistV" title="Distribute Vertical Spacing">⫾</button>
+        <button class="btn-align-tool" id="inspDistH" title="Distribute Horizontal Spacing"><span data-icon="ArrowLeftRight"></span></button>
+        <button class="btn-align-tool" id="inspDistV" title="Distribute Vertical Spacing"><span data-icon="ArrowUpDown"></span></button>
       </div>
 
       ${selectedIds.length >= 2 ? `
@@ -2558,10 +2558,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       <div class="section-group" style="padding-bottom: 8px;">
         <div class="section-title">Boolean Operations</div>
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 6px;">
-          <button class="btn-inspector-action" id="btnInspBoolUnion" title="Union Selection (⌥⌘U)" style="font-size: 11px; padding: 4px 2px;">∪ Union</button>
-          <button class="btn-inspector-action" id="btnInspBoolSubtract" title="Subtract Selection (⌥⌘S)" style="font-size: 11px; padding: 4px 2px;">− Subtract</button>
-          <button class="btn-inspector-action" id="btnInspBoolIntersect" title="Intersect Selection (⌥⌘I)" style="font-size: 11px; padding: 4px 2px;">∩ Intersect</button>
-          <button class="btn-inspector-action" id="btnInspBoolExclude" title="Exclude Selection (⌥⌘X)" style="font-size: 11px; padding: 4px 2px;">⊻ Exclude</button>
+          <button class="btn-inspector-action" id="btnInspBoolUnion" title="Union Selection (⌥⌘U)" style="font-size: 11px; padding: 4px 2px;"><span data-icon="Layers" data-icon-size="13"></span> Union</button>
+          <button class="btn-inspector-action" id="btnInspBoolSubtract" title="Subtract Selection (⌥⌘S)" style="font-size: 11px; padding: 4px 2px;"><span data-icon="Minus" data-icon-size="13"></span> Subtract</button>
+          <button class="btn-inspector-action" id="btnInspBoolIntersect" title="Intersect Selection (⌥⌘I)" style="font-size: 11px; padding: 4px 2px;"><span data-icon="Circle" data-icon-size="13"></span> Intersect</button>
+          <button class="btn-inspector-action" id="btnInspBoolExclude" title="Exclude Selection (⌥⌘X)" style="font-size: 11px; padding: 4px 2px;"><span data-icon="X" data-icon-size="13"></span> Exclude</button>
         </div>
       </div>` : ''}
 
@@ -2572,10 +2572,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         <div class="props-row">
           <div class="prop-field" style="flex: 1;">
             <select class="prop-input" id="propBooleanGroupOp">
-              <option value="union" ${node.booleanOperation === 'union' ? 'selected' : ''}>∪ Union Selection</option>
-              <option value="subtract" ${node.booleanOperation === 'subtract' ? 'selected' : ''}>− Subtract Selection</option>
-              <option value="intersect" ${node.booleanOperation === 'intersect' ? 'selected' : ''}>∩ Intersect Selection</option>
-              <option value="exclude" ${node.booleanOperation === 'exclude' ? 'selected' : ''}>⊻ Exclude Selection</option>
+              <option value="union" ${node.booleanOperation === 'union' ? 'selected' : ''}>Union Selection</option>
+              <option value="subtract" ${node.booleanOperation === 'subtract' ? 'selected' : ''}>Subtract Selection</option>
+              <option value="intersect" ${node.booleanOperation === 'intersect' ? 'selected' : ''}>Intersect Selection</option>
+              <option value="exclude" ${node.booleanOperation === 'exclude' ? 'selected' : ''}>Exclude Selection</option>
             </select>
           </div>
         </div>
@@ -2787,12 +2787,12 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
                 <option value="image" ${fillType === 'image' ? 'selected' : ''}>Image</option>
                 <option value="video" ${fillType === 'video' ? 'selected' : ''}>Video</option>
               </select>
-              <button class="btn-icon-xs btn-remove-fill" data-index="${idx}" title="Remove Fill" aria-label="Remove fill">✕</button>
+              <button class="btn-icon-xs btn-remove-fill" data-index="${idx}" title="Remove Fill" aria-label="Remove fill"><span data-icon="X"></span></button>
             </div>
             ${fillType === 'solid' ? `
               <div class="props-row">
                 <div class="prop-field"><input type="text" class="prop-input fill-hex-input" data-index="${idx}" value="${this.escapeAttr(f.color || '#334155')}" aria-label="Solid fill color"></div>
-                <button class="btn-icon-xs btn-bind-token" data-index="${idx}" title="Bind to Theme Token">❖</button>
+                <button class="btn-icon-xs btn-bind-token" data-index="${idx}" title="Bind to Theme Token"><span data-icon="Link"></span></button>
               </div>
               ${f.tokenName ? `<span class="token-chip-badge" title="Bound to token">${this.escapeAttr(f.tokenName)}</span>` : ''}
             ` : ''}
@@ -2811,7 +2811,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
                 <span class="fill-media-name" style="font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis;">${this.escapeAttr(f.name || (f.url ? `Attached ${fillType}` : 'No media selected'))}</span>
               </div>
               <div class="props-row">
-                <button type="button" class="btn-inspector-action btn-generate-fill" data-type="${fillType}">✦ Generate with AI</button>
+                <button type="button" class="btn-inspector-action btn-generate-fill" data-type="${fillType}"><span data-icon="Sparkles"></span> Generate with AI</button>
                 <span style="font-size: 10px; color: var(--text-muted);" title="Media generation is not connected in this build.">Provider not connected</span>
               </div>
             ` : ''}
@@ -2837,7 +2837,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             <span class="prop-label">W</span>
             <input type="text" class="prop-input stroke-width-input" data-index="${idx}" value="${st.width || 1}">
           </div>
-          <button class="btn-icon-xs btn-remove-stroke" data-index="${idx}">✕</button>
+          <button class="btn-icon-xs btn-remove-stroke" data-index="${idx}" title="Remove stroke" aria-label="Remove stroke"><span data-icon="X"></span></button>
         </div>
         `).join('') : '<div style="font-size: 11px; color: var(--text-dim);">No stroke applied</div>'}
       </div>
@@ -2852,7 +2852,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         <div style="background: var(--bg-surface); padding: 8px; border-radius: 4px; border: 1px solid var(--border-subtle); margin-bottom: 6px;">
           <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px;">
             <span>Drop Shadow</span>
-            <button class="btn-icon-xs btn-remove-effect" data-index="${idx}">✕</button>
+            <button class="btn-icon-xs btn-remove-effect" data-index="${idx}" title="Remove effect" aria-label="Remove effect"><span data-icon="X"></span></button>
           </div>
           <div class="props-row">
             <div class="prop-field"><span class="prop-label">X</span><input type="text" class="prop-input effect-x" data-index="${idx}" value="${sh.x || 0}"></div>
@@ -3616,7 +3616,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       <div class="proto-interaction-card" style="padding: 10px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 6px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;">
         <div class="proto-row" style="display: flex; justify-content: space-between; align-items: center;">
           <span style="font-weight: 600; color: #38bdf8;"><span data-icon="Zap"></span> Interaction ${idx + 1}</span>
-          <button class="btn-icon-xs btn-remove-interaction" data-index="${idx}" title="Remove interaction">✕</button>
+          <button class="btn-icon-xs btn-remove-interaction" data-index="${idx}" title="Remove interaction" aria-label="Remove interaction"><span data-icon="X"></span></button>
         </div>
 
         <!-- Trigger Selector -->
@@ -4934,23 +4934,27 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       const hasChildren = Array.isArray(node.childIds) && node.childIds.length > 0;
       const isCollapsed = this.collapsedNodeIds.has(nodeId);
 
-      const icon = node.type === 'frame' ? '#' :
-                   node.type === 'text' ? 'T' :
-                   node.type === 'ellipse' ? '○' :
-                   node.type === 'line' ? '─' :
-                   node.type === 'group' ? '⬚' :
-                   node.type === 'component' ? '❖' :
-                   node.type === 'instance' ? '◇' :
+      const icon = node.type === 'frame' ? 'Frame' :
+                   node.type === 'text' ? 'Type' :
+                   node.type === 'ellipse' ? 'Circle' :
+                   node.type === 'line' ? 'Minus' :
+                   node.type === 'group' ? 'Layers' :
+                   node.type === 'component' ? 'Box' :
+                   node.type === 'instance' ? 'Copy' :
+                   node.type === 'path' || node.type === 'vector' ? 'PenTool' :
+                   node.type === 'image' ? 'Image' :
+                   node.type === 'star' ? 'Star' :
+                   node.type === 'polygon' ? 'Triangle' :
                    (node.type === 'boolean' || node.type === 'boolean_group') ? (
-                     node.booleanOperation === 'subtract' ? '−' :
-                     node.booleanOperation === 'intersect' ? '∩' :
-                     node.booleanOperation === 'exclude' ? '⊻' : '∪'
-                   ) : '□';
+                     node.booleanOperation === 'subtract' ? 'Minus' :
+                     node.booleanOperation === 'intersect' ? 'Circle' :
+                     node.booleanOperation === 'exclude' ? 'X' : 'Layers'
+                   ) : 'Square';
 
       const paddingLeft = 6 + depth * 14;
 
       const chevronHtml = hasChildren
-        ? `<button class="layer-chevron ${isCollapsed ? 'collapsed' : ''}" data-action="toggle-collapse" data-node-id="${node.id}" title="${isCollapsed ? 'Expand' : 'Collapse'}" tabindex="-1">${isCollapsed ? '▸' : '▾'}</button>`
+        ? `<button class="layer-chevron ${isCollapsed ? 'collapsed' : ''}" data-action="toggle-collapse" data-node-id="${node.id}" title="${isCollapsed ? 'Expand' : 'Collapse'}" tabindex="-1"><span data-icon="${isCollapsed ? 'ChevronRight' : 'ChevronDown'}" data-icon-size="13"></span></button>`
         : `<span class="layer-chevron-spacer"></span>`;
 
       const nameHtml = isEditing
@@ -4969,7 +4973,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       html += `
         <div class="${stateClasses}" data-node-id="${node.id}" draggable="${!isEditing}" style="padding-left: ${paddingLeft}px;">
           ${chevronHtml}
-          <span class="layer-icon" title="${node.type}">${icon}</span>
+          <span class="layer-icon" title="${node.type}"><span data-icon="${icon}" data-icon-size="14"></span></span>
           ${nameHtml}
           <div class="layer-actions">
             <button class="layer-btn toggle-lock" data-action="toggle-lock" data-node-id="${node.id}" title="${node.locked ? 'Unlock Layer' : 'Lock Layer'}">${node.locked ? '<span data-icon="LockKeyhole"></span>' : '<span data-icon="LockOpen"></span>'}</button>
@@ -6019,7 +6023,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       const promptText = aiInput?.value?.trim();
       if (!promptText) return;
       closeAiBar();
-      this.showToast(`✦ Figma AI: Generating "${promptText.slice(0, 32)}..."`, 'info', 3000);
+      this.showToast(`Figma AI: Generating "${promptText.slice(0, 32)}..."`, 'info', 3000);
       
       const aiPromptInp = document.getElementById('aiPromptInput');
       if (aiPromptInp) aiPromptInp.value = promptText;

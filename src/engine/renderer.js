@@ -1110,10 +1110,22 @@ export class CanvasRenderer {
       // Pin Number/Icon
       ctx.shadowColor = 'transparent';
       ctx.fillStyle = '#ffffff';
-      ctx.font = `600 ${Math.max(11 / this.zoom, 8)}px Inter, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(c.resolved ? '✓' : `${i + 1}`, x, y);
+      if (c.resolved) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = Math.max(1.5 / this.zoom, 1);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.18, y);
+        ctx.lineTo(x - size * 0.03, y + size * 0.16);
+        ctx.lineTo(x + size * 0.22, y - size * 0.16);
+        ctx.stroke();
+      } else {
+        ctx.font = `600 ${Math.max(11 / this.zoom, 8)}px Inter, sans-serif`;
+        ctx.fillText(`${i + 1}`, x, y);
+      }
     }
     ctx.restore();
   }

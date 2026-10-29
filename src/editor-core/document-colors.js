@@ -1,12 +1,18 @@
-const HEX_COLOR_PATTERN = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+import { parseColorString, rgbToHex } from './color-picker.js';
+
+const HEX_COLOR_PATTERN = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 function normalizeHexColor(value) {
   const color = String(value ?? '').trim();
-  if (!HEX_COLOR_PATTERN.test(color)) return null;
-  if (color.length === 4) {
+  if (HEX_COLOR_PATTERN.test(color) && color.length === 4) {
     return `#${[...color.slice(1)].map(channel => channel + channel).join('')}`.toUpperCase();
   }
-  return color.toUpperCase();
+  if (HEX_COLOR_PATTERN.test(color) && color.length === 5) {
+    return `#${[...color.slice(1)].map(channel => channel + channel).join('')}`.toUpperCase();
+  }
+  if (HEX_COLOR_PATTERN.test(color)) return color.toUpperCase();
+  const parsed = parseColorString(color);
+  return parsed ? rgbToHex(parsed.r, parsed.g, parsed.b, parsed.a) : null;
 }
 
 export function collectDocumentColors(document) {
@@ -32,8 +38,8 @@ export function collectDocumentColors(document) {
     const nodes = page?.nodes && typeof page.nodes === 'object' ? Object.values(page.nodes) : [];
     for (const node of nodes) {
       addColor(node?.text?.color);
-      for (const paint of node?.style?.fills || []) addPaint(paint);
-      for (const paint of node?.style?.strokes || []) addPaint(paint);
+      for (const paint of Array.isArray(node?.style?.fills) ? node.style.fills : []) addPaint(paint);
+      for (const paint of Array.isArray(node?.style?.strokes) ? node.style.strokes : []) addPaint(paint);
     }
   }
 

@@ -2073,7 +2073,7 @@ export class PrototypeEngine {
           </div>
           <div class="debugger-actions" style="display: flex; gap: 6px;">
             <button class="btn-player" id="btnClearLog" style="padding: 2px 8px; font-size: 10px;">Clear Log</button>
-            <button class="btn-player" id="btnCloseDebugger" style="padding: 2px 8px; font-size: 10px;">✕</button>
+            <button class="btn-player" id="btnCloseDebugger" style="padding: 2px 8px; font-size: 10px;" aria-label="Close debugger"><span data-icon="X"></span></button>
           </div>
         </div>
         <div class="debugger-body">

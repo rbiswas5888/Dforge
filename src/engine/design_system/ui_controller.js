@@ -641,7 +641,7 @@ export class DesignSystemUIController {
           <div class="ds-card-title">
             <span>Validation Health & Governance</span>
             <span style="font-size: 11px; color: ${metrics.duplicateCandidates.length === 0 ? 'var(--accent-green)' : 'var(--accent-amber)'};">
-              ${metrics.duplicateCandidates.length === 0 ? '✓ All Validated' : `${metrics.duplicateCandidates.length} warnings`}
+              ${metrics.duplicateCandidates.length === 0 ? '<span data-icon="Check" data-icon-size="13"></span> All Validated' : `${metrics.duplicateCandidates.length} warnings`}
             </span>
           </div>
           ${metrics.duplicateCandidates.length > 0 ? `
@@ -652,7 +652,7 @@ export class DesignSystemUIController {
             </div>
           ` : `
             <div class="ds-issue-item info">
-              <div>✓ Zero duplicate token candidates detected. Registry is normalized.</div>
+              <div><span data-icon="Check" data-icon-size="13"></span> Zero duplicate token candidates detected. Registry is normalized.</div>
             </div>
           `}
           ${metrics.unboundCount > 0 ? `
@@ -661,11 +661,11 @@ export class DesignSystemUIController {
             </div>
           ` : `
             <div class="ds-issue-item info">
-              <div>✓ No unbound raw styling candidates identified in document layers.</div>
+              <div><span data-icon="Check" data-icon-size="13"></span> No unbound raw styling candidates identified in document layers.</div>
             </div>
           `}
           <div class="ds-issue-item info">
-            <div>✓ Single authoritative shared registry active. Tokens, Variables, Assets synchronized.</div>
+            <div><span data-icon="Check" data-icon-size="13"></span> Single authoritative shared registry active. Tokens, Variables, Assets synchronized.</div>
           </div>
         </div>
 
@@ -850,7 +850,7 @@ export class DesignSystemUIController {
           <div style="grid-column: 1 / -1; text-align: center; color: var(--text-dim); padding: 28px;">No components registered yet. Add one from the catalog above or import a component library.</div>
         ` : comps.map(c => `
           <div class="ds-card" style="display: flex; flex-direction: column; gap: 8px;">
-            <div style="height: 90px; background: var(--bg-surface); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 28px;">❖</div>
+            <div style="height: 90px; background: var(--bg-surface); border-radius: 6px; display: flex; align-items: center; justify-content: center;"><span data-icon="Box" data-icon-size="28"></span></div>
             <div style="font-size: 13px; font-weight: 700; color: var(--text-main);">${c.name}</div>
             <div style="font-size: 11px; color: var(--text-dim);">${c.description || 'Governed component definition'}</div>
             <div style="display: flex; gap: 6px; margin-top: auto; padding-top: 8px;">

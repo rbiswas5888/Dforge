@@ -11,6 +11,8 @@ export function hexToRgb(hex) {
   let c = String(hex || '').trim().replace(/^#/, '');
   if (c.length === 3) {
     c = c.split('').map(x => x + x).join('');
+  } else if (c.length === 4) {
+    c = c.split('').map(x => x + x).join('');
   }
   if (c.length === 6) {
     const num = parseInt(c, 16);
@@ -98,8 +100,99 @@ export function hsvToRgb(h, s, v) {
   };
 }
 
+export function rgbToHsl(r, g, b) {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  const lightness = (max + min) / 2;
+  let hue = 0;
+  let saturation = 0;
+
+  if (delta !== 0) {
+    saturation = delta / (1 - Math.abs(2 * lightness - 1));
+    switch (max) {
+      case r: hue = ((g - b) / delta) % 6; break;
+      case g: hue = (b - r) / delta + 2; break;
+      default: hue = (r - g) / delta + 4; break;
+    }
+    hue *= 60;
+    if (hue < 0) hue += 360;
+  }
+
+  return { h: hue, s: saturation * 100, l: lightness * 100 };
+}
+
+export function hslToRgb(h, s, l) {
+  const hue = ((h % 360) + 360) % 360 / 360;
+  const saturation = Math.max(0, Math.min(100, s)) / 100;
+  const lightness = Math.max(0, Math.min(100, l)) / 100;
+  const channel = offset => {
+    const k = (offset + hue * 12) % 12;
+    const a = saturation * Math.min(lightness, 1 - lightness);
+    return lightness - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  };
+  return {
+    r: Math.round(channel(0) * 255),
+    g: Math.round(channel(8) * 255),
+    b: Math.round(channel(4) * 255)
+  };
+}
+
+export function parseColorString(value) {
+  const color = String(value ?? '').trim();
+  if (/^#?(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color)) {
+    const channels = color.replace(/^#/, '');
+    const rgb = hexToRgb(color);
+    return { ...rgb, hasAlpha: channels.length === 4 || channels.length === 8 };
+  }
+
+  const match = color.match(/^(rgb|rgba|hsl|hsla)\((.*)\)$/i);
+  if (!match) return null;
+  const [, model, body] = match;
+  const isHsl = model.toLowerCase().startsWith('hsl');
+  const components = body.split('/');
+  if (components.length > 2) return null;
+  const values = components[0].includes(',')
+    ? components[0].split(',').map(part => part.trim())
+    : components[0].trim().split(/\s+/);
+  let alphaValue = components[1]?.trim();
+  if (!alphaValue && values.length === 4) alphaValue = values.pop();
+  if (values.length !== 3 || (model.toLowerCase().endsWith('a') && !alphaValue)) return null;
+
+  const parseComponent = part => {
+    const component = String(part).trim().match(/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(%?)$/);
+    if (!component) return null;
+    return { number: Number(component[1]), percent: component[2] === '%' };
+  };
+  const parsed = values.map(parseComponent);
+  if (parsed.some(part => !part)) return null;
+
+  let rgb;
+  if (isHsl) {
+    if (!parsed[1].percent || !parsed[2].percent) return null;
+    rgb = hslToRgb(parsed[0].number, parsed[1].number, parsed[2].number);
+  } else {
+    const channel = part => Math.max(0, Math.min(255, Math.round(part.percent ? part.number * 2.55 : part.number)));
+    rgb = {
+      r: channel(parsed[0]),
+      g: channel(parsed[1]),
+      b: channel(parsed[2])
+    };
+  }
+  const alphaParsed = alphaValue ? parseComponent(alphaValue) : null;
+  if (alphaValue && !alphaParsed) return null;
+  return {
+    ...rgb,
+    a: alphaParsed ? Math.max(0, Math.min(1, alphaParsed.percent ? alphaParsed.number / 100 : alphaParsed.number)) : 1,
+    hasAlpha: Boolean(alphaParsed)
+  };
+}
+
 function isValidHexColor(value) {
-  return /^#?(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(String(value || '').trim());
+  return /^#?(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(String(value || '').trim());
 }
 
 function escapeHtml(value) {
@@ -117,7 +210,7 @@ export class ColorPickerPopover {
     this.s = 76;
     this.v = 96;
     this.a = 1;
-    this.format = 'HEX'; // 'HEX' | 'RGB'
+    this.format = this.loadColorFormat();
     this.onInputCallback = null;
     this.onChangeCallback = null;
     this.documentColors = [];
@@ -150,6 +243,65 @@ export class ColorPickerPopover {
     }
     this.container = el;
     this.bindEvents();
+  }
+
+  loadColorFormat() {
+    try {
+      const format = globalThis.localStorage?.getItem('designforge_color_format');
+      return ['HEX', 'RGB', 'HSL', 'HSB', 'CSS'].includes(format) ? format : 'HEX';
+    } catch (error) {
+      console.warn('Could not load color format preference:', error);
+      return 'HEX';
+    }
+  }
+
+  saveColorFormat(format) {
+    try {
+      globalThis.localStorage?.setItem('designforge_color_format', format);
+    } catch (error) {
+      console.warn('Could not save color format preference:', error);
+    }
+  }
+
+  renderColorInputFields(rgb, hex) {
+    const formatNumber = value => String(Math.round(value * 100) / 100);
+    const numberInput = (id, label, value, min, max) => `
+      <div class="cp-input-wrapper">
+        <span class="cp-input-label">${label}</span>
+        <input type="number" class="cp-text-input cp-model-input" id="${id}" value="${formatNumber(value)}" min="${min}" max="${max}" step="0.1" aria-label="${label}" aria-describedby="cpColorInputError">
+      </div>`;
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+
+    if (this.format === 'RGB') {
+      return `<div class="cp-input-row cp-rgb-row">
+        ${numberInput('cpRInput', 'R', rgb.r, 0, 255)}
+        ${numberInput('cpGInput', 'G', rgb.g, 0, 255)}
+        ${numberInput('cpBInput', 'B', rgb.b, 0, 255)}
+      </div>`;
+    }
+    if (this.format === 'HSL') {
+      return `<div class="cp-input-row cp-rgb-row">
+        ${numberInput('cpHslHInput', 'H', hsl.h, 0, 360)}
+        ${numberInput('cpHslSInput', 'S', hsl.s, 0, 100)}
+        ${numberInput('cpHslLInput', 'L', hsl.l, 0, 100)}
+      </div>`;
+    }
+    if (this.format === 'HSB') {
+      return `<div class="cp-input-row cp-rgb-row">
+        ${numberInput('cpHsbHInput', 'H', this.h, 0, 360)}
+        ${numberInput('cpHsbSInput', 'S', this.s, 0, 100)}
+        ${numberInput('cpHsbBInput', 'B', this.v, 0, 100)}
+      </div>`;
+    }
+
+    const isCss = this.format === 'CSS';
+    const value = isCss
+      ? (this.a < 0.999 ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${this.a})` : `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`)
+      : hex;
+    return `<div class="cp-input-wrapper">
+      <span class="cp-input-label">${isCss ? 'CSS' : 'HEX'}</span>
+      <input type="text" class="cp-text-input cp-model-input" id="${isCss ? 'cpCssInput' : 'cpHexInput'}" value="${value}" aria-label="${isCss ? 'CSS color value' : 'HEX color value'}" aria-describedby="cpColorInputError">
+    </div>`;
   }
 
   render() {
@@ -202,20 +354,21 @@ export class ColorPickerPopover {
 
         <div class="cp-field-group">
           <div class="cp-input-row">
-            <div class="cp-input-wrapper" style="flex: 1.5;">
-              <span class="cp-input-label">HEX</span>
-              <input type="text" class="cp-text-input" id="cpHexInput" value="${hex}">
+            <div class="cp-input-wrapper">
+              <span class="cp-input-label">MODEL</span>
+              <select class="cp-text-input" id="cpColorModel" aria-label="Color model">
+                ${['HEX', 'RGB', 'HSL', 'HSB', 'CSS'].map(format => `<option value="${format}" ${this.format === format ? 'selected' : ''}>${format}</option>`).join('')}
+              </select>
             </div>
-            <div class="cp-input-wrapper" style="flex: 1;">
+            <div class="cp-input-wrapper">
               <span class="cp-input-label">%</span>
-              <input type="number" class="cp-text-input" id="cpOpacityInput" value="${Math.round(this.a * 100)}" min="0" max="100">
+              <input type="number" class="cp-text-input" id="cpOpacityInput" value="${Math.round(this.a * 100)}" min="0" max="100" step="0.1" aria-describedby="cpColorInputError">
             </div>
           </div>
 
-          <div class="cp-rgb-row" style="display: flex; gap: 4px; margin-top: 4px;">
-            <div class="cp-input-wrapper"><span class="cp-input-label">R</span><input type="number" class="cp-text-input cp-rgb-input" id="cpRInput" value="${rgb.r}" min="0" max="255"></div>
-            <div class="cp-input-wrapper"><span class="cp-input-label">G</span><input type="number" class="cp-text-input cp-rgb-input" id="cpGInput" value="${rgb.g}" min="0" max="255"></div>
-            <div class="cp-input-wrapper"><span class="cp-input-label">B</span><input type="number" class="cp-text-input cp-rgb-input" id="cpBInput" value="${rgb.b}" min="0" max="255"></div>
+          <div id="cpModelInputs">${this.renderColorInputFields(rgb, hex)}</div>
+          <div id="cpColorInputError" role="alert" aria-live="polite" style="display: none; color: #f87171; font-size: 10px; margin-top: 4px;">
+            Enter a valid HEX, RGB, HSL, or CSS color value.
           </div>
         </div>
       </div>
@@ -356,18 +509,38 @@ export class ColorPickerPopover {
       const prevCurrent = document.getElementById('cpPreviewCurrent');
       if (prevCurrent) prevCurrent.style.background = hex;
 
+      const activeElement = document.activeElement;
       const hexInp = document.getElementById('cpHexInput');
-      if (hexInp && document.activeElement !== hexInp) hexInp.value = hex;
-
+      if (hexInp && activeElement !== hexInp) hexInp.value = hex;
+      const cssInp = document.getElementById('cpCssInput');
+      if (cssInp && activeElement !== cssInp) {
+        cssInp.value = this.a < 0.999
+          ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${this.a})`
+          : `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+      }
       const opInp = document.getElementById('cpOpacityInput');
-      if (opInp && document.activeElement !== opInp) opInp.value = Math.round(this.a * 100);
+      if (opInp && activeElement !== opInp) opInp.value = Math.round(this.a * 100);
 
       const rInp = document.getElementById('cpRInput');
       const gInp = document.getElementById('cpGInput');
       const bInp = document.getElementById('cpBInput');
-      if (rInp && document.activeElement !== rInp) rInp.value = rgb.r;
-      if (gInp && document.activeElement !== gInp) gInp.value = rgb.g;
-      if (bInp && document.activeElement !== bInp) bInp.value = rgb.b;
+      if (rInp && activeElement !== rInp) rInp.value = rgb.r;
+      if (gInp && activeElement !== gInp) gInp.value = rgb.g;
+      if (bInp && activeElement !== bInp) bInp.value = rgb.b;
+
+      const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+      const modelValues = [
+        ['cpHslHInput', hsl.h],
+        ['cpHslSInput', hsl.s],
+        ['cpHslLInput', hsl.l],
+        ['cpHsbHInput', this.h],
+        ['cpHsbSInput', this.s],
+        ['cpHsbBInput', this.v]
+      ];
+      for (const [id, value] of modelValues) {
+        const input = document.getElementById(id);
+        if (input && activeElement !== input) input.value = String(Math.round(value * 100) / 100);
+      }
 
       this.updateThumbPositions();
     }
@@ -541,65 +714,106 @@ export class ColorPickerPopover {
       };
     }
 
-    // 4. Hex Input manual typing
-    const hexInp = document.getElementById('cpHexInput');
-    if (hexInp) {
-      const applyHex = (e, commit) => {
-        const val = e.target.value.trim();
-        if (!isValidHexColor(val)) {
-          hexInp.setAttribute('aria-invalid', 'true');
-          return;
+    const showInputValidity = (input, valid) => {
+      if (valid) input.removeAttribute('aria-invalid');
+      else input.setAttribute('aria-invalid', 'true');
+      const error = document.getElementById('cpColorInputError');
+      if (error) {
+        error.textContent = input.id === 'cpOpacityInput'
+          ? 'Opacity must be between 0 and 100.'
+          : 'Enter a valid HEX, RGB, HSL, or CSS color value.';
+        error.style.display = valid ? 'none' : 'block';
+      }
+    };
+
+    const colorModel = document.getElementById('cpColorModel');
+    if (colorModel) {
+      colorModel.onchange = event => {
+        const format = event.target.value;
+        if (!['HEX', 'RGB', 'HSL', 'HSB', 'CSS'].includes(format)) return;
+        this.format = format;
+        this.saveColorFormat(format);
+        this.render();
+      };
+    }
+
+    // 4. Color model input
+    const modelInputs = [...this.container.querySelectorAll('.cp-model-input')];
+    const modelInput = modelInputs[0];
+    if (modelInput) {
+      const applyModelInput = commit => {
+        let rgb;
+        let hasAlpha = false;
+        if (this.format === 'RGB' || this.format === 'HSL' || this.format === 'HSB') {
+          const ids = this.format === 'RGB'
+            ? ['cpRInput', 'cpGInput', 'cpBInput']
+            : this.format === 'HSL'
+              ? ['cpHslHInput', 'cpHslSInput', 'cpHslLInput']
+              : ['cpHsbHInput', 'cpHsbSInput', 'cpHsbBInput'];
+          const inputs = ids.map(id => document.getElementById(id));
+          const values = inputs.map(input => input?.value.trim() === '' ? Number.NaN : Number(input.value));
+          const maximums = this.format === 'RGB' ? [255, 255, 255] : [360, 100, 100];
+          const isValid = values.every((value, index) =>
+            Number.isFinite(value) && value >= 0 && value <= maximums[index]
+          );
+          if (!isValid) {
+            inputs.forEach(input => input && showInputValidity(input, false));
+            return;
+          }
+          inputs.forEach(input => input && showInputValidity(input, true));
+
+          if (this.format === 'RGB') {
+            rgb = { r: values[0], g: values[1], b: values[2] };
+          } else if (this.format === 'HSL') {
+            rgb = hslToRgb(values[0], values[1], values[2]);
+          } else {
+            rgb = hsvToRgb(values[0], values[1], values[2]);
+          }
+        } else {
+          const parsed = parseColorString(modelInput.value);
+          if (!parsed) {
+            showInputValidity(modelInput, false);
+            return;
+          }
+          rgb = parsed;
+          hasAlpha = parsed.hasAlpha;
+          showInputValidity(modelInput, true);
         }
-        hexInp.removeAttribute('aria-invalid');
-        const rgb = hexToRgb(val);
+
         const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
         this.h = hsv.h;
         this.s = hsv.s;
         this.v = hsv.v;
-        this.a = rgb.a !== undefined ? rgb.a : 1;
+        if (hasAlpha) this.a = rgb.a;
         this.drawSBCanvas();
         this.notifyInput();
         if (commit) this.notifyChange();
       };
-      hexInp.oninput = e => applyHex(e, false);
-      hexInp.onchange = e => applyHex(e, true);
+
+      modelInput.oninput = () => applyModelInput(false);
+      modelInput.onchange = () => applyModelInput(true);
+      for (const input of modelInputs.slice(1)) {
+        input.oninput = () => applyModelInput(false);
+        input.onchange = () => applyModelInput(true);
+      }
     }
 
     // 5. Opacity Input
     const opInp = document.getElementById('cpOpacityInput');
     if (opInp) {
       const applyOpacity = (e, commit) => {
-        const parsed = Number.parseInt(e.target.value, 10);
-        if (!Number.isFinite(parsed)) return;
-        const val = Math.max(0, Math.min(100, parsed));
-        this.a = val / 100;
+        const value = e.target.value.trim() === '' ? Number.NaN : Number(e.target.value);
+        if (!Number.isFinite(value) || value < 0 || value > 100) {
+          showInputValidity(opInp, false);
+          return;
+        }
+        showInputValidity(opInp, true);
+        this.a = value / 100;
         this.notifyInput();
         if (commit) this.notifyChange();
       };
       opInp.oninput = e => applyOpacity(e, false);
       opInp.onchange = e => applyOpacity(e, true);
-    }
-
-    // 6. RGB Inputs
-    const rInp = document.getElementById('cpRInput');
-    const gInp = document.getElementById('cpGInput');
-    const bInp = document.getElementById('cpBInput');
-    const onRgbInput = (commit = false) => {
-      const values = [rInp, gInp, bInp].map(input => Number.parseInt(input.value, 10));
-      if (values.some(value => !Number.isFinite(value))) return;
-      const [r, g, b] = values.map(value => Math.max(0, Math.min(255, value)));
-      const hsv = rgbToHsv(r, g, b);
-      this.h = hsv.h;
-      this.s = hsv.s;
-      this.v = hsv.v;
-      this.drawSBCanvas();
-      this.notifyInput();
-      if (commit) this.notifyChange();
-    };
-    for (const input of [rInp, gInp, bInp]) {
-      if (!input) continue;
-      input.oninput = () => onRgbInput();
-      input.onchange = () => onRgbInput(true);
     }
 
     // 7. Swatches Click
