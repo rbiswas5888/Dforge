@@ -95,3 +95,4 @@ assert.equal(page.nodes[node1.id].transform.pivot.y, 0.75, 'Redo reapplied custo
 console.log('   ✓ Pivot updates support full transactional Undo / Redo.');
 
 console.log('\n✅ All Transform Pivot & Reference Point tests PASSED!\n');
+
