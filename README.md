@@ -59,6 +59,20 @@ MVP1 - https://designforgeai.netlify.app/
    - Debounced autosave to local browser storage so work is never lost.
    - Native `.dforge` project file export and upload/import with 100% fidelity.
 
+   [page@825f5485994a3beef4bbc5ce6a6de5ed.webm](https://github.com/user-attachments/assets/15d1a505-baaa-4a0b-a634-5e976ebf1996)
+
+
+ <img width="1440" height="900" alt="24_editor_canvas_tools_verified" src="https://github.com/user-attachments/assets/8ef0001b-4720-4fd3-a9d4-da07feaf30ec" />
+<img width="1440" height="900" alt="20_editor_canvas_loaded" src="https://github.com/user-attachments/assets/e5151da2-91df-40b1-a7a6-a3358748ceb3" />
+<img width="1440" height="900" alt="19_project_settings_members_table" src="https://github.com/user-attachments/assets/b04d4e7e-2e2f-44bd-bab9-82c3ace4c799" />
+<img width="1440" height="900" alt="16_workspace_projects_listing" src="https://github.com/user-attachments/assets/022f000c-89a3-4a41-9ff3-488b6a8563f1" />
+<img width="390" height="844" alt="12_mobile_forgot_password_modal" src="https://github.com/user-attachments/assets/7bae8593-91a1-4749-b15f-5ffeb97e2617" />
+<img width="390" height="844" alt="11_mobile_standard_login" src="https://github.com/user-attachments/assets/668b5949-6546-4dcc-af56-25dca450bad8" />
+<img width="1440" height="900" alt="08_desktop_sign_out_complete" src="https://github.com/user-attachments/assets/e863d0c2-ff49-4733-b357-593af31669ca" />
+<img width="1440" height="900" alt="06_desktop_credentials_filled" src="https://github.com/user-attachments/assets/34a1c546-614a-4a47-a6bd-3e9457d1b898" />
+<img width="1440" height="900" alt="04_desktop_login_incorrect_password" src="https://github.com/user-attachments/assets/b1eadcd2-60b3-4d89-84f4-947b5d1e0d57" />
+<img width="1440" height="900" alt="01_desktop_login_initial" src="https://github.com/user-attachments/assets/870fa9f7-6f40-4bcc-aba4-552752dfe651" />
+
 ---
 
 ## 🚀 Running DesignForge AI
