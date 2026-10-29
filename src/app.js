@@ -58,6 +58,7 @@ import { ColorPickerPopover } from './editor-core/color-picker.js';
 import { collectDocumentColors } from './editor-core/document-colors.js';
 import { buildSelectionColorUpdates, collectSelectionColors } from './editor-core/selection-colors.js';
 import { WorkspaceStore } from './engine/workspace_store.js';
+import { AuthService, DEMO_ACCOUNTS } from './engine/auth_service.js';
 import { mountLucideIcons } from './ui/lucide-icons.js';
 
 export class DesignForgeApp {
@@ -66,6 +67,7 @@ export class DesignForgeApp {
     const savedDoc = this.storage.loadAutosave();
     this.doc = savedDoc || createInitialDocument('ForgePay AI — Treasury Platform');
     this.workspaceStore = new WorkspaceStore();
+    this.auth = new AuthService(this.workspaceStore);
     this.storage.setWorkspaceStore(this.workspaceStore);
     try {
       this.workspaceStore.ensureActiveProject(this.doc);
@@ -403,13 +405,21 @@ export class DesignForgeApp {
       }
     });
 
+    // Initialize responsive authentication experience
+    this.initAuthExperience();
+
     // Landing navigation rule:
-    // User should always land on workspace unless they closed the application while design file was on.
-    const lastActiveView = this.workspaceStore.getLastActiveView();
-    if (lastActiveView === 'editor') {
-      this.showWorkspaceView('editor');
+    // If not authenticated, always show Login.
+    // If authenticated, user always lands on workspace unless they closed the app while design file was open.
+    if (!this.auth.isAuthenticated()) {
+      this.showAuthView();
     } else {
-      this.showWorkspaceView('projects');
+      const lastActiveView = this.workspaceStore.getLastActiveView();
+      if (lastActiveView === 'editor') {
+        this.showWorkspaceView('editor');
+      } else {
+        this.showWorkspaceView('projects');
+      }
     }
   }
 
@@ -423,8 +433,252 @@ export class DesignForgeApp {
     })[character]);
   }
 
+  showAuthView() {
+    this.workspaceShellView = 'auth';
+    const authScreen = document.getElementById('authScreen');
+    const wsDashboard = document.getElementById('workspaceDashboard');
+    const wsSettings = document.getElementById('workspaceSettings');
+    if (authScreen) authScreen.hidden = false;
+    if (wsDashboard) wsDashboard.hidden = true;
+    if (wsSettings) wsSettings.hidden = true;
+    mountLucideIcons(authScreen || document.body);
+  }
+
+  initAuthExperience() {
+    // Quick demo account fills
+    document.getElementById('btnFillDemoLead')?.addEventListener('click', () => {
+      const emailInput = document.getElementById('authEmailInput');
+      const passInput = document.getElementById('authPasswordInput');
+      if (emailInput) {
+        emailInput.value = 'designer@designforge.ai';
+        emailInput.classList.remove('has-error');
+      }
+      if (passInput) {
+        passInput.value = 'DesignForge2026!';
+        passInput.classList.remove('has-error');
+      }
+      this.clearAuthErrors();
+    });
+
+    document.getElementById('btnFillDemoAlex')?.addEventListener('click', () => {
+      const emailInput = document.getElementById('authEmailInput');
+      const passInput = document.getElementById('authPasswordInput');
+      if (emailInput) {
+        emailInput.value = 'alex@designforge.ai';
+        emailInput.classList.remove('has-error');
+      }
+      if (passInput) {
+        passInput.value = 'DesignForge2026!';
+        passInput.classList.remove('has-error');
+      }
+      this.clearAuthErrors();
+    });
+
+    // Password visibility toggle
+    document.getElementById('btnToggleAuthPassword')?.addEventListener('click', () => {
+      const passInput = document.getElementById('authPasswordInput');
+      const icon = document.getElementById('passwordEyeIcon');
+      if (!passInput) return;
+      const isPassword = passInput.type === 'password';
+      passInput.type = isPassword ? 'text' : 'password';
+      if (icon) {
+        icon.setAttribute('data-icon', isPassword ? 'EyeOff' : 'Eye');
+        mountLucideIcons(icon.parentElement);
+      }
+      const btn = document.getElementById('btnToggleAuthPassword');
+      if (btn) btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+    });
+
+    // Form submit
+    document.getElementById('authLoginForm')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      await this.handleLoginSubmit();
+    });
+
+    // SSO buttons
+    document.getElementById('btnSsoGoogle')?.addEventListener('click', () => this.handleSsoLogin('google'));
+    document.getElementById('btnSsoGithub')?.addEventListener('click', () => this.handleSsoLogin('github'));
+    document.getElementById('btnSsoSaml')?.addEventListener('click', () => this.handleSsoLogin('saml'));
+
+    // Forgot password modal
+    document.getElementById('btnOpenForgotPassword')?.addEventListener('click', () => {
+      const modal = document.getElementById('authForgotModal');
+      const emailInput = document.getElementById('authForgotEmail');
+      const status = document.getElementById('authForgotStatus');
+      const errorMsg = document.getElementById('authForgotEmailError');
+      if (modal) modal.style.display = 'flex';
+      if (emailInput) {
+        emailInput.value = document.getElementById('authEmailInput')?.value || '';
+        emailInput.focus();
+      }
+      if (status) status.style.display = 'none';
+      if (errorMsg) errorMsg.textContent = '';
+    });
+
+    document.getElementById('btnCloseForgotModal')?.addEventListener('click', () => {
+      const modal = document.getElementById('authForgotModal');
+      if (modal) modal.style.display = 'none';
+    });
+
+    document.getElementById('authForgotForm')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const email = document.getElementById('authForgotEmail')?.value.trim();
+      const status = document.getElementById('authForgotStatus');
+      const errorMsg = document.getElementById('authForgotEmailError');
+      if (!email) {
+        if (errorMsg) errorMsg.textContent = 'Please enter your email.';
+        return;
+      }
+      try {
+        const res = await this.auth.requestPasswordReset(email);
+        if (status) {
+          status.className = 'auth-status-alert success';
+          status.textContent = res.message;
+          status.style.display = 'flex';
+        }
+        if (errorMsg) errorMsg.textContent = '';
+      } catch (err) {
+        if (errorMsg) errorMsg.textContent = err.message;
+      }
+    });
+
+    // Sign out buttons
+    document.getElementById('workspaceRailSignOut')?.addEventListener('click', () => this.handleSignOut());
+    document.getElementById('btnSettingsSignOut')?.addEventListener('click', () => this.handleSignOut());
+  }
+
+  clearAuthErrors() {
+    const emailErr = document.getElementById('authEmailError');
+    const passErr = document.getElementById('authPasswordError');
+    const statusAlert = document.getElementById('authStatusAlert');
+    const emailInput = document.getElementById('authEmailInput');
+    const passInput = document.getElementById('authPasswordInput');
+    if (emailErr) emailErr.textContent = '';
+    if (passErr) passErr.textContent = '';
+    if (statusAlert) statusAlert.style.display = 'none';
+    if (emailInput) emailInput.classList.remove('has-error');
+    if (passInput) passInput.classList.remove('has-error');
+  }
+
+  async handleLoginSubmit() {
+    this.clearAuthErrors();
+    const emailInput = document.getElementById('authEmailInput');
+    const passInput = document.getElementById('authPasswordInput');
+    const rememberMeInput = document.getElementById('authRememberMe');
+    const statusAlert = document.getElementById('authStatusAlert');
+    const submitBtn = document.getElementById('btnSubmitAuthLogin');
+    const submitText = document.getElementById('authSubmitText');
+
+    const email = emailInput?.value.trim() || '';
+    const password = passInput?.value || '';
+    const rememberMe = Boolean(rememberMeInput?.checked);
+
+    let hasError = false;
+    if (!email) {
+      const emailErr = document.getElementById('authEmailError');
+      if (emailErr) emailErr.textContent = 'Email or username is required.';
+      emailInput?.classList.add('has-error');
+      hasError = true;
+    } else if (!this.auth.validateEmail(email)) {
+      const emailErr = document.getElementById('authEmailError');
+      if (emailErr) emailErr.textContent = 'Please enter a valid email address.';
+      emailInput?.classList.add('has-error');
+      hasError = true;
+    }
+
+    if (!password) {
+      const passErr = document.getElementById('authPasswordError');
+      if (passErr) passErr.textContent = 'Password is required.';
+      passInput?.classList.add('has-error');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    if (submitBtn) submitBtn.disabled = true;
+    if (submitText) submitText.textContent = 'Signing in...';
+
+    try {
+      const session = await this.auth.login(email, password, rememberMe);
+      if (statusAlert) {
+        statusAlert.className = 'auth-status-alert success';
+        statusAlert.textContent = `Welcome back, ${session.user.name}!`;
+        statusAlert.style.display = 'flex';
+      }
+      this.renderWorkspaceProfileSummary();
+      this.showToast(`Signed in as ${session.user.name}`, 'success');
+
+      // Hide auth screen and respect landing rule
+      setTimeout(() => {
+        const authScreen = document.getElementById('authScreen');
+        if (authScreen) authScreen.hidden = true;
+        const lastActiveView = this.workspaceStore.getLastActiveView();
+        if (lastActiveView === 'editor') {
+          this.showWorkspaceView('editor');
+        } else {
+          this.showWorkspaceView('projects');
+        }
+        if (submitBtn) submitBtn.disabled = false;
+        if (submitText) submitText.textContent = 'Sign in';
+      }, 300);
+    } catch (err) {
+      if (statusAlert) {
+        statusAlert.className = 'auth-status-alert error';
+        statusAlert.textContent = err.message;
+        statusAlert.style.display = 'flex';
+      }
+      if (submitBtn) submitBtn.disabled = false;
+      if (submitText) submitText.textContent = 'Sign in';
+    }
+  }
+
+  async handleSsoLogin(provider) {
+    const statusAlert = document.getElementById('authStatusAlert');
+    try {
+      const session = await this.auth.loginWithSso(provider);
+      if (statusAlert) {
+        statusAlert.className = 'auth-status-alert success';
+        statusAlert.textContent = `Authenticated via ${session.user.name}!`;
+        statusAlert.style.display = 'flex';
+      }
+      this.renderWorkspaceProfileSummary();
+      this.showToast(`Signed in via SSO`, 'success');
+      setTimeout(() => {
+        const authScreen = document.getElementById('authScreen');
+        if (authScreen) authScreen.hidden = true;
+        this.showWorkspaceView('projects');
+      }, 250);
+    } catch (err) {
+      if (statusAlert) {
+        statusAlert.className = 'auth-status-alert error';
+        statusAlert.textContent = err.message;
+        statusAlert.style.display = 'flex';
+      }
+    }
+  }
+
+  handleSignOut() {
+    this.auth.logout();
+    document.getElementById('workspaceDashboard').hidden = true;
+    document.getElementById('workspaceSettings').hidden = true;
+    this.showAuthView();
+    const statusAlert = document.getElementById('authStatusAlert');
+    if (statusAlert) {
+      statusAlert.className = 'auth-status-alert info';
+      statusAlert.textContent = 'You have signed out of your workspace.';
+      statusAlert.style.display = 'flex';
+    }
+    this.showToast('Signed out of DesignForge.', 'info');
+  }
+
   showWorkspaceView(view) {
+    if (!this.auth.isAuthenticated()) {
+      this.showAuthView();
+      return;
+    }
     this.workspaceShellView = view;
+    const authScreen = document.getElementById('authScreen');
+    if (authScreen) authScreen.hidden = true;
     document.getElementById('workspaceDashboard').hidden = view !== 'projects';
     document.getElementById('workspaceSettings').hidden = view !== 'settings';
     document.getElementById('workspaceNewProjectModal').hidden = true;
