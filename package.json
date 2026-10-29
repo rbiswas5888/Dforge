@@ -6,9 +6,12 @@
   "scripts": {
     "start": "node serve.js",
     "build": "vite build",
-    "test": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_export_engine.js && node tests/test_figma_functional_map.js && node tests/test_design_system.js && node tests/test_workspace.js && node tests/test_advanced_figma_prototyping.js && node tests/test_boolean_and_drilldown.js && node tests/test_color_picker.js && node tests/test_document_colors.js && node tests/test_selection_colors.js",
+    "test": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_export_engine.js && node tests/test_figma_functional_map.js && node tests/test_design_system.js && node tests/test_workspace.js && node tests/test_advanced_figma_prototyping.js && node tests/test_boolean_and_drilldown.js && node tests/test_color_picker.js && node tests/test_document_colors.js && node tests/test_selection_colors.js && node tests/test_transform_pivot.js && node tests/test_shape_builder.js && node tests/test_document_tabs.js",
     "test:color": "node tests/test_color_picker.js",
     "test:boolean": "node tests/test_boolean_and_drilldown.js",
+    "test:pivot": "node tests/test_transform_pivot.js",
+    "test:shapebuilder": "node tests/test_shape_builder.js",
+    "test:tabs": "node tests/test_document_tabs.js",
     "test:export": "node tests/test_export_engine.js",
     "test:ds": "node tests/test_design_system.js",
     "test:workspace": "node tests/test_workspace.js",
@@ -21,7 +24,7 @@
     "test:axiom": "node tests/test_axiom_layout.js",
     "test:modals": "node tests/test_figma_modals_and_themes.js",
     "test:launch": "node tests/test_launch_acceptance_suite.js",
-    "test:all": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_export_engine.js && node tests/test_figma_functional_map.js && node tests/test_master_implementation.js && node tests/test_v2_features.js && node tests/test_prototyping_logic_engine.js && node tests/test_advanced_figma_prototyping.js && node tests/test_mobile_preview.js && node tests/test_axiom_layout.js && node tests/test_figma_modals_and_themes.js && node tests/test_ai_engine.js && node tests/test_compiler.js && node tests/test_editor_upgrades.js && node tests/test_mcp_ecosystem.js && node tests/test_design_system.js && node tests/test_launch_acceptance_suite.js && node tests/test_boolean_and_drilldown.js"
+    "test:all": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_export_engine.js && node tests/test_figma_functional_map.js && node tests/test_master_implementation.js && node tests/test_v2_features.js && node tests/test_prototyping_logic_engine.js && node tests/test_advanced_figma_prototyping.js && node tests/test_mobile_preview.js && node tests/test_axiom_layout.js && node tests/test_figma_modals_and_themes.js && node tests/test_ai_engine.js && node tests/test_compiler.js && node tests/test_editor_upgrades.js && node tests/test_mcp_ecosystem.js && node tests/test_design_system.js && node tests/test_launch_acceptance_suite.js && node tests/test_boolean_and_drilldown.js && node tests/test_transform_pivot.js && node tests/test_shape_builder.js && node tests/test_document_tabs.js"
   },
   "dependencies": {
     "@rneui/base": "^5.0.0",

@@ -82,6 +82,56 @@ export class ShortcutRegistry {
     });
 
     this.register({
+      id: 'newDocumentTab',
+      name: 'New Document Tab',
+      category: 'Tabs',
+      macKey: '⌥T',
+      winKey: 'Alt+T',
+      match: (e) => e.altKey && !e.metaKey && !e.ctrlKey && e.key.toLowerCase() === 't',
+      handler: () => {
+        const nextDoc = this.engine.createEmptyDocument(`Canvas ${this.app.openDocumentTabs.length + 1}`);
+        this.app.openDocumentInTab(nextDoc);
+        this.app.showToast(`Opened new design tab: "${nextDoc.name}"`, 'success');
+      }
+    });
+
+    this.register({
+      id: 'nextDocumentTab',
+      name: 'Next Document Tab',
+      category: 'Tabs',
+      macKey: 'Ctrl+Tab / ⌥⌘]',
+      winKey: 'Ctrl+Tab',
+      match: (e) => (e.ctrlKey && e.key === 'Tab' && !e.shiftKey) ||
+                    (e.metaKey && e.altKey && e.key === ']'),
+      handler: () => this.app.cycleNextTab(1)
+    });
+
+    this.register({
+      id: 'prevDocumentTab',
+      name: 'Previous Document Tab',
+      category: 'Tabs',
+      macKey: 'Ctrl+⇧Tab / ⌥⌘[',
+      winKey: 'Ctrl+Shift+Tab',
+      match: (e) => (e.ctrlKey && e.key === 'Tab' && e.shiftKey) ||
+                    (e.metaKey && e.altKey && e.key === '['),
+      handler: () => this.app.cycleNextTab(-1)
+    });
+
+    this.register({
+      id: 'closeDocumentTab',
+      name: 'Close Active Tab',
+      category: 'Tabs',
+      macKey: '⌥W',
+      winKey: 'Alt+W',
+      match: (e) => e.altKey && !e.metaKey && !e.ctrlKey && e.key.toLowerCase() === 'w',
+      handler: () => {
+        if (this.app.activeDocumentTabId) {
+          this.app.closeDocumentTab(this.app.activeDocumentTabId);
+        }
+      }
+    });
+
+    this.register({
       id: 'exportReact',
       name: 'Export React Code',
       category: 'Code',
@@ -437,6 +487,16 @@ export class ShortcutRegistry {
       winKey: 'P',
       match: (e) => !e.metaKey && !e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'p',
       handler: () => this.app.setTool('pen')
+    });
+
+    this.register({
+      id: 'toolShapeBuilder',
+      name: 'Shape Builder Tool',
+      category: 'Tools',
+      macKey: '⇧M',
+      winKey: 'Shift+M',
+      match: (e) => !e.metaKey && !e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'm',
+      handler: () => this.app.setTool('shape_builder')
     });
 
     this.register({

@@ -102,6 +102,20 @@ export class DesignForgeApp {
       window.designForgeApp = this;
     }
 
+    // In-Editor Multi-Document Tabs (Part 2: §5, §8, §9)
+    const initialDocId = this.doc.id || 'doc_' + Date.now();
+    this.openDocumentTabs = [{
+      id: initialDocId,
+      name: this.doc.name || 'Untitled Document',
+      doc: this.doc,
+      engine: this.engine,
+      zoom: 1,
+      pan: { x: 0, y: 0 },
+      isDirty: false
+    }];
+    this.activeDocumentTabId = initialDocId;
+    this.pendingTabCloseId = null;
+
     // Active tool state
     this.currentTool = 'select'; // 'select' | 'hand' | 'frame' | 'rectangle' | 'ellipse' | 'line' | 'text' | 'comment' | 'scale' | 'pen' | 'section' | 'slice'
     this.isHandMode = false;
@@ -135,6 +149,7 @@ export class DesignForgeApp {
     mountLucideIcons(document.body);
     this.initUI();
     this.initWorkspaceExperience();
+    this.initDocumentTabs();
     this.initMenus();
     this.initRightSidebar();
     this.initCommandPalette();
@@ -289,7 +304,7 @@ export class DesignForgeApp {
     }
     const nextDocument = createInitialDocument(name);
     this.workspaceStore.createProject(nextDocument);
-    this.replaceDocument(nextDocument);
+    this.openDocumentInTab(nextDocument);
     if (!this.storage.flushAutosave(nextDocument)) {
       this.showToast('Project was created, but its latest local snapshot could not be saved.', 'error');
     }
@@ -305,7 +320,7 @@ export class DesignForgeApp {
       throw new Error('Current project changes could not be saved; project switching was cancelled.');
     }
     const nextDocument = this.workspaceStore.loadProject(projectId);
-    this.replaceDocument(nextDocument);
+    this.openDocumentInTab(nextDocument);
     if (!this.storage.flushAutosave(nextDocument)) {
       this.showToast('Project opened, but its latest local snapshot could not be saved.', 'error');
     }
@@ -756,6 +771,168 @@ export class DesignForgeApp {
       provider.apiKey = priorConfig.apiKey;
       const keyInput = document.getElementById('providerApiKeyInput');
       if (keyInput) keyInput.value = '';
+    }
+  }
+
+  // --- In-Editor Multi-Document Tabs (Part 2: §5, §8, §9) ---
+  initDocumentTabs() {
+    this.renderDocumentTabs();
+
+    document.getElementById('btnNewDocumentTab')?.addEventListener('click', () => {
+      const nextDoc = createInitialDocument(`Untitled ${this.openDocumentTabs.length + 1}`);
+      this.workspaceStore.createProject(nextDoc);
+      this.openDocumentInTab(nextDoc);
+      this.showToast(`Opened new design tab: "${nextDoc.name}"`, 'success');
+    });
+
+    document.getElementById('btnUnsavedCancel')?.addEventListener('click', () => {
+      const modal = document.getElementById('modalUnsavedChanges');
+      if (modal) modal.style.display = 'none';
+      this.pendingTabCloseId = null;
+    });
+
+    document.getElementById('btnUnsavedDontSave')?.addEventListener('click', () => {
+      const modal = document.getElementById('modalUnsavedChanges');
+      if (modal) modal.style.display = 'none';
+      if (this.pendingTabCloseId) {
+        this.forceCloseTab(this.pendingTabCloseId);
+        this.pendingTabCloseId = null;
+      }
+    });
+
+    document.getElementById('btnUnsavedSave')?.addEventListener('click', () => {
+      const modal = document.getElementById('modalUnsavedChanges');
+      if (modal) modal.style.display = 'none';
+      if (this.pendingTabCloseId) {
+        const tab = this.openDocumentTabs.find(t => t.id === this.pendingTabCloseId);
+        if (tab) {
+          this.storage.flushAutosave(tab.doc);
+          this.forceCloseTab(this.pendingTabCloseId);
+        }
+        this.pendingTabCloseId = null;
+      }
+    });
+  }
+
+  renderDocumentTabs() {
+    const scrollEl = document.getElementById('editorTabsScroll');
+    if (!scrollEl) return;
+    scrollEl.innerHTML = this.openDocumentTabs.map(tab => {
+      const isActive = tab.id === this.activeDocumentTabId;
+      const dirtyClass = tab.isDirty ? 'is-dirty' : '';
+      return `
+        <div class="editor-doc-tab ${isActive ? 'active' : ''} ${dirtyClass}" data-tab-id="${this.escapeAttr(tab.id)}" title="${this.escapeAttr(tab.name)}">
+          <span style="font-size: 11px; opacity: 0.7;">▤</span>
+          <span class="editor-doc-tab-title">${this.escapeHtml(tab.name)}</span>
+          <span class="editor-doc-tab-dot" title="Unsaved changes"></span>
+          <button class="editor-doc-tab-close" data-close-tab="${this.escapeAttr(tab.id)}" title="Close tab (⌥W)" type="button">×</button>
+        </div>
+      `;
+    }).join('');
+
+    scrollEl.querySelectorAll('.editor-doc-tab').forEach(tabEl => {
+      tabEl.addEventListener('click', (e) => {
+        if (e.target.closest('.editor-doc-tab-close')) return;
+        this.switchDocumentTab(tabEl.dataset.tabId);
+      });
+    });
+
+    scrollEl.querySelectorAll('.editor-doc-tab-close').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closeDocumentTab(btn.dataset.closeTab);
+      });
+    });
+  }
+
+  switchDocumentTab(tabId) {
+    if (tabId === this.activeDocumentTabId) return;
+    const currentTab = this.openDocumentTabs.find(t => t.id === this.activeDocumentTabId);
+    if (currentTab) {
+      currentTab.zoom = this.renderer.zoom || 1;
+      currentTab.pan = { x: this.renderer.panX || 0, y: this.renderer.panY || 0 };
+      currentTab.name = this.doc.name || currentTab.name;
+    }
+
+    const targetTab = this.openDocumentTabs.find(t => t.id === tabId);
+    if (!targetTab) return;
+
+    this.activeDocumentTabId = tabId;
+    this.replaceDocument(targetTab.doc);
+    this.renderer.zoom = targetTab.zoom || 1;
+    this.renderer.panX = targetTab.pan?.x || 0;
+    this.renderer.panY = targetTab.pan?.y || 0;
+    this.renderer.render();
+    this.updateRulers();
+    this.renderDocumentTabs();
+  }
+
+  openDocumentInTab(nextDoc) {
+    let tab = this.openDocumentTabs.find(t => t.id === nextDoc.id);
+    if (!tab) {
+      tab = {
+        id: nextDoc.id || 'doc_' + Date.now(),
+        name: nextDoc.name || 'Untitled Document',
+        doc: nextDoc,
+        engine: new CommandEngine(nextDoc),
+        zoom: 1,
+        pan: { x: 0, y: 0 },
+        isDirty: false
+      };
+      this.openDocumentTabs.push(tab);
+    }
+    this.switchDocumentTab(tab.id);
+  }
+
+  closeDocumentTab(tabId) {
+    const tab = this.openDocumentTabs.find(t => t.id === tabId);
+    if (!tab) return;
+
+    if (tab.isDirty) {
+      this.pendingTabCloseId = tabId;
+      const modal = document.getElementById('modalUnsavedChanges');
+      const nameEl = document.getElementById('unsavedChangesDocName');
+      if (nameEl) nameEl.textContent = `"${tab.name}" has unsaved edits. Closing without saving will discard changes.`;
+      if (modal) modal.style.display = 'flex';
+      return;
+    }
+
+    this.forceCloseTab(tabId);
+  }
+
+  forceCloseTab(tabId) {
+    const idx = this.openDocumentTabs.findIndex(t => t.id === tabId);
+    if (idx === -1) return;
+
+    this.openDocumentTabs.splice(idx, 1);
+
+    if (this.openDocumentTabs.length === 0) {
+      const freshDoc = createInitialDocument('Untitled Document');
+      this.openDocumentInTab(freshDoc);
+      return;
+    }
+
+    if (tabId === this.activeDocumentTabId) {
+      const nextTab = this.openDocumentTabs[Math.max(0, idx - 1)];
+      this.switchDocumentTab(nextTab.id);
+    } else {
+      this.renderDocumentTabs();
+    }
+  }
+
+  cycleNextTab(direction = 1) {
+    if (this.openDocumentTabs.length <= 1) return;
+    const curIdx = this.openDocumentTabs.findIndex(t => t.id === this.activeDocumentTabId);
+    if (curIdx === -1) return;
+    const nextIdx = (curIdx + direction + this.openDocumentTabs.length) % this.openDocumentTabs.length;
+    this.switchDocumentTab(this.openDocumentTabs[nextIdx].id);
+  }
+
+  markActiveTabDirty(isDirty = true) {
+    const activeTab = this.openDocumentTabs.find(t => t.id === this.activeDocumentTabId);
+    if (activeTab && activeTab.isDirty !== isDirty) {
+      activeTab.isDirty = isDirty;
+      this.renderDocumentTabs();
     }
   }
 
@@ -1628,6 +1805,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       if (this.rightTabMode === 'inspect') this.updateInspectPanel();
       if (this.rightTabMode === 'export') this.updateExportPanel();
       this.updateRulers();
+      this.markActiveTabDirty(true);
       this.storage.scheduleAutosave(this.doc);
 
       // Update undo/redo buttons state
@@ -1759,6 +1937,25 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         return;
       }
 
+      // 1.5 Shape Builder Tool Interaction (§9.2, §32.4.K, §32.6.B)
+      if (this.currentTool === 'shape_builder') {
+        const selectedIds = engine.getSelection();
+        if (selectedIds.length < 2) {
+          this.showToast('Select 2 or more overlapping shapes to use Shape Builder.', 'warning');
+          return;
+        }
+        this.dragState = {
+          type: 'shape_builder',
+          isSubtract: !!(e.altKey),
+          touchedIds: new Set()
+        };
+        const rawHit = renderer.hitTest(canvasCoords.x, canvasCoords.y);
+        if (rawHit && selectedIds.includes(rawHit)) {
+          this.dragState.touchedIds.add(rawHit);
+        }
+        return;
+      }
+
       // 2. Shape Creation Tools
       if (this.currentTool !== 'select') {
         this.dragState = {
@@ -1779,13 +1976,28 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         return;
       }
 
-      // 3. Resize Handle Hit-test
+      // 3. Resize Handle & Transform Pivot Hit-test
       const selectedIds = engine.getSelection();
       const page = engine.getActivePage();
       if (selectedIds.length === 1) {
         const bounds = computeWorldBounds(page, selectedIds[0]);
-        const handle = renderer.hitTestHandle(canvasCoords.x, canvasCoords.y, bounds);
         const node = engine.getNode(selectedIds[0]);
+        if (node && !node.locked && renderer.hitTestPivot(canvasCoords.x, canvasCoords.y, bounds, node)) {
+          const px = node.transform?.pivot?.x !== undefined ? node.transform.pivot.x : 0.5;
+          const py = node.transform?.pivot?.y !== undefined ? node.transform.pivot.y : 0.5;
+          this.dragState = {
+            type: 'pivot',
+            moved: false,
+            nodeId: selectedIds[0],
+            bounds,
+            startPivot: { x: px, y: py },
+            startX: canvasCoords.x,
+            startY: canvasCoords.y
+          };
+          return;
+        }
+
+        const handle = renderer.hitTestHandle(canvasCoords.x, canvasCoords.y, bounds);
         if (handle && node && !node.locked) {
           this.dragState = {
             type: 'resize',
@@ -1935,6 +2147,29 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         node.transform.y = Math.round(newY);
         renderer.render();
         this.updateInspector();
+      } else if (this.dragState.type === 'shape_builder') {
+        const rawHit = renderer.hitTest(canvasCoords.x, canvasCoords.y);
+        const selectedIds = engine.getSelection();
+        if (rawHit && selectedIds.includes(rawHit)) {
+          this.dragState.touchedIds.add(rawHit);
+        }
+      } else if (this.dragState.type === 'pivot') {
+        const { bounds, nodeId } = this.dragState;
+        const node = engine.getNode(nodeId);
+        if (node && bounds.width > 0 && bounds.height > 0) {
+          let px = (canvasCoords.x - bounds.x) / bounds.width;
+          let py = (canvasCoords.y - bounds.y) / bounds.height;
+          const snapPoints = [0, 0.5, 1];
+          for (const sp of snapPoints) {
+            if (Math.abs(px - sp) < 0.06) px = sp;
+            if (Math.abs(py - sp) < 0.06) py = sp;
+          }
+          if (!node.transform) node.transform = {};
+          node.transform.pivot = { x: Math.round(px * 100) / 100, y: Math.round(py * 100) / 100 };
+          this.dragState.moved = true;
+          renderer.render();
+          this.updateInspector();
+        }
       } else if (this.dragState.type === 'marquee') {
         renderer.marquee.currentX = canvasCoords.x;
         renderer.marquee.currentY = canvasCoords.y;
@@ -1945,7 +2180,27 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     window.addEventListener('mouseup', () => {
       if (!this.dragState) return;
 
-      if (this.dragState.type === 'move') {
+      if (this.dragState.type === 'shape_builder') {
+        const selectedIds = engine.getSelection();
+        const isSubtract = this.dragState.isSubtract;
+        const op = isSubtract ? 'subtract' : 'union';
+        if (selectedIds.length >= 2) {
+          const groupId = this.engine.booleanGroup(selectedIds, op);
+          if (groupId) {
+            renderer.render();
+            this.updateLayersTree();
+            this.updateInspector();
+            this.showToast(isSubtract ? 'Shape Builder: Subtracted overlapping region' : 'Shape Builder: Merged regions into shape', 'success');
+          }
+        }
+      } else if (this.dragState.type === 'pivot') {
+        if (this.dragState.moved) {
+          const node = engine.getNode(this.dragState.nodeId);
+          if (node?.transform?.pivot) {
+            this.engine.updateNode(this.dragState.nodeId, { transform: { pivot: { ...node.transform.pivot } } }, 'Move Pivot Point');
+          }
+        }
+      } else if (this.dragState.type === 'move') {
         renderer.snapGuides = [];
         if (this.dragState.moved) engine.commitTransforms(this.dragState.initialTransforms, 'Move objects');
       } else if (this.dragState.type === 'resize') {
@@ -2209,12 +2464,22 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       pen: 'Tool: Pen / Vector Path (P)',
       star: 'Tool: Star Shape',
       polygon: 'Tool: Polygon / Triangle Shape',
+      shape_builder: 'Tool: Shape Builder (⇧M) • Drag across overlapping shapes to merge (hold Alt to subtract)',
       text: 'Tool: Text (T) • Click canvas to type',
       comment: 'Tool: Comment (C) • Click canvas to pin review note',
       ai: 'Tool: AI Assistant (⌘⇧K)'
     };
     const hintEl = document.getElementById('statusToolHint');
     if (hintEl) hintEl.textContent = hints[tool] || `Tool: ${tool}`;
+
+    if (tool === 'shape_builder') {
+      const sel = this.engine.getSelection();
+      if (sel.length < 2) {
+        this.showToast('Shape Builder: Select 2 or more overlapping shapes to merge or subtract', 'info');
+      } else {
+        this.showToast('Shape Builder: Drag across regions to merge, hold Alt to subtract', 'info');
+      }
+    }
   }
 
   normalizeHexColor(value, fallback = '#3B82F6') {
@@ -2502,6 +2767,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const radTR = isQuadRadius ? (radius.topRight || 0) : radius;
     const radBR = isQuadRadius ? (radius.bottomRight || 0) : radius;
     const radBL = isQuadRadius ? (radius.bottomLeft || 0) : radius;
+    const px = t.pivot?.x !== undefined ? t.pivot.x : 0.5;
+    const py = t.pivot?.y !== undefined ? t.pivot.y : 0.5;
 
     const fills = s.fills || [];
     const strokes = s.strokes && s.strokes.length > 0 ? s.strokes : [];
@@ -2609,6 +2876,27 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           <div class="prop-field"><span class="prop-label" style="font-size: 9px;">BR</span><input type="text" class="prop-input" id="propRadBR" value="${radBR}"></div>
           <div class="prop-field"><span class="prop-label" style="font-size: 9px;">BL</span><input type="text" class="prop-input" id="propRadBL" value="${radBL}"></div>
         </div>` : ''}
+
+        <!-- 9-Point Transform Pivot / Reference Point (§8 & §32.7) -->
+        <div class="props-row" style="align-items: center; justify-content: space-between; margin-top: 6px; padding: 4px 6px; background: rgba(255,255,255,0.03); border-radius: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="pivot-matrix" id="pivotMatrix" title="Transform Reference Point">
+              <button class="pivot-dot ${px===0&&py===0?'active':''}" data-pivot="0,0" title="Top-Left" type="button"></button>
+              <button class="pivot-dot ${px===0.5&&py===0?'active':''}" data-pivot="0.5,0" title="Top-Center" type="button"></button>
+              <button class="pivot-dot ${px===1&&py===0?'active':''}" data-pivot="1,0" title="Top-Right" type="button"></button>
+              <button class="pivot-dot ${px===0&&py===0.5?'active':''}" data-pivot="0,0.5" title="Center-Left" type="button"></button>
+              <button class="pivot-dot ${px===0.5&&py===0.5?'active':''}" data-pivot="0.5,0.5" title="Center" type="button"></button>
+              <button class="pivot-dot ${px===1&&py===0.5?'active':''}" data-pivot="1,0.5" title="Center-Right" type="button"></button>
+              <button class="pivot-dot ${px===0&&py===1?'active':''}" data-pivot="0,1" title="Bottom-Left" type="button"></button>
+              <button class="pivot-dot ${px===0.5&&py===1?'active':''}" data-pivot="0.5,1" title="Bottom-Center" type="button"></button>
+              <button class="pivot-dot ${px===1&&py===1?'active':''}" data-pivot="1,1" title="Bottom-Right" type="button"></button>
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted);">
+              Pivot: <strong style="color: var(--text-main);">${px === 0.5 && py === 0.5 ? 'Center' : `${Math.round(px*100)}%, ${Math.round(py*100)}%`}</strong>
+            </div>
+          </div>
+          <button class="btn-inspector-action" id="btnResetPivot" style="font-size: 10px; padding: 2px 6px;" title="Reset Pivot to Center (0.5, 0.5)" type="button">Reset</button>
+        </div>
 
         <div style="display: flex; gap: 6px; margin-top: 8px;">
           <button class="btn-inspector-action" id="btnFlipH" style="font-size: 11px; flex: 1;"><span data-icon="ArrowLeftRight"></span> Flip Horizontal</button>
@@ -3043,6 +3331,24 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     });
     document.getElementById('btnFlipV')?.addEventListener('click', () => {
       this.engine.updateNode(node.id, { transform: { scaleY: (t.scaleY || 1) * -1 } }, 'Flip Vertical');
+    });
+
+    // Pivot Reference Matrix & Reset
+    document.querySelectorAll('.pivot-dot').forEach(dot => {
+      dot.addEventListener('click', (e) => {
+        const raw = e.currentTarget.dataset.pivot || '';
+        const parts = raw.split(',').map(Number);
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+          this.engine.updateNode(node.id, { transform: { pivot: { x: parts[0], y: parts[1] } } }, 'Change Pivot Reference');
+          this.renderer.render();
+          this.updateInspector();
+        }
+      });
+    });
+    document.getElementById('btnResetPivot')?.addEventListener('click', () => {
+      this.engine.updateNode(node.id, { transform: { pivot: { x: 0.5, y: 0.5 } } }, 'Reset Pivot Reference');
+      this.renderer.render();
+      this.updateInspector();
     });
 
     // 3. Auto Layout 2.0 Controls

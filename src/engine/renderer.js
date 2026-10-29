@@ -249,10 +249,12 @@ export class CanvasRenderer {
     ctx.save();
     ctx.globalAlpha = (node.opacity !== undefined ? node.opacity : (node.style?.opacity !== undefined ? node.style.opacity : 1));
 
-    // Rotation around center
+    // Rotation around pivot point (defaults to center 0.5, 0.5 - Section 8 & 32.7)
     if (node.transform?.rotation) {
-      const cx = bounds.x + bounds.width / 2;
-      const cy = bounds.y + bounds.height / 2;
+      const px = node.transform?.pivot?.x !== undefined ? node.transform.pivot.x : 0.5;
+      const py = node.transform?.pivot?.y !== undefined ? node.transform.pivot.y : 0.5;
+      const cx = bounds.x + bounds.width * px;
+      const cy = bounds.y + bounds.height * py;
       ctx.translate(cx, cy);
       ctx.rotate((node.transform.rotation * Math.PI) / 180);
       ctx.translate(-cx, -cy);
@@ -953,6 +955,32 @@ export class CanvasRenderer {
           ctx.fillRect(c.x - halfSize, c.y - halfSize, handleSize, handleSize);
           ctx.strokeRect(c.x - halfSize, c.y - halfSize, handleSize, handleSize);
         }
+
+        // Draw 9-Point Transform Pivot / Reference Point (Section 8 & 32.7)
+        const px = node.transform?.pivot?.x !== undefined ? node.transform.pivot.x : 0.5;
+        const py = node.transform?.pivot?.y !== undefined ? node.transform.pivot.y : 0.5;
+        const pivotX = bounds.x + bounds.width * px;
+        const pivotY = bounds.y + bounds.height * py;
+        const pRad = 5 / this.zoom;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(pivotX, pivotY, pRad, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#0d99ff';
+        ctx.lineWidth = 2 / this.zoom;
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(pivotX - pRad + 1 / this.zoom, pivotY);
+        ctx.lineTo(pivotX + pRad - 1 / this.zoom, pivotY);
+        ctx.moveTo(pivotX, pivotY - pRad + 1 / this.zoom);
+        ctx.lineTo(pivotX, pivotY + pRad - 1 / this.zoom);
+        ctx.strokeStyle = '#0d99ff';
+        ctx.lineWidth = 1 / this.zoom;
+        ctx.stroke();
+        ctx.restore();
       }
 
       ctx.restore();
@@ -1024,8 +1052,10 @@ export class CanvasRenderer {
     let localX = cx;
     let localY = cy;
     if (node.transform?.rotation) {
-      const centerX = bounds.x + bounds.width / 2;
-      const centerY = bounds.y + bounds.height / 2;
+      const px = node.transform?.pivot?.x !== undefined ? node.transform.pivot.x : 0.5;
+      const py = node.transform?.pivot?.y !== undefined ? node.transform.pivot.y : 0.5;
+      const centerX = bounds.x + bounds.width * px;
+      const centerY = bounds.y + bounds.height * py;
       const angle = -node.transform.rotation * Math.PI / 180;
       const offsetX = cx - centerX;
       const offsetY = cy - centerY;
@@ -1076,6 +1106,19 @@ export class CanvasRenderer {
       }
     }
     return null;
+  }
+
+  /**
+   * Hit test for the transform pivot / reference point (Section 8 & 32.7)
+   */
+  hitTestPivot(canvasX, canvasY, bounds, node) {
+    if (!bounds || !node) return false;
+    const px = node.transform?.pivot?.x !== undefined ? node.transform.pivot.x : 0.5;
+    const py = node.transform?.pivot?.y !== undefined ? node.transform.pivot.y : 0.5;
+    const pivotX = bounds.x + bounds.width * px;
+    const pivotY = bounds.y + bounds.height * py;
+    const threshold = 9 / this.zoom;
+    return Math.hypot(canvasX - pivotX, canvasY - pivotY) <= threshold;
   }
 
   drawComments(ctx) {

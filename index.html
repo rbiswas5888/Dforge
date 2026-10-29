@@ -238,6 +238,14 @@
       </div>
     </header>
 
+    <!-- Document Tabs Bar (Figma-Inspired Multi-File Navigation - Part 2 §5) -->
+    <nav class="editor-tab-bar" id="editorTabBar" aria-label="Open documents">
+      <div class="editor-tabs-scroll" id="editorTabsScroll">
+        <!-- Rendered dynamically by App -->
+      </div>
+      <button class="btn-new-tab" id="btnNewDocumentTab" title="New Design Document (⌘N)" type="button">＋</button>
+    </nav>
+
     <!-- Main 3-Column Workspace with Axiom Geography (Section 3.1) -->
     <main class="main-workspace axiom-workspace-body">
       <!-- B. Left Sidebar: Navigator Panel (272px wide, resizable) (Section 3.5) -->
@@ -390,6 +398,9 @@
           </button>
           <button class="tool-btn" data-tool="polygon" title="Polygon / Triangle Shape">
               <span data-icon="Triangle"></span>
+          </button>
+          <button class="tool-btn" data-tool="shape_builder" id="toolShapeBuilder" title="Shape Builder Tool (⇧M)">
+              <span style="font-size: 13px; font-weight: 700; line-height: 1;">◫</span>
           </button>
             </div>
           </div>
@@ -1992,6 +2003,21 @@
               <button class="workspace-primary-btn" type="submit">Create project</button>
             </div>
           </form>
+        </div>
+
+        <!-- Unsaved Changes Modal (Part 2: §5) -->
+        <div class="workspace-modal-backdrop" id="modalUnsavedChanges" style="display: none;">
+          <div class="workspace-modal" style="max-width: 420px; text-align: left;">
+            <h3 style="margin: 0 0 8px; font-size: 16px; color: #ffffff;">Save changes before closing?</h3>
+            <p style="margin: 0 0 16px; font-size: 13px; color: var(--text-dim);" id="unsavedChangesDocName">
+              This document has unsaved edits. Closing without saving will discard changes.
+            </p>
+            <div class="workspace-modal-actions">
+              <button class="workspace-secondary-btn" id="btnUnsavedCancel" type="button">Cancel</button>
+              <button class="workspace-secondary-btn" id="btnUnsavedDontSave" type="button" style="color: #f87171;">Don't Save</button>
+              <button class="workspace-primary-btn" id="btnUnsavedSave" type="button">Save</button>
+            </div>
+          </div>
         </div>
 
         <script type="module" src="src/app.js"></script>
