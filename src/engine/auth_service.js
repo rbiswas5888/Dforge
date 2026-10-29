@@ -186,3 +186,4 @@ export class AuthService {
     return Boolean(this.workspaceStore?.isAuthenticated());
   }
 }
+

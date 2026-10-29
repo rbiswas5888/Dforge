@@ -114,3 +114,4 @@ assert.match(resetRes.message, /instructions have been sent to designer@designfo
 console.log('   ✓ Password recovery validation and instructions receipt verified.');
 
 console.log('\n🎉 ALL AUTHENTICATION TESTS PASSED SUCCESSFULLY (100% SUCCESS)!');
+
