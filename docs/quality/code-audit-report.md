@@ -92,3 +92,4 @@ To maintain transparency as mandated by the Master Prompt, the following are dis
 | **Rate Limit Permanent Lockout** | **Verified Bug** | **Fixed & Verified** | Lockout now cleanly resets after 60 seconds |
 | **JSX Angle Bracket Escaping** | **Verified Bug** | **Fixed & Verified** | Escaped safely with React `{'>'}` and `{'<'}` expressions |
 | **Static Server Traversal Boundary** | **Verified Bug** | **Fixed & Verified** | Restricted strictly to `resolvedDir + path.sep` |
+

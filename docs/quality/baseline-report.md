@@ -68,3 +68,4 @@ The codebase demonstrates solid engineering design with strict boundary separati
 - The **Workspace Hierarchy Store** (`src/engine/workspace_store.js`)
 - The **Deterministic React/TS Compiler** (`src/compiler/`)
 - The **Auth & Session Service** (`src/engine/auth_service.js`)
+
