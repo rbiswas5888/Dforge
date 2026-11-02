@@ -258,7 +258,7 @@ All colors, spacing, and corner radii are bound to CSS variables defined in \`sr
   }
 
   escapeJsx(str) {
-    return String(str).replace(/([{}])/g, '{\'$1\'}');
+    return String(str).replace(/[<>{}]/g, m => `{'${m}'}`);
   }
 }
 

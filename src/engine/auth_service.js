@@ -72,8 +72,17 @@ export class AuthService {
       throw new Error('Please enter your password.');
     }
 
-    // 2. Rate limiting check
-    const attempts = this.failedAttempts.get(identifier) || 0;
+    // 2. Rate limiting check (lockout expires after 1 minute)
+    const record = this.failedAttempts.get(identifier);
+    const now = Date.now();
+    let attempts = 0;
+    if (record) {
+      if (now - record.lastAttempt > 60000) {
+        this.failedAttempts.delete(identifier);
+      } else {
+        attempts = record.count;
+      }
+    }
     if (attempts >= 5) {
       throw new Error('Too many failed sign-in attempts. Please try again in 1 minute.');
     }
@@ -84,7 +93,7 @@ export class AuthService {
     );
 
     if (!account || account.password !== cleanPassword) {
-      this.failedAttempts.set(identifier, attempts + 1);
+      this.failedAttempts.set(identifier, { count: attempts + 1, lastAttempt: Date.now() });
       throw new Error('Incorrect email, username, or password.');
     }
 

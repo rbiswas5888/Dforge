@@ -1,0 +1,250 @@
+[
+  {
+    "id": "AUTH-001",
+    "module": "Authentication",
+    "description": "Unauthenticated user lands on responsive login page",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:09.012Z"
+  },
+  {
+    "id": "AUTH-002",
+    "module": "Form Validation",
+    "description": "Empty email submission triggers required field error",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:09.850Z"
+  },
+  {
+    "id": "AUTH-003",
+    "module": "Form Validation",
+    "description": "Malformed email triggers format validation error",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:10.751Z"
+  },
+  {
+    "id": "AUTH-004",
+    "module": "Authentication",
+    "description": "Invalid credentials rejected with accessible status alert",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:11.746Z"
+  },
+  {
+    "id": "AUTH-005",
+    "module": "Accessibility & UI",
+    "description": "Password visibility toggle toggles type between text and password",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:12.756Z"
+  },
+  {
+    "id": "AUTH-006",
+    "module": "Authentication",
+    "description": "Designated test account 1-click pill populates credentials",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:13.545Z"
+  },
+  {
+    "id": "AUTH-007",
+    "module": "Authentication",
+    "description": "Valid login commits session and transitions to Workspace",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:15.138Z"
+  },
+  {
+    "id": "AUTH-008",
+    "module": "Authentication",
+    "description": "Sign-out terminates session and routes back to login",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:15.891Z"
+  },
+  {
+    "id": "RESP-001",
+    "module": "Responsive UI",
+    "description": "Tablet Portrait (768×1024) reflows into centered card without overflow",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:16.856Z"
+  },
+  {
+    "id": "RESP-002",
+    "module": "Responsive UI",
+    "description": "Tablet Landscape (1024×768) displays balanced layout with comfortable touch padding",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:17.747Z"
+  },
+  {
+    "id": "RESP-003",
+    "module": "Responsive UI",
+    "description": "Mobile Standard (390×844) renders single-column touch targets and no horizontal scroll",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:18.646Z"
+  },
+  {
+    "id": "AUTH-009",
+    "module": "Password Recovery",
+    "description": "Forgot password dialog opens and presents email recovery input",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:19.225Z"
+  },
+  {
+    "id": "AUTH-010",
+    "module": "Password Recovery",
+    "description": "Recovery flow validates email and displays confirmation status",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:19.977Z"
+  },
+  {
+    "id": "RESP-004",
+    "module": "Responsive UI",
+    "description": "Mobile Compact (360×800) scales smoothly with zero clipped controls",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:20.706Z"
+  },
+  {
+    "id": "RESP-005",
+    "module": "Responsive UI",
+    "description": "Mobile Large (430×932) displays balanced edge-to-edge container",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:21.246Z"
+  },
+  {
+    "id": "AUTH-011",
+    "module": "Enterprise SSO",
+    "description": "Single Sign-On (Google Workspace) logs in and transitions to workspace",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:22.419Z"
+  },
+  {
+    "id": "NAV-001",
+    "module": "Navigation",
+    "description": "Settings and Organization remain persistent top-level destinations",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:23.039Z"
+  },
+  {
+    "id": "NAV-002",
+    "module": "Navigation",
+    "description": "Organization destination displays design team org chart",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:23.678Z"
+  },
+  {
+    "id": "PROJ-001",
+    "module": "Projects",
+    "description": "Workspace lists 1 projects with preview cards and file counts",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:24.462Z"
+  },
+  {
+    "id": "PROJ-002",
+    "module": "Project Detail",
+    "description": "Project detail view opened for \"Untitled Experience\" displaying its design files",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:25.454Z"
+  },
+  {
+    "id": "PROJ-003",
+    "module": "Project Settings",
+    "description": "Project settings modal/screen opens with General and Members & access tabs",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:26.227Z"
+  },
+  {
+    "id": "MEMB-001",
+    "module": "Member Management",
+    "description": "Project members table lists 1 member(s) with role dropdowns",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:26.905Z"
+  },
+  {
+    "id": "MEMB-002",
+    "module": "Member Management",
+    "description": "Add member interaction executed: ",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:27.791Z"
+  },
+  {
+    "id": "EDIT-001",
+    "module": "Design Editor",
+    "description": "Selecting design file opens existing DesignForge canvas editor",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:29.367Z"
+  },
+  {
+    "id": "EDIT-002",
+    "module": "Editor Navigation",
+    "description": "Topbar workspace navigation and project switcher verified",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:29.513Z"
+  },
+  {
+    "id": "EDIT-003",
+    "module": "File Switcher",
+    "description": "Quick file switcher dialog opens listing accessible project files",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:27:30.057Z"
+  },
+  {
+    "id": "EDIT-004",
+    "module": "Prototyping",
+    "description": "Prototype mode activates with interactions and smart-animate rules",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:28:01.055Z"
+  },
+  {
+    "id": "EDIT-005",
+    "module": "Code Export",
+    "description": "Inspect/Code mode displays compiled React JSX and design tokens",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:28:31.692Z"
+  },
+  {
+    "id": "EDIT-006",
+    "module": "Canvas Tools",
+    "description": "Canvas selection, creation tools, and floating dock pods verified",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:29:02.994Z"
+  },
+  {
+    "id": "INVAR-001",
+    "module": "Landing Rule",
+    "description": "Re-opening application when design file was active lands directly in editor",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:29:04.457Z"
+  },
+  {
+    "id": "INVAR-002",
+    "module": "Landing Rule",
+    "description": "Re-opening application when workspace was active lands directly on workspace",
+    "status": "PASS",
+    "details": "",
+    "timestamp": "2026-11-02T15:29:06.707Z"
+  }
+]

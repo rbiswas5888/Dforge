@@ -154,6 +154,6 @@ export default ${compName};
   }
 
   escapeJsx(str) {
-    return String(str).replace(/([{}])/g, '{\'$1\'}');
+    return String(str).replace(/[<>{}]/g, m => `{'${m}'}`);
   }
 }

@@ -59,6 +59,7 @@ export async function readZipTextEntries(input) {
     offset += 46 + nameLength + extraLength + commentLength;
 
     if (!name || name.endsWith('/') || !name.toLowerCase().endsWith('.json')) continue;
+    if (name.includes('..') || name.startsWith('/') || name.startsWith('\\')) continue;
     if (flags & 1) throw new Error(`Encrypted Sketch archive entry is not supported: ${name}`);
     if (uncompressedSize > MAX_ENTRY_SIZE || (totalSize += uncompressedSize) > MAX_TOTAL_SIZE) {
       throw new Error('Sketch archive exceeds the safe import size limit.');

@@ -51,7 +51,7 @@ function serveStaticFile(req, res) {
   const resolvedDir = path.resolve(__dirname);
   const resolvedFile = path.resolve(filePath);
 
-  if (!resolvedFile.startsWith(resolvedDir)) {
+  if (resolvedFile !== resolvedDir && !resolvedFile.startsWith(resolvedDir + path.sep)) {
     res.writeHead(403, { 'Content-Type': 'text/plain' });
     res.end('403 Forbidden');
     return;

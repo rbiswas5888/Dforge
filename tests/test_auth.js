@@ -113,5 +113,22 @@ assert.equal(resetRes.success, true);
 assert.match(resetRes.message, /instructions have been sent to designer@designforge.ai/);
 console.log('   ✓ Password recovery validation and instructions receipt verified.');
 
+// 8. Rate Limiting & Lockout Expiry
+console.log('\n8. Testing Rate Limiting & Lockout Expiry...');
+const testEmail = 'alex@designforge.ai';
+auth.failedAttempts.set(testEmail, { count: 5, lastAttempt: Date.now() });
+await assert.rejects(
+  async () => auth.login(testEmail, 'DesignForge2026!'),
+  /Too many failed sign-in attempts/,
+  'Active lockout prevents login'
+);
+
+// Expire the lockout window (> 60 seconds ago)
+auth.failedAttempts.set(testEmail, { count: 5, lastAttempt: Date.now() - 65000 });
+const sessionUnlocked = await auth.login(testEmail, 'DesignForge2026!');
+assert.equal(sessionUnlocked.user.name, 'Alex Morgan');
+auth.logout();
+console.log('   ✓ Rate limiting lockout and automatic expiry verified.');
+
 console.log('\n🎉 ALL AUTHENTICATION TESTS PASSED SUCCESSFULLY (100% SUCCESS)!');
 
