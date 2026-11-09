@@ -11,6 +11,10 @@ export class OpenAIProvider extends BaseProvider {
     return ['gpt-4o', 'gpt-4o-mini', 'o1', 'o3-mini', 'gpt-4-turbo'];
   }
 
+  get SUPPORTED_MODELS() {
+    return OpenAIProvider.SUPPORTED_MODELS;
+  }
+
   constructor(config = {}) {
     super({
       name: 'openai',

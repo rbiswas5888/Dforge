@@ -401,10 +401,11 @@ export class ComponentVariableManager {
       throw new Error(`Source layer ${nodeId} not found.`);
     }
 
-    // Determine target component definition
-    const muiDef = MUI_COMPONENT_CATALOG.find(c => c.id === targetComponentId);
-    const rneuiDef = RNEUI_COMPONENT_CATALOG.find(c => c.id === targetComponentId);
-    const customDef = this.registry.getAllComponents().find(c => c.id === targetComponentId || c.sourceMetadata?.catalogId === targetComponentId);
+    // Determine target component definition (flexible ID and name matching)
+    const normalizedTarget = targetComponentId.toLowerCase().replace(/^mui-/, '').replace(/^rneui-/, '');
+    const muiDef = MUI_COMPONENT_CATALOG.find(c => c.id === targetComponentId || c.id === normalizedTarget || c.name.toLowerCase() === normalizedTarget);
+    const rneuiDef = RNEUI_COMPONENT_CATALOG.find(c => c.id === targetComponentId || c.id === normalizedTarget || c.name.toLowerCase() === normalizedTarget);
+    const customDef = this.registry.getAllComponents().find(c => c.id === targetComponentId || c.id === normalizedTarget || c.name?.toLowerCase() === normalizedTarget || c.sourceMetadata?.catalogId === targetComponentId);
 
     if (!muiDef && !rneuiDef && !customDef) {
       throw new Error(`Unknown replacement component catalog ID: ${targetComponentId}`);
@@ -470,6 +471,9 @@ export class ComponentVariableManager {
       });
     }
 
+    if (transferred.width) replacementRoot.transform.width = transferred.width;
+    if (transferred.height) replacementRoot.transform.height = transferred.height;
+
     // Carry over preserved text content to first text child if applicable
     if (preservedText && replacementChildren.length > 0) {
       const firstTextChild = replacementChildren.find(c => c.type === 'text');
@@ -502,11 +506,12 @@ export class ComponentVariableManager {
       }
     } else {
       // Root level replace in page order
-      const rootIdx = page.rootNodeIds.indexOf(sourceNode.id);
+      const rootArr = page.rootIds || page.rootNodeIds || [];
+      const rootIdx = rootArr.indexOf(sourceNode.id);
       if (rootIdx !== -1) {
-        page.rootNodeIds.splice(rootIdx, 1, replacementRoot.id);
+        rootArr.splice(rootIdx, 1, replacementRoot.id);
       } else {
-        page.rootNodeIds.push(replacementRoot.id);
+        rootArr.push(replacementRoot.id);
       }
     }
 
@@ -524,33 +529,46 @@ export class ComponentVariableManager {
     deleteRecursive(sourceNode.id);
 
     // Register transaction with CommandEngine so undo works
-    this.engine.history.push({
-      undo: () => {
-        // Restore sourceNode and remove replacement
-        deleteRecursive(replacementRoot.id);
-        page.nodes[sourceNode.id] = sourceNode;
-        if (sourceNode.parentId) {
-          const parent = page.nodes[sourceNode.parentId];
-          if (parent) {
-            const idx = parent.childIds.indexOf(replacementRoot.id);
-            if (idx !== -1) parent.childIds.splice(idx, 1, sourceNode.id);
+    const undoStack = this.engine.undoStack || this.engine.history;
+    if (undoStack) {
+      undoStack.push({
+        description: `Undo replace component with ${componentName}`,
+        execute: () => {
+          // Restore sourceNode and remove replacement
+          deleteRecursive(replacementRoot.id);
+          page.nodes[sourceNode.id] = sourceNode;
+          if (sourceNode.parentId) {
+            const parent = page.nodes[sourceNode.parentId];
+            if (parent && parent.childIds) {
+              const idx = parent.childIds.indexOf(replacementRoot.id);
+              if (idx !== -1) parent.childIds.splice(idx, 1, sourceNode.id);
+            }
+          } else {
+            const rootArr = page.rootIds || page.rootNodeIds;
+            if (rootArr) {
+              const idx = rootArr.indexOf(replacementRoot.id);
+              if (idx !== -1) rootArr.splice(idx, 1, sourceNode.id);
+            }
           }
-        } else {
-          const idx = page.rootNodeIds.indexOf(replacementRoot.id);
-          if (idx !== -1) page.rootNodeIds.splice(idx, 1, sourceNode.id);
+
+          // Return redo inverse command
+          return {
+            description: `Redo replace component with ${componentName}`,
+            execute: () => {
+              this.replaceComponent(sourceNode.id, targetComponentId);
+            }
+          };
         }
-      },
-      redo: () => {
-        this.replaceComponent(sourceNode.id, targetComponentId);
-      },
-      description: `Replace Component ${sourceNode.name} with ${componentName}`
-    });
+      });
+      if (this.engine.redoStack) this.engine.redoStack = [];
+    }
 
     return {
       success: true,
       oldNodeId: sourceNode.id,
       newNodeId: replacementRoot.id,
       replacementComponent: componentName,
+      replacementName: componentName,
       transferredProperties: Object.keys(transferred),
       preservedBindingsCount: Object.keys(preservedBindings).length,
       preservedInteractionsCount: preservedInteractions.length,

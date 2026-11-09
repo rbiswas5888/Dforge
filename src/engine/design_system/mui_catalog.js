@@ -543,7 +543,7 @@ export function createMuiNode(componentId, options = {}) {
     case 'button': {
       rootNode = createNode('frame', {
         name: 'MUI / Button (Contained)',
-        transform: { x, y, width: 140, height: 42 },
+        transform: { x, y, width, height },
         cornerRadius: 4,
         fills: [{ type: 'solid', color: '#1976d2', opacity: 1, visible: true }],
         effects: [{

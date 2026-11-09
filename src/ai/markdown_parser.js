@@ -494,3 +494,77 @@ export function parseMarkdownToDesign(markdownText) {
   return new MarkdownDesignParser().parse(markdownText);
 }
 
+/**
+ * Parses full Markdown specification into structured sections:
+ * Objective, Target Users, Scope, Required Screens, Constraints, Breakpoints, Behaviors.
+ * (Spec Part D & E)
+ */
+export function parseMarkdownDesignSpec(markdownText) {
+  if (!markdownText || typeof markdownText !== 'string') {
+    throw new Error('Invalid Markdown specification input.');
+  }
+
+  const lines = markdownText.split('\n');
+  const result = {
+    title: 'Design Specification',
+    objective: '',
+    targetUsers: [],
+    scope: [],
+    screens: [],
+    constraints: [],
+    breakpoints: { desktop: 1440, tablet: 768, mobile: 375 },
+    behaviors: []
+  };
+
+  let currentSection = '';
+
+  for (let rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    if (line.startsWith('# ')) {
+      result.title = line.substring(2).trim();
+    } else if (line.startsWith('## ')) {
+      currentSection = line.substring(3).trim().toLowerCase();
+    } else if (line.startsWith('- ') || line.startsWith('* ') || /^\d+\.\s/.test(line)) {
+      const isNumbered = /^\d+\.\s/.test(line);
+      const isIndented = rawLine.startsWith('   ') || rawLine.startsWith('\t') || rawLine.startsWith('  ');
+      const item = line.replace(/^[-\*]\s+/, '').replace(/^\d+\.\s+/, '').trim();
+      if (currentSection.includes('target user') || currentSection.includes('user')) {
+        result.targetUsers.push(item);
+      } else if (currentSection.includes('scope')) {
+        result.scope.push(item);
+      } else if (currentSection.includes('screen') || currentSection.includes('section')) {
+        if (isNumbered || (!isIndented && !result.screens.length)) {
+          const dimMatch = item.match(/(\d+)\s*[x×,]\s*(\d+)/i);
+          result.screens.push({
+            name: item.split('(')[0].trim(),
+            width: dimMatch ? parseInt(dimMatch[1], 10) : 1440,
+            height: dimMatch ? parseInt(dimMatch[2], 10) : 900,
+            components: [],
+            raw: item
+          });
+        } else if (result.screens.length > 0) {
+          result.screens[result.screens.length - 1].components.push(item);
+        }
+      } else if (currentSection.includes('constraint') || currentSection.includes('rule')) {
+        result.constraints.push(item);
+      } else if (currentSection.includes('breakpoint')) {
+        const valMatch = item.match(/(\d+)\s*px/i);
+        const val = valMatch ? parseInt(valMatch[1], 10) : null;
+        if (val) {
+          if (item.toLowerCase().includes('desktop')) result.breakpoints.desktop = val;
+          else if (item.toLowerCase().includes('tablet')) result.breakpoints.tablet = val;
+          else if (item.toLowerCase().includes('mobile')) result.breakpoints.mobile = val;
+        }
+      } else if (currentSection.includes('behavior')) {
+        result.behaviors.push(item);
+      }
+    } else if (currentSection === 'objective') {
+      result.objective += (result.objective ? ' ' : '') + line;
+    }
+  }
+
+  return result;
+}
+

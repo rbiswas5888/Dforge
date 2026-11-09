@@ -107,6 +107,10 @@ export class DesignForgeAIService {
     }
   }
 
+  setProvider(name) {
+    return this.setActiveProvider(name);
+  }
+
   setPrivacyMode(mode) {
     this.privacyMode = mode;
     this.contextManager.setPrivacyMode(mode);

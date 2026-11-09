@@ -441,6 +441,113 @@ export class DesignSystemUIController {
         this.renderView(this.activeView);
       });
     }
+
+    // 7. Add Variable to Component Modal (Part A, Section 2)
+    const modalAddVar = document.getElementById('modalAddVariableToComponent');
+    const btnCloseAddVar = document.getElementById('btnCloseModalAddVar');
+    const btnCancelAddVar = document.getElementById('btnCancelAddVar');
+    const btnCommitAddVar = document.getElementById('btnCommitAddVar');
+    const closeAddVar = () => { if (modalAddVar) modalAddVar.style.display = 'none'; };
+    if (btnCloseAddVar) btnCloseAddVar.addEventListener('click', closeAddVar);
+    if (btnCancelAddVar) btnCancelAddVar.addEventListener('click', closeAddVar);
+
+    if (btnCommitAddVar) {
+      btnCommitAddVar.addEventListener('click', () => {
+        const propPath = document.getElementById('addVarTargetProperty')?.value;
+        if (this.activeCompNode && this.selectedAddVarId && propPath) {
+          try {
+            this.app.compVarManager.bindVariable(this.activeCompNode.id, propPath, this.selectedAddVarId);
+            this.app.showToast('Variable bound successfully', 'success');
+            closeAddVar();
+            if (this.app.renderer) this.app.renderer.render();
+            this.app.updateInspector();
+          } catch (err) {
+            this.app.showToast(`Failed to bind variable: ${err.message}`, 'error');
+          }
+        }
+      });
+    }
+
+    // Category pills for Add Variable modal
+    const addVarPills = document.querySelectorAll('#addVarCategoryPills .ds-filter-pill');
+    addVarPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        addVarPills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        if (this.activeCompNode && modalAddVar && modalAddVar.style.display !== 'none') {
+          this.refreshAddVariableList();
+        }
+      });
+    });
+
+    const addVarSearch = document.getElementById('addVarSearchInput');
+    if (addVarSearch) {
+      addVarSearch.addEventListener('input', () => {
+        if (this.activeCompNode && modalAddVar && modalAddVar.style.display !== 'none') {
+          this.refreshAddVariableList();
+        }
+      });
+    }
+
+    // 8. Replace Component Modal (Part A, Section 3)
+    const modalReplaceComp = document.getElementById('modalReplaceComponent');
+    const btnCloseReplaceComp = document.getElementById('btnCloseModalReplaceComp');
+    const btnCancelReplaceComp = document.getElementById('btnCancelReplaceComp');
+    const btnConfirmReplaceComp = document.getElementById('btnConfirmReplaceComp');
+    const closeReplaceComp = () => { if (modalReplaceComp) modalReplaceComp.style.display = 'none'; };
+    if (btnCloseReplaceComp) btnCloseReplaceComp.addEventListener('click', closeReplaceComp);
+    if (btnCancelReplaceComp) btnCancelReplaceComp.addEventListener('click', closeReplaceComp);
+
+    if (btnConfirmReplaceComp) {
+      btnConfirmReplaceComp.addEventListener('click', () => {
+        if (this.activeCompNode && this.selectedReplaceCompId) {
+          try {
+            const res = this.app.compVarManager.replaceComponent(this.activeCompNode.id, this.selectedReplaceCompId);
+            this.app.showToast(`Replaced with ${res.replacementName}`, 'success');
+            closeReplaceComp();
+            this.app.engine.setSelection([res.newNodeId]);
+            if (this.app.renderer) this.app.renderer.render();
+            this.app.updateLayersTree();
+            this.app.updateInspector();
+          } catch (err) {
+            this.app.showToast(`Failed to replace component: ${err.message}`, 'error');
+          }
+        }
+      });
+    }
+
+    // 9. Replace Variable Modal (Part A, Section 3)
+    const modalReplaceVar = document.getElementById('modalReplaceVariable');
+    const btnCloseReplaceVar = document.getElementById('btnCloseModalReplaceVar');
+    const btnCancelReplaceVar = document.getElementById('btnCancelReplaceVar');
+    const btnConfirmReplaceVar = document.getElementById('btnConfirmReplaceVar');
+    const closeReplaceVar = () => { if (modalReplaceVar) modalReplaceVar.style.display = 'none'; };
+    if (btnCloseReplaceVar) btnCloseReplaceVar.addEventListener('click', closeReplaceVar);
+    if (btnCancelReplaceVar) btnCancelReplaceVar.addEventListener('click', closeReplaceVar);
+
+    if (btnConfirmReplaceVar) {
+      btnConfirmReplaceVar.addEventListener('click', () => {
+        if (this.activeCompNode && this.activeReplaceOldVarId && this.selectedReplaceVarId) {
+          try {
+            const res = this.app.compVarManager.replaceVariable(this.activeCompNode.id, this.activeReplaceOldVarId, this.selectedReplaceVarId);
+            this.app.showToast(`Updated ${res.replacedCount} variable binding(s)`, 'success');
+            closeReplaceVar();
+            if (this.app.renderer) this.app.renderer.render();
+            this.app.updateInspector();
+          } catch (err) {
+            this.app.showToast(`Failed to replace variable: ${err.message}`, 'error');
+          }
+        }
+      });
+    }
+
+    // 10. Audit Component Modal (Part A, Section 1)
+    const modalAuditComp = document.getElementById('modalAuditComponent');
+    const btnCloseAuditComp = document.getElementById('btnCloseModalAuditComp');
+    const btnCloseAuditFooter = document.getElementById('btnCloseAuditCompFooter');
+    const closeAuditComp = () => { if (modalAuditComp) modalAuditComp.style.display = 'none'; };
+    if (btnCloseAuditComp) btnCloseAuditComp.addEventListener('click', closeAuditComp);
+    if (btnCloseAuditFooter) btnCloseAuditFooter.addEventListener('click', closeAuditComp);
   }
 
   async analyzeSourceFiles(files) {
@@ -519,6 +626,370 @@ export class DesignSystemUIController {
         </tr>
       `).join('');
     }
+
+    modal.style.display = 'flex';
+  }
+
+  // --- Spec Part A: Component and Variable Intelligence Modals ---
+  openAddVariableModal(node, defaultPropertyPath = null) {
+    if (!node) return;
+    this.activeCompNode = node;
+    const modal = document.getElementById('modalAddVariableToComponent');
+    const selectProp = document.getElementById('addVarTargetProperty');
+    const commitBtn = document.getElementById('btnCommitAddVar');
+    if (!modal || !selectProp) return;
+
+    this.selectedAddVarId = null;
+    if (commitBtn) {
+      commitBtn.disabled = true;
+      commitBtn.style.opacity = '0.6';
+      commitBtn.style.cursor = 'not-allowed';
+    }
+
+    const compVarMgr = this.app.compVarManager;
+    const audit = compVarMgr.auditComponent(node.id);
+
+    selectProp.innerHTML = audit.bindableProperties.map(p => `
+      <option value="${p.path}" ${defaultPropertyPath === p.path ? 'selected' : ''}>
+        ${p.label} (${p.category}) ${p.boundVariableId ? '• Bound' : ''}
+      </option>
+    `).join('');
+
+    selectProp.onchange = () => {
+      this.selectedAddVarId = null;
+      if (commitBtn) {
+        commitBtn.disabled = true;
+        commitBtn.style.opacity = '0.6';
+        commitBtn.style.cursor = 'not-allowed';
+      }
+      this.refreshAddVariableList();
+    };
+
+    this.refreshAddVariableList();
+    modal.style.display = 'flex';
+  }
+
+  refreshAddVariableList() {
+    const list = document.getElementById('addVarItemsList');
+    const selectProp = document.getElementById('addVarTargetProperty');
+    const commitBtn = document.getElementById('btnCommitAddVar');
+    if (!list || !selectProp) return;
+
+    const currentPropPath = selectProp.value;
+    const search = (document.getElementById('addVarSearchInput')?.value || '').toLowerCase();
+    const cat = document.querySelector('#addVarCategoryPills .ds-filter-pill.active')?.dataset.category || 'all';
+    const compVarMgr = this.app.compVarManager;
+
+    const allVars = compVarMgr.getAllAvailableVariables();
+    const filtered = allVars.filter(v => {
+      if (cat !== 'all') {
+        const varCat = (v.category || v.type || '').toLowerCase();
+        if (!varCat.includes(cat.toLowerCase())) return false;
+      }
+      if (search) {
+        const matchName = (v.name || '').toLowerCase().includes(search);
+        const matchVal = String(v.value || '').toLowerCase().includes(search);
+        const matchType = (v.type || '').toLowerCase().includes(search);
+        if (!matchName && !matchVal && !matchType) return false;
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<div style="text-align: center; color: #64748b; padding: 20px; font-size: 11px;">No matching variables found.</div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(v => {
+      const compat = compVarMgr.validatePropertyCompatibility(currentPropPath, v);
+      const isSelected = this.selectedAddVarId === v.id;
+      return `
+        <div class="add-var-card ${isSelected ? 'selected' : ''} ${!compat.compatible ? 'incompatible' : ''}" data-var-id="${v.id}"
+          style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: ${isSelected ? 'rgba(56,189,248,0.1)' : 'var(--bg-surface)'}; border: 1px solid ${isSelected ? '#38bdf8' : 'var(--border-subtle)'}; border-radius: 6px; cursor: ${compat.compatible ? 'pointer' : 'not-allowed'}; opacity: ${compat.compatible ? '1' : '0.45'}; transition: all 0.15s ease;">
+          <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+            ${v.type === 'color' ? `<div style="width: 18px; height: 18px; border-radius: 4px; background: ${v.value}; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;"></div>` : `<span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); color: var(--text-muted);">${v.type}</span>`}
+            <div style="min-width: 0;">
+              <div style="font-weight: 600; font-size: 11px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${v.name}</div>
+              <div style="font-size: 10px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace;">${typeof v.value === 'object' ? JSON.stringify(v.value) : v.value}</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: ${compat.compatible ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color: ${compat.compatible ? '#34d399' : '#f87171'};">
+              ${compat.compatible ? 'Compatible' : 'Type Mismatch'}
+            </span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    list.querySelectorAll('.add-var-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const varId = card.dataset.varId;
+        const v = filtered.find(item => item.id === varId);
+        if (!v) return;
+        const compat = compVarMgr.validatePropertyCompatibility(selectProp.value, v);
+        if (!compat.compatible) {
+          this.app.showToast(compat.reason, 'warning');
+          return;
+        }
+        this.selectedAddVarId = varId;
+        this.refreshAddVariableList();
+        if (commitBtn) {
+          commitBtn.disabled = false;
+          commitBtn.style.opacity = '1';
+          commitBtn.style.cursor = 'pointer';
+        }
+      });
+    });
+  }
+
+  openReplaceComponentModal(node) {
+    if (!node) return;
+    this.activeCompNode = node;
+    const modal = document.getElementById('modalReplaceComponent');
+    const grid = document.getElementById('replaceCompCatalogGrid');
+    const searchInput = document.getElementById('replaceCompSearchInput');
+    const reportBox = document.getElementById('replaceCompTransferReport');
+    const details = document.getElementById('replaceCompTransferDetails');
+    const confirmBtn = document.getElementById('btnConfirmReplaceComp');
+    if (!modal || !grid) return;
+
+    this.selectedReplaceCompId = null;
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.style.opacity = '0.6';
+      confirmBtn.style.cursor = 'not-allowed';
+    }
+    if (reportBox) reportBox.style.display = 'none';
+
+    const compVarMgr = this.app.compVarManager;
+    const catalog = compVarMgr.getAvailableCatalogComponents();
+
+    const renderGrid = () => {
+      const q = (searchInput?.value || '').toLowerCase();
+      const filtered = catalog.filter(c => {
+        if (!q) return true;
+        return (c.name || '').toLowerCase().includes(q) ||
+               (c.category || '').toLowerCase().includes(q) ||
+               (c.description || '').toLowerCase().includes(q);
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #64748b; padding: 20px; font-size: 11px;">No components matching search.</div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(c => {
+        const isSelected = this.selectedReplaceCompId === c.id;
+        return `
+          <div class="replace-comp-card ${isSelected ? 'selected' : ''}" data-comp-id="${c.id}"
+            style="background: ${isSelected ? 'rgba(168,85,247,0.1)' : 'var(--bg-surface)'}; border: 1px solid ${isSelected ? '#a855f7' : 'var(--border-subtle)'}; border-radius: 6px; padding: 10px; cursor: pointer; transition: all 0.15s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-weight: 600; font-size: 11px; color: var(--text-main);">${c.name}</span>
+              <span style="font-size: 9px; padding: 2px 5px; border-radius: 3px; background: rgba(255,255,255,0.06); color: var(--text-dim); text-transform: uppercase;">${c.library || 'MUI'}</span>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+              ${c.description || c.category || 'Canonical Design Component'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      grid.querySelectorAll('.replace-comp-card').forEach(card => {
+        card.addEventListener('click', () => {
+          this.selectedReplaceCompId = card.dataset.compId;
+          renderGrid();
+
+          const target = catalog.find(x => x.id === this.selectedReplaceCompId);
+          if (reportBox && details && target) {
+            reportBox.style.display = 'block';
+            const bindingsCount = Object.keys(node.tokenBindings || {}).length;
+            const interactionsCount = (node.interactions || []).length;
+            details.innerHTML = `
+              <div>• <strong>Geometry:</strong> Dimensions (${Math.round(node.transform?.width || 0)}×${Math.round(node.transform?.height || 0)}) and canvas position (${Math.round(node.transform?.x || 0)}, ${Math.round(node.transform?.y || 0)}) will be transferred.</div>
+              <div>• <strong>Content:</strong> Text content preserved where applicable in target structure.</div>
+              <div>• <strong>Tokens & Variables:</strong> ${bindingsCount} active variable binding(s) mapped to compatible properties on target ${target.name}.</div>
+              <div>• <strong>Prototype:</strong> ${interactionsCount} prototype interaction(s) preserved.</div>
+              <div style="color: #34d399; margin-top: 4px; font-weight: 600;">✓ Ready for clean single-transaction swap with undo/redo support.</div>
+            `;
+          }
+
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.style.opacity = '1';
+            confirmBtn.style.cursor = 'pointer';
+          }
+        });
+      });
+    };
+
+    if (searchInput) searchInput.oninput = () => renderGrid();
+    renderGrid();
+    modal.style.display = 'flex';
+  }
+
+  openReplaceVariableModal(node, oldVarId, propertyPath) {
+    if (!node) return;
+    this.activeCompNode = node;
+    this.activeReplaceOldVarId = oldVarId;
+    const modal = document.getElementById('modalReplaceVariable');
+    const info = document.getElementById('replaceVarCurrentInfo');
+    const list = document.getElementById('replaceVarCandidatesList');
+    const confirmBtn = document.getElementById('btnConfirmReplaceVar');
+    if (!modal || !list) return;
+
+    this.selectedReplaceVarId = null;
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.style.opacity = '0.6';
+      confirmBtn.style.cursor = 'not-allowed';
+    }
+
+    const compVarMgr = this.app.compVarManager;
+    const allVars = compVarMgr.getAllAvailableVariables();
+    const currentVar = allVars.find(v => v.id === oldVarId) || { id: oldVarId, name: 'Current Variable', type: 'unknown', value: '' };
+
+    if (info) {
+      info.innerHTML = `
+        <div style="font-weight: 600; color: var(--text-main); margin-bottom: 4px;">Current Variable: ${currentVar.name}</div>
+        <div style="color: var(--text-dim);">Type: <code>${currentVar.type}</code> • Value: <code>${typeof currentVar.value === 'object' ? JSON.stringify(currentVar.value) : currentVar.value}</code> • Target: <code>${propertyPath}</code></div>
+      `;
+    }
+
+    const candidates = compVarMgr.getCompatibleVariablesForProperty(node, propertyPath).filter(v => v.id !== oldVarId);
+
+    if (candidates.length === 0) {
+      list.innerHTML = `<div style="text-align: center; color: #64748b; padding: 20px; font-size: 11px;">No compatible replacement variables available.</div>`;
+    } else {
+      list.innerHTML = candidates.map(v => {
+        const isSelected = this.selectedReplaceVarId === v.id;
+        return `
+          <div class="replace-var-card ${isSelected ? 'selected' : ''}" data-var-id="${v.id}"
+            style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: ${isSelected ? 'rgba(56,189,248,0.1)' : 'var(--bg-surface)'}; border: 1px solid ${isSelected ? '#38bdf8' : 'var(--border-subtle)'}; border-radius: 6px; cursor: pointer;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              ${v.type === 'color' ? `<div style="width: 18px; height: 18px; border-radius: 4px; background: ${v.value}; border: 1px solid rgba(255,255,255,0.1);"></div>` : `<span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); color: var(--text-muted);">${v.type}</span>`}
+              <div>
+                <div style="font-weight: 600; font-size: 11px; color: var(--text-main);">${v.name}</div>
+                <div style="font-size: 10px; color: var(--text-dim); font-family: monospace;">${typeof v.value === 'object' ? JSON.stringify(v.value) : v.value}</div>
+              </div>
+            </div>
+            <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(16,185,129,0.15); color: #34d399;">Compatible</span>
+          </div>
+        `;
+      }).join('');
+
+      list.querySelectorAll('.replace-var-card').forEach(card => {
+        card.addEventListener('click', () => {
+          this.selectedReplaceVarId = card.dataset.varId;
+          list.querySelectorAll('.replace-var-card').forEach(c => {
+            const sel = c.dataset.varId === this.selectedReplaceVarId;
+            c.style.background = sel ? 'rgba(56,189,248,0.1)' : 'var(--bg-surface)';
+            c.style.borderColor = sel ? '#38bdf8' : 'var(--border-subtle)';
+          });
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.style.opacity = '1';
+            confirmBtn.style.cursor = 'pointer';
+          }
+        });
+      });
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  openAuditComponentModal(node) {
+    if (!node) return;
+    this.activeCompNode = node;
+    const modal = document.getElementById('modalAuditComponent');
+    const title = document.getElementById('auditModalTitle');
+    const summary = document.getElementById('auditMetricsSummary');
+    const tbody = document.getElementById('auditTableBody');
+    if (!modal || !tbody) return;
+
+    const compVarMgr = this.app.compVarManager;
+    const audit = compVarMgr.auditComponent(node.id);
+
+    if (title) title.textContent = `Audit: ${audit.nodeName} (${audit.nodeType})`;
+
+    if (summary) {
+      summary.innerHTML = `
+        <div style="background: var(--bg-surface); padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); text-align: center;">
+          <div style="font-size: 20px; font-weight: 700; color: var(--text-main);">${audit.totalPropertiesCount}</div>
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Total Properties</div>
+        </div>
+        <div style="background: var(--bg-surface); padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); text-align: center;">
+          <div style="font-size: 20px; font-weight: 700; color: #10b981;">${audit.boundPropertiesCount}</div>
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Bound Variables</div>
+        </div>
+        <div style="background: var(--bg-surface); padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); text-align: center;">
+          <div style="font-size: 20px; font-weight: 700; color: #f59e0b;">${audit.totalPropertiesCount - audit.boundPropertiesCount}</div>
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Unbound Properties</div>
+        </div>
+        <div style="background: var(--bg-surface); padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); text-align: center;">
+          <div style="font-size: 20px; font-weight: 700; color: #38bdf8;">${audit.childCount}</div>
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Child Elements</div>
+        </div>
+      `;
+    }
+
+    tbody.innerHTML = audit.bindableProperties.map(p => {
+      const isBound = !!p.boundVariableId;
+      const boundName = p.boundVariable ? p.boundVariable.name : (p.boundVariableId || 'None');
+      return `
+        <tr>
+          <td style="font-weight: 600; color: var(--text-main);">
+            ${p.label}
+            <div style="font-size: 9px; font-family: monospace; color: var(--text-muted);">${p.path}</div>
+          </td>
+          <td><span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); color: var(--text-dim);">${p.category}</span></td>
+          <td style="font-family: monospace; font-size: 11px;">${typeof p.currentValue === 'object' ? JSON.stringify(p.currentValue) : p.currentValue}</td>
+          <td>
+            ${isBound ? `<span class="token-chip-badge" style="background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3);">${boundName}</span>` : `<span style="font-size: 10px; color: var(--text-muted);">Unbound</span>`}
+          </td>
+          <td>
+            <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.15); color: #38bdf8;">
+              ${p.compatibleVariables.length} Compatible
+            </span>
+          </td>
+          <td>
+            ${isBound ? `
+              <div style="display: flex; gap: 4px;">
+                <button class="btn-inspector-action btn-audit-replace" data-path="${p.path}" data-var-id="${p.boundVariableId}" style="font-size: 10px; padding: 2px 6px; color: #38bdf8;" title="Replace variable">⇄</button>
+                <button class="btn-inspector-action btn-audit-unbind" data-path="${p.path}" style="font-size: 10px; padding: 2px 6px; color: #f87171;" title="Unbind variable">Unbind</button>
+              </div>
+            ` : `
+              <button class="btn-inspector-action btn-audit-bind" data-path="${p.path}" style="font-size: 10px; padding: 2px 6px; color: #38bdf8;" title="Bind variable">+ Bind</button>
+            `}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    tbody.querySelectorAll('.btn-audit-unbind').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const path = btn.dataset.path;
+        compVarMgr.unbindVariable(node.id, path);
+        this.app.showToast(`Unbound variable from ${path}`, 'info');
+        this.openAuditComponentModal(node);
+        if (this.app.renderer) this.app.renderer.render();
+        this.app.updateInspector();
+      });
+    });
+
+    tbody.querySelectorAll('.btn-audit-replace').forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        this.openReplaceVariableModal(node, btn.dataset.varId, btn.dataset.path);
+      });
+    });
+
+    tbody.querySelectorAll('.btn-audit-bind').forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        this.openAddVariableModal(node, btn.dataset.path);
+      });
+    });
 
     modal.style.display = 'flex';
   }

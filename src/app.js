@@ -2489,18 +2489,117 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     }
 
     const providerSelect = document.getElementById('aiProviderSelect');
+    const modelSelect = document.getElementById('aiModelSelect');
     const keyFields = document.getElementById('aiKeyFields');
+    const openAiKeyGroup = document.getElementById('aiOpenAiKeyGroup');
+    const geminiKeyGroup = document.getElementById('aiGeminiKeyGroup');
+    const openAiKeyInput = document.getElementById('aiApiKeyInput');
+    const geminiKeyInput = document.getElementById('aiGeminiKeyInput');
+    const tempSlider = document.getElementById('aiTemperatureSlider');
+    const tempVal = document.getElementById('aiTemperatureValue');
     const statusLabel = document.getElementById('aiModelStatusLabel');
     const modelBadge = document.getElementById('aiModelBadge');
+
+    // Load persisted keys and settings from localStorage
+    const savedOpenAiKey = localStorage.getItem('designforge_api_key_openai') || '';
+    const savedGeminiKey = localStorage.getItem('designforge_api_key_gemini') || '';
+    const savedProvider = localStorage.getItem('designforge_ai_provider') || 'openai';
+    const savedModel = localStorage.getItem('designforge_ai_model') || '';
+    const savedTemp = localStorage.getItem('designforge_ai_temperature') || '0.2';
+
+    if (openAiKeyInput && savedOpenAiKey) {
+      openAiKeyInput.value = savedOpenAiKey;
+      const openAiProvider = this.ai.service.providers?.openai;
+      if (openAiProvider) openAiProvider.apiKey = savedOpenAiKey;
+    }
+    if (geminiKeyInput && savedGeminiKey) {
+      geminiKeyInput.value = savedGeminiKey;
+      const geminiProvider = this.ai.service.providers?.gemini;
+      if (geminiProvider) geminiProvider.apiKey = savedGeminiKey;
+    }
+
+    if (openAiKeyInput) {
+      openAiKeyInput.addEventListener('change', (e) => {
+        const val = e.target.value.trim();
+        localStorage.setItem('designforge_api_key_openai', val);
+        const openAiProvider = this.ai.service.providers?.openai;
+        if (openAiProvider) openAiProvider.apiKey = val;
+        this.showToast('OpenAI API Key saved', 'success');
+      });
+    }
+
+    if (geminiKeyInput) {
+      geminiKeyInput.addEventListener('change', (e) => {
+        const val = e.target.value.trim();
+        localStorage.setItem('designforge_api_key_gemini', val);
+        const geminiProvider = this.ai.service.providers?.gemini;
+        if (geminiProvider) geminiProvider.apiKey = val;
+        this.showToast('Google Gemini API Key saved', 'success');
+      });
+    }
+
+    if (tempSlider) {
+      tempSlider.value = savedTemp;
+      if (tempVal) tempVal.textContent = savedTemp;
+      tempSlider.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value) || 0.2;
+        if (tempVal) tempVal.textContent = val.toFixed(1);
+        localStorage.setItem('designforge_ai_temperature', val);
+        if (this.ai.service.providers?.openai) this.ai.service.providers.openai.temperature = val;
+        if (this.ai.service.providers?.gemini) this.ai.service.providers.gemini.temperature = val;
+      });
+    }
+
+    const populateModelOptions = (p, currentModel = null) => {
+      if (!modelSelect) return;
+      if (p === 'openai') {
+        modelSelect.innerHTML = `
+          <option value="gpt-4o">gpt-4o (Omni Multimodal Reasoning — Recommended)</option>
+          <option value="gpt-4o-mini">gpt-4o-mini (Fast & Efficient)</option>
+          <option value="o3-mini">o3-mini (High-Tier Reasoning & Code)</option>
+          <option value="o1">o1 (Deep Chain-of-Thought)</option>
+          <option value="gpt-4-turbo">gpt-4-turbo</option>
+        `;
+        modelSelect.disabled = false;
+        if (currentModel) modelSelect.value = currentModel;
+      } else if (p === 'gemini') {
+        modelSelect.innerHTML = `
+          <option value="gemini-2.5-pro">gemini-2.5-pro (Flagship Complex Reasoning — Recommended)</option>
+          <option value="gemini-2.5-flash">gemini-2.5-flash (High Velocity Sub-Second)</option>
+          <option value="gemini-1.5-pro">gemini-1.5-pro (1M Token Context Window)</option>
+          <option value="gemini-1.5-flash">gemini-1.5-flash (Lightweight Agentic)</option>
+          <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+        `;
+        modelSelect.disabled = false;
+        if (currentModel) modelSelect.value = currentModel;
+      } else if (p === 'dual_reasoning') {
+        modelSelect.innerHTML = `
+          <option value="dual-orchestrated">Dual Orchestrated (OpenAI GPT-4o + Google Gemini 2.5 Pro)</option>
+        `;
+        modelSelect.disabled = true;
+      } else if (p === 'auto') {
+        modelSelect.innerHTML = `
+          <option value="auto-routed">Automatic Intelligent Router (Best Model per Complexity)</option>
+        `;
+        modelSelect.disabled = true;
+      } else {
+        modelSelect.innerHTML = `
+          <option value="default">Default Model</option>
+        `;
+        modelSelect.disabled = true;
+      }
+    };
 
     const updateAiStatusDisplay = (p) => {
       if (statusLabel) {
         const status = {
           ollama: ['Bot', 'Ollama Llama 3.1 (Local AI)'],
           local: ['Zap', 'Built-in Synth Engine (Offline)'],
-          openai: ['Globe', 'OpenAI GPT-4o'],
-          gemini: ['Sparkles', 'Google Gemini 1.5/2.0']
-        }[p];
+          openai: ['Globe', 'ChatGPT — OpenAI (GPT-4o)'],
+          gemini: ['Sparkles', 'Gemini — Google (2.5 / 1.5)'],
+          auto: ['Cpu', 'Automatic Provider Selection'],
+          dual_reasoning: ['Layers', 'Dual Reasoning (ChatGPT + Gemini)']
+        }[p] || ['Bot', p];
         const icon = statusLabel.querySelector('[data-icon]');
         if (status && icon) {
           icon.dataset.icon = status[0];
@@ -2510,21 +2609,43 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         }
       }
       if (modelBadge) {
-        modelBadge.textContent = p === 'ollama' ? 'llama3.1:latest' : p;
+        modelBadge.textContent = p === 'dual_reasoning' ? 'Dual (GPT-4o + Gemini)' : (p === 'auto' ? 'Auto Router' : p);
       }
       if (keyFields) {
         keyFields.style.display = (p === 'local' || p === 'ollama') ? 'none' : 'flex';
       }
+      if (openAiKeyGroup) {
+        openAiKeyGroup.style.display = (p === 'openai' || p === 'dual_reasoning' || p === 'auto') ? 'block' : 'none';
+      }
+      if (geminiKeyGroup) {
+        geminiKeyGroup.style.display = (p === 'gemini' || p === 'dual_reasoning' || p === 'auto') ? 'block' : 'none';
+      }
+      populateModelOptions(p, savedModel);
     };
 
     if (providerSelect) {
-      providerSelect.value = this.ai.service.activeProviderName;
-      updateAiStatusDisplay(providerSelect.value);
+      providerSelect.value = savedProvider;
+      this.ai.setProvider(savedProvider);
+      updateAiStatusDisplay(savedProvider);
 
       providerSelect.addEventListener('change', (e) => {
         const p = e.target.value;
+        localStorage.setItem('designforge_ai_provider', p);
         this.ai.setProvider(p);
         updateAiStatusDisplay(p);
+      });
+    }
+
+    if (modelSelect) {
+      modelSelect.addEventListener('change', (e) => {
+        const m = e.target.value;
+        localStorage.setItem('designforge_ai_model', m);
+        const p = providerSelect?.value;
+        if (p === 'openai' && this.ai.service.providers?.openai) {
+          this.ai.service.providers.openai.model = m;
+        } else if (p === 'gemini' && this.ai.service.providers?.gemini) {
+          this.ai.service.providers.gemini.model = m;
+        }
       });
     }
 
@@ -2532,8 +2653,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const aiConnStatus = document.getElementById('aiConnectionStatus');
     if (btnTestAi) {
       btnTestAi.addEventListener('click', async () => {
+        const currentProviderName = providerSelect?.value || this.ai.service.activeProviderName;
         if (aiConnStatus) {
-          aiConnStatus.textContent = 'Testing connection to Ollama (Llama 3.1)...';
+          aiConnStatus.textContent = `Testing connection to ${currentProviderName.toUpperCase()}...`;
           aiConnStatus.style.color = 'var(--text-dim)';
         }
         try {
@@ -3809,9 +3931,18 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           <span>Transform</span>
           <span style="font-size: 10px; color: var(--accent-blue); text-transform: lowercase;">${node.type}</span>
         </div>
-        <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-          <button class="btn-inspector-action" id="btnExtractCompVariables" style="font-size: 11px; color: #10b981; border: 1px solid rgba(16,185,129,0.4);" title="Extract Reusable Variables with AI (Section 11)">
-            <span><span data-icon="Type"></span> Extract Variables (AI)</span>
+        <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+          <button class="btn-inspector-action" id="btnOpenAddVariableModal" style="font-size: 10px; padding: 4px 6px; color: #38bdf8; border: 1px solid rgba(56,189,248,0.3);" title="Add Variable to Component (Spec Part A, Section 2)">
+            <span>+ Variable</span>
+          </button>
+          <button class="btn-inspector-action" id="btnOpenReplaceComponentModal" style="font-size: 10px; padding: 4px 6px; color: #c084fc; border: 1px solid rgba(192,132,252,0.3);" title="Replace Component (Spec Part A, Section 3)">
+            <span>⇄ Replace</span>
+          </button>
+          <button class="btn-inspector-action" id="btnOpenAuditComponentModal" style="font-size: 10px; padding: 4px 6px; color: #10b981; border: 1px solid rgba(16,185,129,0.3);" title="Audit Variables & Compatibility (Spec Part A, Section 1)">
+            <span>Audit</span>
+          </button>
+          <button class="btn-inspector-action" id="btnExtractCompVariables" style="font-size: 10px; padding: 4px 6px; color: #94a3b8;" title="Extract Reusable Variables with AI (Section 11)">
+            <span>Extract</span>
           </button>
         </div>
         <div class="props-row">
@@ -4326,11 +4457,11 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             </div>
             <div style="display: flex; gap: 4px; align-items: center; flex-shrink: 0;">
               ${sc.tokenName ? `<span class="token-chip-badge" title="${sc.unresolved ? 'Unresolved color resource' : 'Linked color resource'}">${this.escapeAttr(sc.tokenName)}</span>` : ''}
-              <button type="button" class="btn-icon-xs btn-select-color-matches" data-color-index="${index}" title="Select matching layers (${sc.count})">
-                <span data-icon="Target" data-icon-size="12"></span>
+              <button type="button" class="btn-inspector-action btn-select-color-matches" data-color-index="${index}" style="font-size: 10px; padding: 2px 8px; width: auto; height: 24px;" title="Select matching layers (${sc.count})">
+                Select matches
               </button>
-              <button type="button" class="btn-icon-xs btn-recolor-selection-color" data-color-index="${index}" title="${sc.tokenId || sc.tokenName || sc.unresolved ? 'Detach & Change' : 'Change color'}">
-                <span data-icon="Palette" data-icon-size="12"></span>
+              <button type="button" class="btn-inspector-action btn-recolor-selection-color" data-color-index="${index}" style="font-size: 10px; padding: 2px 8px; width: auto; height: 24px;" title="${sc.tokenId || sc.tokenName || sc.unresolved ? 'Detach & Change' : 'Change color'}">
+                Change
               </button>
             </div>
           </div>
@@ -4360,6 +4491,17 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     document.getElementById('inspAlignBottom')?.addEventListener('click', () => this.alignSelected('bottom'));
     document.getElementById('inspDistH')?.addEventListener('click', () => this.distributeSelected('horizontal'));
     document.getElementById('inspDistV')?.addEventListener('click', () => this.distributeSelected('vertical'));
+    
+    // Component & Variable Management Handlers (Spec Part A)
+    document.getElementById('btnOpenAddVariableModal')?.addEventListener('click', () => {
+      this.dsUi.openAddVariableModal(node);
+    });
+    document.getElementById('btnOpenReplaceComponentModal')?.addEventListener('click', () => {
+      this.dsUi.openReplaceComponentModal(node);
+    });
+    document.getElementById('btnOpenAuditComponentModal')?.addEventListener('click', () => {
+      this.dsUi.openAuditComponentModal(node);
+    });
     document.getElementById('btnExtractCompVariables')?.addEventListener('click', () => {
       this.dsUi.openComponentVariablesModal(node);
     });

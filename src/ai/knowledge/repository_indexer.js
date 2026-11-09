@@ -174,6 +174,16 @@ export class DesignSystemRepositoryIndexer {
     return this.index;
   }
 
+  buildIndex() {
+    this.reindex();
+    return {
+      componentCount: this.index.components.length,
+      tokenCount: this.index.tokens.length,
+      variableCount: this.index.variables.length,
+      guidelinesCount: this.index.guidelines.length
+    };
+  }
+
   /**
    * 6.3 Retrieval-Augmented Design Generation (RAG)
    * Retrieves relevant components, tokens, variables, and guidelines for a query
@@ -224,6 +234,8 @@ export class DesignSystemRepositoryIndexer {
 
     return {
       query,
+      components: finalComponents,
+      tokens: relevantTokens,
       retrievedComponents: finalComponents.map(c => ({
         id: c.id,
         name: c.name,
@@ -255,10 +267,10 @@ export class DesignSystemRepositoryIndexer {
     const compList = components.map(c => `• ${c.name} (id: "${c.id}", category: "${c.category}"): ${c.description}`).join('\n');
     const tokList = tokens.map(t => `• ${t.name}: ${t.value} [${t.category}]`).join('\n');
 
-    return `### Discovered Design System Components:
+    return `### Canonical Material UI & Design System Components:
 ${compList}
 
-### Discovered Design Tokens:
+### Discovered Design Tokens & Variables:
 ${tokList}
 
 INSTRUCTION: You must strictly reuse these discovered component IDs and tokens in your design operations rather than inventing new names.`;

@@ -11,6 +11,10 @@ export class GeminiProvider extends BaseProvider {
     return ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash'];
   }
 
+  get SUPPORTED_MODELS() {
+    return GeminiProvider.SUPPORTED_MODELS;
+  }
+
   constructor(config = {}) {
     super({
       name: 'gemini',
