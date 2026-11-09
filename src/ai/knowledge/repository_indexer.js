@@ -7,6 +7,9 @@
 
 import { MUI_COMPONENT_CATALOG, MUI_DESIGN_TOKENS } from '../../engine/design_system/mui_catalog.js';
 import { RNEUI_COMPONENT_CATALOG } from '../../engine/design_system/rneui_catalog.js';
+import { MANTINE_COMPONENT_CATALOG, MANTINE_DESIGN_TOKENS } from '../../engine/design_system/mantine_catalog.js';
+import { AG_GRID_COMPONENT_CATALOG, AG_GRID_VARIABLES } from '../../engine/design_system/ag_grid_catalog.js';
+import { GRAFANA_COMPONENT_CATALOG, GRAFANA_DESIGN_TOKENS } from '../../engine/design_system/grafana_catalog.js';
 
 export class DesignSystemRepositoryIndexer {
   constructor(registry = null, doc = null) {
@@ -79,6 +82,76 @@ export class DesignSystemRepositoryIndexer {
           rneuiComp.category.toLowerCase(),
           'mobile',
           'react-native'
+        ]
+      });
+    }
+
+    // 3. Index Mantine UI Components
+    for (const mantineComp of MANTINE_COMPONENT_CATALOG) {
+      components.push({
+        id: `mantine_${mantineComp.id}`,
+        name: `Mantine ${mantineComp.name}`,
+        catalog: mantineComp.package || '@mantine/core',
+        platform: 'react-web',
+        category: mantineComp.category,
+        description: mantineComp.description,
+        defaultSize: mantineComp.defaultSize,
+        properties: mantineComp.properties,
+        keywords: [
+          mantineComp.id,
+          mantineComp.name.toLowerCase(),
+          mantineComp.category.toLowerCase(),
+          'mantine',
+          'react',
+          ...mantineComp.description.toLowerCase().split(/\s+/)
+        ]
+      });
+    }
+
+    // 4. Index AG Grid Components
+    for (const agComp of AG_GRID_COMPONENT_CATALOG) {
+      components.push({
+        id: `ag_grid_${agComp.id}`,
+        name: `AG Grid ${agComp.name}`,
+        catalog: 'ag-grid-react',
+        platform: 'react-web',
+        category: agComp.category,
+        description: agComp.description,
+        defaultSize: agComp.defaultSize,
+        properties: agComp.properties,
+        keywords: [
+          agComp.id,
+          agComp.name.toLowerCase(),
+          agComp.category.toLowerCase(),
+          'ag-grid',
+          'grid',
+          'table',
+          'react',
+          ...agComp.description.toLowerCase().split(/\s+/)
+        ]
+      });
+    }
+
+    // 5. Index Grafana UI Components
+    for (const grafComp of GRAFANA_COMPONENT_CATALOG) {
+      components.push({
+        id: `grafana_${grafComp.id}`,
+        name: `Grafana ${grafComp.name}`,
+        catalog: '@grafana/ui',
+        platform: 'react-web',
+        category: grafComp.category,
+        description: grafComp.description,
+        defaultSize: grafComp.defaultSize,
+        properties: grafComp.properties,
+        keywords: [
+          grafComp.id,
+          grafComp.name.toLowerCase(),
+          grafComp.category.toLowerCase(),
+          'grafana',
+          'chart',
+          'telemetry',
+          'graph',
+          ...grafComp.description.toLowerCase().split(/\s+/)
         ]
       });
     }

@@ -6,6 +6,9 @@
 import { TOKEN_CATEGORIES, VARIABLE_TYPES, THEME_MODES, DESIGN_SYSTEM_STARTERS } from './types.js';
 import { RNEUI_COMPONENT_CATALOG, addRneuiComponentToRegistry } from './rneui_catalog.js';
 import { MUI_COMPONENT_CATALOG, MUI_DESIGN_TOKENS, addMuiComponentToRegistry, insertMuiComponentToCanvas } from './mui_catalog.js';
+import { AG_GRID_COMPONENT_CATALOG, AG_GRID_VARIABLES, addAgGridComponentToRegistry, addAgGridVariablesToRegistry, insertAgGridComponentToCanvas } from './ag_grid_catalog.js';
+import { GRAFANA_COMPONENT_CATALOG, GRAFANA_DESIGN_TOKENS, addGrafanaComponentToRegistry, addGrafanaTokensToRegistry, insertGrafanaComponentToCanvas } from './grafana_catalog.js';
+import { MANTINE_COMPONENT_CATALOG, MANTINE_DESIGN_TOKENS, addMantineComponentToRegistry, addMantineTokensToRegistry, insertMantineComponentToCanvas } from './mantine_catalog.js';
 
 export class DesignSystemUIController {
   constructor(app) {
@@ -19,7 +22,10 @@ export class DesignSystemUIController {
     this.activeView = 'overview';
     this.activeTokenCategory = 'all';
     this.activeTheme = 'dark';
-    this.activeComponentLibrary = 'mui';
+    this.activeComponentLibrary = 'mantine';
+    this.activeMantineCategory = 'all';
+    this.activeAgGridCategory = 'all';
+    this.activeGrafanaCategory = 'all';
     this.activeMuiCategory = 'all';
     this.tokenSearchQuery = '';
     this.varSearchQuery = '';
@@ -1314,12 +1320,57 @@ export class DesignSystemUIController {
 
   renderComponentsView(container) {
     const comps = this.registry.getAllComponents();
-    const isMui = this.activeComponentLibrary === 'mui';
+    const lib = this.activeComponentLibrary;
 
-    const muiCategories = ['all', 'Inputs', 'Surfaces', 'Feedback', 'Data Display', 'Navigation', 'Layout'];
-    const filteredMuiComps = this.activeMuiCategory === 'all'
-      ? MUI_COMPONENT_CATALOG
-      : MUI_COMPONENT_CATALOG.filter(c => c.category.toLowerCase() === this.activeMuiCategory.toLowerCase());
+    let catalogItems = [];
+    let libTitle = 'Mantine UI (@mantine/*)';
+    let libTag = '@mantine/core · React v9.8.0';
+    let libDesc = 'Comprehensive Mantine design system: Core components, Dates, Charts, TipTap Rich Text, Dropzone, Carousel, Spotlight, Code Highlight, and Notification overlays.';
+    let activeCategory = 'all';
+    let categories = ['all'];
+
+    if (lib === 'mantine') {
+      libTitle = 'Mantine UI (@mantine/*)';
+      libTag = '@mantine/core · React v9.8.0';
+      libDesc = 'Comprehensive Mantine design system: Core components, Dates, Charts, TipTap Rich Text, Dropzone, Carousel, Spotlight, Code Highlight, and Notification overlays.';
+      categories = ['all', 'Buttons', 'Inputs', 'Data Display', 'Feedback', 'Overlays', 'Navigation', 'Layout', 'Dates', 'Charts', 'Editors', 'Code', 'Upload', 'Media'];
+      activeCategory = this.activeMantineCategory;
+      catalogItems = activeCategory === 'all'
+        ? MANTINE_COMPONENT_CATALOG
+        : MANTINE_COMPONENT_CATALOG.filter(c => c.category.toLowerCase() === activeCategory.toLowerCase());
+    } else if (lib === 'aggrid') {
+      libTitle = 'AG Grid (ag-grid-react)';
+      libTag = 'ag-grid-react · Data Grid v36.3.0';
+      libDesc = 'Enterprise-grade React data grids and data tables. Sorting, filtering, tree data, pivot mode, column tool panels, and CSS variable theming.';
+      categories = ['all', 'Grids', 'Hierarchical', 'Analytics', 'ToolPanels', 'Navigation', 'Toolbar'];
+      activeCategory = this.activeAgGridCategory;
+      catalogItems = activeCategory === 'all'
+        ? AG_GRID_COMPONENT_CATALOG
+        : AG_GRID_COMPONENT_CATALOG.filter(c => c.category.toLowerCase() === activeCategory.toLowerCase());
+    } else if (lib === 'grafana') {
+      libTitle = 'Grafana UI (@grafana/ui)';
+      libTag = '@grafana/ui · Observability v13.3.0';
+      libDesc = 'Official Grafana metric graphs, time series, gauges, KPI stats, heatmaps, state timelines, and dashboard panels.';
+      categories = ['all', 'Charts', 'Gauges', 'Observability', 'Financial', 'Navigation'];
+      activeCategory = this.activeGrafanaCategory;
+      catalogItems = activeCategory === 'all'
+        ? GRAFANA_COMPONENT_CATALOG
+        : GRAFANA_COMPONENT_CATALOG.filter(c => c.category.toLowerCase() === activeCategory.toLowerCase());
+    } else if (lib === 'mui') {
+      libTitle = 'Material UI (@mui/material)';
+      libTag = '@mui/material · React v10';
+      libDesc = 'Official Material UI React components with Roboto typography scale, 8px grid spacing, and 24 elevation depths.';
+      categories = ['all', 'Inputs', 'Surfaces', 'Feedback', 'Data Display', 'Navigation', 'Layout'];
+      activeCategory = this.activeMuiCategory;
+      catalogItems = activeCategory === 'all'
+        ? MUI_COMPONENT_CATALOG
+        : MUI_COMPONENT_CATALOG.filter(c => c.category.toLowerCase() === activeCategory.toLowerCase());
+    } else {
+      libTitle = 'React Native Elements (@rneui/themed)';
+      libTag = '@rneui/themed · Mobile v5';
+      libDesc = 'React Native Elements component references for cross-platform mobile interface architecture.';
+      catalogItems = RNEUI_COMPONENT_CATALOG;
+    }
 
     container.innerHTML = `
       <section class="ds-card" style="margin-bottom: 20px;">
@@ -1327,82 +1378,76 @@ export class DesignSystemUIController {
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
           <div>
             <div style="font-size: 15px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
-              <span>Component Library Catalog</span>
+              <span>${libTitle}</span>
               <span style="font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(25, 118, 210, 0.15); color: #42a5f5; font-weight: 600;">
-                ${isMui ? '@mui/material · React v10' : '@rneui/themed · Mobile v5'}
+                ${libTag}
               </span>
             </div>
             <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
-              ${isMui 
-                ? 'Official Material UI React components. Insert directly onto the canvas with live styling or register into your active design system.'
-                : 'React Native Elements component references for cross-platform mobile interface architecture.'}
+              ${libDesc}
             </div>
           </div>
 
           <!-- Library Toggle Switcher -->
-          <div style="display: flex; background: var(--bg-surface); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); gap: 4px;">
-            <button type="button" class="ds-filter-pill ${isMui ? 'active' : ''}" data-ds-lib="mui" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
-              Material UI (@mui/material)
+          <div style="display: flex; background: var(--bg-surface); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); gap: 4px; flex-wrap: wrap;">
+            <button type="button" class="ds-filter-pill ${lib === 'mantine' ? 'active' : ''}" data-ds-lib="mantine" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
+              Mantine UI
             </button>
-            <button type="button" class="ds-filter-pill ${!isMui ? 'active' : ''}" data-ds-lib="rneui" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
-              React Native (@rneui/themed)
+            <button type="button" class="ds-filter-pill ${lib === 'aggrid' ? 'active' : ''}" data-ds-lib="aggrid" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
+              AG Grid
+            </button>
+            <button type="button" class="ds-filter-pill ${lib === 'grafana' ? 'active' : ''}" data-ds-lib="grafana" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
+              Grafana UI
+            </button>
+            <button type="button" class="ds-filter-pill ${lib === 'mui' ? 'active' : ''}" data-ds-lib="mui" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
+              Material UI
+            </button>
+            <button type="button" class="ds-filter-pill ${lib === 'rneui' ? 'active' : ''}" data-ds-lib="rneui" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
+              React Native
             </button>
           </div>
         </div>
 
-        ${isMui ? `
-          <!-- MUI Category Filter Pills -->
+        ${categories.length > 1 ? `
+          <!-- Category Filter Pills -->
           <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;">
-            ${muiCategories.map(cat => `
-              <button type="button" class="ds-filter-pill ${this.activeMuiCategory === cat.toLowerCase() ? 'active' : ''}" data-mui-category="${cat.toLowerCase()}" style="font-size: 11px; padding: 4px 10px; cursor: pointer;">
-                ${cat === 'all' ? 'All Categories (' + MUI_COMPONENT_CATALOG.length + ')' : cat}
+            ${categories.map(cat => `
+              <button type="button" class="ds-filter-pill ${activeCategory === cat.toLowerCase() ? 'active' : ''}" data-cat-filter="${cat.toLowerCase()}" style="font-size: 11px; padding: 4px 10px; cursor: pointer;">
+                ${cat === 'all' ? `All (${catalogItems.length})` : cat}
               </button>
             `).join('')}
           </div>
+        ` : ''}
 
-          <!-- MUI Component Grid -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px;">
-            ${filteredMuiComps.map(component => {
-              const added = comps.some(item => item.sourceMetadata?.catalogId === component.id && item.sourceMetadata?.package === '@mui/material');
-              return `
-                <article style="border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--bg-surface); transition: border-color 0.15s ease;">
-                  <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="font-size: 13px; font-weight: 700; color: var(--text-main);">${component.name}</div>
-                    <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(25,118,210,0.12); color: #42a5f5; font-weight: 600;">
-                      ${component.category}
-                    </span>
-                  </div>
-                  <div style="font-size: 11px; color: var(--text-dim); min-height: 32px; line-height: 1.4;">${component.description}</div>
-                  
-                  <div style="display: flex; gap: 6px; margin-top: auto; padding-top: 6px;">
-                    <button type="button" class="ds-action-btn" data-mui-insert="${component.id}" title="Insert directly onto design canvas" style="flex: 1; background: #1976d2; color: #ffffff; border: none; font-weight: 600;">
-                      ↵ Insert
-                    </button>
-                    <button type="button" class="ds-action-btn" data-mui-add="${component.id}" ${added ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''} style="flex: 1;">
-                      ${added ? '✓ In System' : '+ System'}
-                    </button>
-                  </div>
-                </article>
-              `;
-            }).join('')}
-          </div>
-        ` : `
-          <!-- RNEUI Component Grid -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px;">
-            ${RNEUI_COMPONENT_CATALOG.map(component => {
-              const added = comps.some(item => item.sourceMetadata?.catalogId === component.id && item.sourceMetadata?.package === '@rneui/themed');
-              return `
-                <article style="border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;">
-                  <div style="font-size: 12px; font-weight: 700; color: var(--text-main);">${component.name}</div>
-                  <div style="font-size: 10px; color: var(--text-dim); min-height: 28px;">${component.description}</div>
-                  <button type="button" class="ds-action-btn" data-rneui-component="${component.id}" ${added ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''}>
-                    ${added ? 'Added to system' : 'Add to system'}
+        <!-- Component Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px;">
+          ${catalogItems.map(component => {
+            const added = comps.some(item =>
+              item.sourceMetadata?.catalogId === component.id &&
+              (item.sourceMetadata?.package?.includes(lib) || (lib === 'aggrid' && item.sourceMetadata?.package === 'ag-grid-react') || (lib === 'grafana' && item.sourceMetadata?.package === '@grafana/ui') || (lib === 'mantine' && item.sourceMetadata?.package?.startsWith('@mantine')) || (lib === 'mui' && item.sourceMetadata?.package === '@mui/material'))
+            );
+            return `
+              <article style="border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--bg-surface); transition: border-color 0.15s ease;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <div style="font-size: 13px; font-weight: 700; color: var(--text-main);">${component.name}</div>
+                  <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(25,118,210,0.12); color: #42a5f5; font-weight: 600;">
+                    ${component.category || 'General'}
+                  </span>
+                </div>
+                <div style="font-size: 11px; color: var(--text-dim); min-height: 32px; line-height: 1.4;">${component.description}</div>
+                
+                <div style="display: flex; gap: 6px; margin-top: auto; padding-top: 6px;">
+                  <button type="button" class="ds-action-btn" data-insert-comp="${component.id}" data-lib="${lib}" title="Insert directly onto design canvas" style="flex: 1; background: #0284c7; color: #ffffff; border: none; font-weight: 600;">
+                    ↵ Insert
                   </button>
-                </article>
-              `;
-            }).join('')}
-          </div>
-        `}
+                  <button type="button" class="ds-action-btn" data-add-comp="${component.id}" data-lib="${lib}" ${added ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''} style="flex: 1;">
+                    ${added ? '✓ In System' : '+ System'}
+                  </button>
+                </div>
+              </article>
+            `;
+          }).join('')}
+        </div>
       </section>
 
       <!-- Registered Components List in Active Design System -->
@@ -1414,7 +1459,7 @@ export class DesignSystemUIController {
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
           ${comps.length === 0 ? `
             <div style="grid-column: 1 / -1; text-align: center; color: var(--text-dim); padding: 28px; border: 1px dashed var(--border-subtle); border-radius: 8px;">
-              No components registered yet. Use "+ System" on any Material UI or RNEUI component above.
+              No components registered yet. Use "+ System" on any Mantine, AG Grid, Grafana, or Material UI component above.
             </div>
           ` : comps.map(c => `
             <div class="ds-card" style="display: flex; flex-direction: column; gap: 8px;">
@@ -1441,57 +1486,71 @@ export class DesignSystemUIController {
       });
     });
 
-    // MUI category filter buttons
-    container.querySelectorAll('[data-mui-category]').forEach(btn => {
+    // Category filter buttons
+    container.querySelectorAll('[data-cat-filter]').forEach(btn => {
       btn.addEventListener('click', () => {
-        this.activeMuiCategory = btn.dataset.muiCategory;
+        const cat = btn.dataset.catFilter;
+        if (lib === 'mantine') this.activeMantineCategory = cat;
+        else if (lib === 'aggrid') this.activeAgGridCategory = cat;
+        else if (lib === 'grafana') this.activeGrafanaCategory = cat;
+        else if (lib === 'mui') this.activeMuiCategory = cat;
         this.renderComponentsView(container);
       });
     });
 
-    // MUI Insert directly onto canvas
-    container.querySelectorAll('[data-mui-insert]').forEach(btn => {
+    // Unified Insert directly onto canvas
+    container.querySelectorAll('[data-insert-comp]').forEach(btn => {
       btn.addEventListener('click', () => {
         try {
-          const compId = btn.dataset.muiInsert;
-          insertMuiComponentToCanvas(this.app, compId);
-          // Return to Design workspace to see and manipulate the new node
+          const compId = btn.dataset.insertComp;
+          const targetLib = btn.dataset.lib;
+
+          if (targetLib === 'mantine') {
+            insertMantineComponentToCanvas(this.app, compId);
+          } else if (targetLib === 'aggrid') {
+            insertAgGridComponentToCanvas(this.app, compId);
+          } else if (targetLib === 'grafana') {
+            insertGrafanaComponentToCanvas(this.app, compId);
+          } else if (targetLib === 'mui') {
+            insertMuiComponentToCanvas(this.app, compId);
+          } else {
+            insertMuiComponentToCanvas(this.app, 'button');
+          }
+
           this.app.setAxiomMode('design');
         } catch (error) {
-          this.app.showToast(`Error inserting MUI component: ${error.message}`);
+          this.app.showToast(`Error inserting component: ${error.message}`);
         }
       });
     });
 
-    // MUI Add to system
-    container.querySelectorAll('[data-mui-add]').forEach(btn => {
+    // Unified Add to system registry
+    container.querySelectorAll('[data-add-comp]').forEach(btn => {
       btn.addEventListener('click', () => {
         try {
-          const compId = btn.dataset.muiAdd;
-          const result = addMuiComponentToRegistry(this.registry, compId);
+          const compId = btn.dataset.addComp;
+          const targetLib = btn.dataset.lib;
+          let result;
+
+          if (targetLib === 'mantine') {
+            result = addMantineComponentToRegistry(this.registry, compId);
+          } else if (targetLib === 'aggrid') {
+            result = addAgGridComponentToRegistry(this.registry, compId);
+          } else if (targetLib === 'grafana') {
+            result = addGrafanaComponentToRegistry(this.registry, compId);
+          } else if (targetLib === 'mui') {
+            result = addMuiComponentToRegistry(this.registry, compId);
+          } else {
+            result = addRneuiComponentToRegistry(this.registry, compId);
+          }
+
           if (result.added) {
             this.updateHeaderInfo();
             this.renderComponentsView(container);
             this.app.showToast(`${result.component.name} registered in design system.`);
           }
         } catch (error) {
-          this.app.showToast(`Could not register MUI component: ${error.message}`);
-        }
-      });
-    });
-
-    // RNEUI Add to system
-    container.querySelectorAll('[data-rneui-component]').forEach(button => {
-      button.addEventListener('click', () => {
-        try {
-          const result = addRneuiComponentToRegistry(this.registry, button.dataset.rneuiComponent);
-          if (result.added) {
-            this.updateHeaderInfo();
-            this.renderComponentsView(container);
-            this.app.showToast(`${result.component.name} added to the design system catalog.`);
-          }
-        } catch (error) {
-          this.app.showToast(`Could not add RNEUI component: ${error.message}`);
+          this.app.showToast(`Could not register component: ${error.message}`);
         }
       });
     });
@@ -1559,13 +1618,64 @@ export class DesignSystemUIController {
         <div class="ds-card">
           <div class="ds-card-title">
             <span>Integrated Component Libraries & Token Sets</span>
-            <span style="font-size: 11px; color: var(--accent-green);">2 Libraries Available</span>
+            <span style="font-size: 11px; color: var(--accent-green);">5 Frameworks Available</span>
           </div>
           <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
-            DesignForge AI integrates production React and React Native frameworks directly into your workflow.
+            DesignForge AI integrates production React, Mantine, AG Grid, Grafana, and React Native frameworks directly into your workflow.
           </p>
 
           <div style="display: flex; flex-direction: column; gap: 14px;">
+            <!-- Mantine UI Card -->
+            <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <strong style="color: var(--text-main); font-size: 13px;">Mantine UI (@mantine/*)</strong>
+                  <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(34,139,230,0.15); color: #339af0; font-weight: 600;">v9.8.0</span>
+                  <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(16,185,129,0.15); color: var(--accent-green);">Full Suite</span>
+                </div>
+                <button type="button" class="ds-action-btn" id="btnSeedMantineTokens" style="font-size: 11px; padding: 4px 10px; background: #228be6; color: #fff;">
+                  + Seed Mantine Tokens
+                </button>
+              </div>
+              <div style="font-size: 11px; color: var(--text-dim); line-height: 1.6;">
+                Core components, Dates, Charts, TipTap Rich Text, Dropzone file upload, Embla Carousel, Spotlight search palette, Code Highlight, and Notification overlays.
+              </div>
+            </div>
+
+            <!-- AG Grid Card -->
+            <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <strong style="color: var(--text-main); font-size: 13px;">AG Grid (ag-grid-react)</strong>
+                  <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(2,132,199,0.15); color: #0284c7; font-weight: 600;">v36.3.0</span>
+                  <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(16,185,129,0.15); color: var(--accent-green);">Enterprise Data</span>
+                </div>
+                <button type="button" class="ds-action-btn" id="btnSeedAgGridVariables" style="font-size: 11px; padding: 4px 10px;">
+                  + Seed AG Grid Variables
+                </button>
+              </div>
+              <div style="font-size: 11px; color: var(--text-dim); line-height: 1.6;">
+                Enterprise & standard data grids, tree data hierarchies, pivot tables, chart integration, side tool panels, and full CSS variable API tokens.
+              </div>
+            </div>
+
+            <!-- Grafana UI Card -->
+            <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <strong style="color: var(--text-main); font-size: 13px;">Grafana UI (@grafana/ui)</strong>
+                  <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(255,153,0,0.15); color: #ff9900; font-weight: 600;">v13.3.0</span>
+                  <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(16,185,129,0.15); color: var(--accent-green);">Telemetry & Charts</span>
+                </div>
+                <button type="button" class="ds-action-btn" id="btnSeedGrafanaTokens" style="font-size: 11px; padding: 4px 10px;">
+                  + Seed Grafana Tokens
+                </button>
+              </div>
+              <div style="font-size: 11px; color: var(--text-dim); line-height: 1.6;">
+                Official Grafana time-series graphs, bar charts, radial gauges, KPI stat cards, heatmaps, state timelines, and node graph panels.
+              </div>
+            </div>
+
             <!-- Material UI Card -->
             <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
@@ -1600,6 +1710,39 @@ export class DesignSystemUIController {
         </div>
       </div>
     `;
+
+    // Seed Mantine tokens
+    container.querySelector('#btnSeedMantineTokens')?.addEventListener('click', () => {
+      try {
+        const added = addMantineTokensToRegistry(this.registry);
+        this.updateHeaderInfo();
+        this.app.showToast(`${added.length} Mantine UI tokens seeded into design system.`, 'success');
+      } catch (err) {
+        this.app.showToast(`Error seeding Mantine tokens: ${err.message}`);
+      }
+    });
+
+    // Seed AG Grid variables
+    container.querySelector('#btnSeedAgGridVariables')?.addEventListener('click', () => {
+      try {
+        const added = addAgGridVariablesToRegistry(this.registry);
+        this.updateHeaderInfo();
+        this.app.showToast(`${added.length} AG Grid CSS variables seeded into design system.`, 'success');
+      } catch (err) {
+        this.app.showToast(`Error seeding AG Grid variables: ${err.message}`);
+      }
+    });
+
+    // Seed Grafana tokens
+    container.querySelector('#btnSeedGrafanaTokens')?.addEventListener('click', () => {
+      try {
+        const added = addGrafanaTokensToRegistry(this.registry);
+        this.updateHeaderInfo();
+        this.app.showToast(`${added.length} Grafana UI tokens seeded into design system.`, 'success');
+      } catch (err) {
+        this.app.showToast(`Error seeding Grafana tokens: ${err.message}`);
+      }
+    });
 
     // Seed Material tokens button
     container.querySelector('#btnSeedMuiTokens')?.addEventListener('click', () => {

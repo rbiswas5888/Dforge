@@ -8,6 +8,9 @@
 import { VARIABLE_TYPES, TOKEN_CATEGORIES } from './types.js';
 import { MUI_COMPONENT_CATALOG, createMuiNode } from './mui_catalog.js';
 import { RNEUI_COMPONENT_CATALOG } from './rneui_catalog.js';
+import { AG_GRID_COMPONENT_CATALOG, createAgGridNode } from './ag_grid_catalog.js';
+import { GRAFANA_COMPONENT_CATALOG, createGrafanaNode } from './grafana_catalog.js';
+import { MANTINE_COMPONENT_CATALOG, createMantineNode } from './mantine_catalog.js';
 import { createNode } from '../document.js';
 
 /**
@@ -299,6 +302,27 @@ export class ComponentVariableManager {
    * Returns all available catalog components across Material UI, RNEUI, and Custom registry
    */
   getAvailableCatalogComponents() {
+    const mantineItems = MANTINE_COMPONENT_CATALOG.map(c => ({
+      id: c.id,
+      name: c.name,
+      category: c.category,
+      description: c.description,
+      library: 'Mantine UI'
+    }));
+    const agGridItems = AG_GRID_COMPONENT_CATALOG.map(c => ({
+      id: c.id,
+      name: c.name,
+      category: c.category,
+      description: c.description,
+      library: 'AG Grid'
+    }));
+    const grafanaItems = GRAFANA_COMPONENT_CATALOG.map(c => ({
+      id: c.id,
+      name: c.name,
+      category: c.category,
+      description: c.description,
+      library: 'Grafana UI'
+    }));
     const muiItems = MUI_COMPONENT_CATALOG.map(c => ({
       id: c.id,
       name: c.name,
@@ -320,7 +344,7 @@ export class ComponentVariableManager {
       description: c.description || 'Custom Design System Component',
       library: 'Custom'
     }));
-    return [...muiItems, ...rneuiItems, ...customItems];
+    return [...mantineItems, ...agGridItems, ...grafanaItems, ...muiItems, ...rneuiItems, ...customItems];
   }
 
   /**
@@ -442,16 +466,26 @@ export class ComponentVariableManager {
     }
 
     // Determine target component definition (flexible ID and name matching)
-    const normalizedTarget = targetComponentId.toLowerCase().replace(/^mui-/, '').replace(/^rneui-/, '');
+    const normalizedTarget = targetComponentId.toLowerCase()
+      .replace(/^mui-/, '')
+      .replace(/^rneui-/, '')
+      .replace(/^mantine-/, '')
+      .replace(/^ag-grid-/, '')
+      .replace(/^ag-/, '')
+      .replace(/^grafana-/, '');
+
+    const mantineDef = MANTINE_COMPONENT_CATALOG.find(c => c.id === targetComponentId || c.id === normalizedTarget || c.name.toLowerCase() === normalizedTarget);
+    const agGridDef = AG_GRID_COMPONENT_CATALOG.find(c => c.id === targetComponentId || c.id === normalizedTarget || c.name.toLowerCase() === normalizedTarget);
+    const grafanaDef = GRAFANA_COMPONENT_CATALOG.find(c => c.id === targetComponentId || c.id === normalizedTarget || c.name.toLowerCase() === normalizedTarget);
     const muiDef = MUI_COMPONENT_CATALOG.find(c => c.id === targetComponentId || c.id === normalizedTarget || c.name.toLowerCase() === normalizedTarget);
     const rneuiDef = RNEUI_COMPONENT_CATALOG.find(c => c.id === targetComponentId || c.id === normalizedTarget || c.name.toLowerCase() === normalizedTarget);
     const customDef = this.registry.getAllComponents().find(c => c.id === targetComponentId || c.id === normalizedTarget || c.name?.toLowerCase() === normalizedTarget || c.sourceMetadata?.catalogId === targetComponentId);
 
-    if (!muiDef && !rneuiDef && !customDef) {
+    if (!mantineDef && !agGridDef && !grafanaDef && !muiDef && !rneuiDef && !customDef) {
       throw new Error(`Unknown replacement component catalog ID: ${targetComponentId}`);
     }
 
-    const componentName = muiDef?.name || rneuiDef?.name || customDef?.name;
+    const componentName = mantineDef?.name || agGridDef?.name || grafanaDef?.name || muiDef?.name || rneuiDef?.name || customDef?.name;
 
     // 1. Identify transferable properties from sourceNode
     const transferred = {
@@ -489,7 +523,34 @@ export class ComponentVariableManager {
     let replacementRoot;
     let replacementChildren = [];
 
-    if (muiDef) {
+    if (mantineDef) {
+      const generated = createMantineNode(mantineDef.id, {
+        x: transferred.x,
+        y: transferred.y,
+        width: transferred.width || mantineDef.defaultSize.width,
+        height: transferred.height || mantineDef.defaultSize.height
+      });
+      replacementRoot = generated.rootNode;
+      replacementChildren = generated.childNodes;
+    } else if (agGridDef) {
+      const generated = createAgGridNode(agGridDef.id, {
+        x: transferred.x,
+        y: transferred.y,
+        width: transferred.width || agGridDef.defaultSize.width,
+        height: transferred.height || agGridDef.defaultSize.height
+      });
+      replacementRoot = generated.rootNode;
+      replacementChildren = generated.childNodes;
+    } else if (grafanaDef) {
+      const generated = createGrafanaNode(grafanaDef.id, {
+        x: transferred.x,
+        y: transferred.y,
+        width: transferred.width || grafanaDef.defaultSize.width,
+        height: transferred.height || grafanaDef.defaultSize.height
+      });
+      replacementRoot = generated.rootNode;
+      replacementChildren = generated.childNodes;
+    } else if (muiDef) {
       const generated = createMuiNode(muiDef.id, {
         x: transferred.x,
         y: transferred.y,
@@ -607,6 +668,7 @@ export class ComponentVariableManager {
       success: true,
       oldNodeId: sourceNode.id,
       newNodeId: replacementRoot.id,
+      replacement: replacementRoot,
       replacementComponent: componentName,
       replacementName: componentName,
       transferredProperties: Object.keys(transferred),

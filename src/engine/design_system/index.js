@@ -12,4 +12,7 @@ export * from './component_variable_manager.js';
 export * from './react_importer.js';
 export * from './rneui_catalog.js';
 export * from './mui_catalog.js';
+export * from './ag_grid_catalog.js';
+export * from './grafana_catalog.js';
+export * from './mantine_catalog.js';
 export * from './ui_controller.js';
