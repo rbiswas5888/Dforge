@@ -46,9 +46,6 @@ function serveStaticFile(req, res) {
   if (reqPath === '/preview' || reqPath === '/preview/') {
     reqPath = '/preview.html';
   }
-  if (reqPath === '/banking' || reqPath === '/banking/') {
-    reqPath = '/banking.html';
-  }
 
   const filePath = path.join(__dirname, reqPath);
   const resolvedDir = path.resolve(__dirname);
