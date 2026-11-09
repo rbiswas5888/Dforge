@@ -165,21 +165,8 @@ export class FontManager {
       return true;
     }
 
-    // 3. In browser environment, perform canvas probing and document.fonts.check
+    // 3. In browser environment, perform canvas metrics probing against baselines
     if (typeof document !== 'undefined') {
-      // First check document.fonts if available
-      try {
-        if (document.fonts && typeof document.fonts.check === 'function') {
-          if (document.fonts.check(`16px "${clean}"`)) {
-            this.installedFonts.add(clean);
-            return true;
-          }
-        }
-      } catch (e) {
-        // Fall through to canvas probe
-      }
-
-      // Canvas probe: Compare candidate against generic monospace / sans-serif baselines
       const ctx = this.getCanvasProbeContext();
       if (ctx) {
         const testStr = 'mmmmmmmmmmlli100!@#$';

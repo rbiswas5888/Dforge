@@ -31,7 +31,7 @@ async function run() {
 
   // 2. Inject text layer with missing custom font
   console.log('Injecting text layer with missing font...');
-  await page.evaluate(() => {
+  const debugInfo = await page.evaluate(() => {
     const app = window.designForgeApp;
     const activePage = app.engine.getActivePage();
     
@@ -58,7 +58,20 @@ async function run() {
     app.engine.setSelection([textNode.id]);
     app.updateInspector();
     app.updateMissingFontsBadge();
+
+    // Scroll inspector to typography section
+    const alert = document.getElementById('missingFontInspectorAlert') || document.getElementById('propFontFamily');
+    if (alert) alert.scrollIntoView({ behavior: 'instant', block: 'center' });
+
+    const scan = app.fontManager.scanDocumentForMissingFonts(app.doc, activePage.id);
+    return {
+      hasMissing: scan.hasMissingFonts,
+      missingCount: scan.missingFonts.length,
+      missingList: scan.missingFonts.map(m => m.fontFamily),
+      hasAlert: !!document.getElementById('missingFontInspectorAlert')
+    };
   });
+  console.log('Debug Info:', debugInfo);
 
   await page.waitForTimeout(600);
 
