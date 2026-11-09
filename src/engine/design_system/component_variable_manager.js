@@ -284,6 +284,46 @@ export class ComponentVariableManager {
   }
 
   /**
+   * Returns all available variables and design tokens in the active registry
+   */
+  getAllAvailableVariables() {
+    const allVars = Object.values(this.registry.system.variables || {});
+    const allTokens = Object.values(this.registry.system.tokens || {});
+    return [
+      ...allVars.map(v => ({ ...v, sourceKind: 'variable' })),
+      ...allTokens.map(t => ({ ...t, sourceKind: 'token' }))
+    ];
+  }
+
+  /**
+   * Returns all available catalog components across Material UI, RNEUI, and Custom registry
+   */
+  getAvailableCatalogComponents() {
+    const muiItems = MUI_COMPONENT_CATALOG.map(c => ({
+      id: c.id,
+      name: c.name,
+      category: c.category,
+      description: c.description,
+      library: 'Material UI'
+    }));
+    const rneuiItems = RNEUI_COMPONENT_CATALOG.map(c => ({
+      id: c.id,
+      name: c.name,
+      category: c.category,
+      description: c.description,
+      library: 'RNEUI'
+    }));
+    const customItems = this.registry.getAllComponents().map(c => ({
+      id: c.id,
+      name: c.name,
+      category: c.category || 'Custom',
+      description: c.description || 'Custom Design System Component',
+      library: 'Custom'
+    }));
+    return [...muiItems, ...rneuiItems, ...customItems];
+  }
+
+  /**
    * 2. Add Variable Workflow (Spec Part A, Section 2)
    * Binds a variable to a node property with type-safety and atomic undo/redo.
    */

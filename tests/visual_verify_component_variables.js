@@ -52,10 +52,23 @@ async function run() {
 
   // 2. Open Add Variable Modal
   console.log('Opening Add Variable Modal...');
-  await page.evaluate(() => {
-    document.getElementById('btnOpenAddVariableModal')?.click();
+  const addVarDebug = await page.evaluate(() => {
+    try {
+      const app = window.designForgeApp;
+      const activePage = app.engine.getActivePage();
+      const node = app.engine.getNode(Object.keys(activePage.nodes)[0]);
+      app.dsUi.openAddVariableModal(node);
+      const modal = document.getElementById('modalAddVariableToComponent');
+      return {
+        success: true,
+        display: modal?.style.display
+      };
+    } catch (err) {
+      return { success: false, error: err.message, stack: err.stack };
+    }
   });
-  await page.waitForTimeout(500);
+  console.log('Add Var Modal Debug:', addVarDebug);
+  await page.waitForTimeout(600);
   await page.screenshot({ path: '/Users/rbiswas/.gemini/antigravity/brain/c91b06ab-752a-418c-b228-95c444e7031b/modal_add_variable_to_component.png' });
   console.log('Saved modal_add_variable_to_component.png');
 
@@ -67,10 +80,23 @@ async function run() {
 
   // 3. Open Replace Component Modal
   console.log('Opening Replace Component Modal...');
-  await page.evaluate(() => {
-    document.getElementById('btnOpenReplaceComponentModal')?.click();
+  const replaceDebug = await page.evaluate(() => {
+    try {
+      const app = window.designForgeApp;
+      const activePage = app.engine.getActivePage();
+      const node = app.engine.getNode(Object.keys(activePage.nodes)[0]);
+      app.dsUi.openReplaceComponentModal(node);
+      const modal = document.getElementById('modalReplaceComponent');
+      return {
+        success: true,
+        display: modal?.style.display
+      };
+    } catch (err) {
+      return { success: false, error: err.message, stack: err.stack };
+    }
   });
-  await page.waitForTimeout(500);
+  console.log('Replace Comp Modal Debug:', replaceDebug);
+  await page.waitForTimeout(600);
   await page.screenshot({ path: '/Users/rbiswas/.gemini/antigravity/brain/c91b06ab-752a-418c-b228-95c444e7031b/modal_replace_component.png' });
   console.log('Saved modal_replace_component.png');
 
@@ -82,10 +108,18 @@ async function run() {
 
   // 4. Open Audit Component Modal
   console.log('Opening Audit Component Modal...');
-  await page.evaluate(() => {
-    document.getElementById('btnOpenAuditComponentModal')?.click();
+  const auditDebug = await page.evaluate(() => {
+    const btn = document.getElementById('btnOpenAuditComponentModal');
+    if (btn) btn.click();
+    const modal = document.getElementById('modalAuditComponent');
+    return {
+      hasBtn: !!btn,
+      hasModal: !!modal,
+      display: modal?.style.display
+    };
   });
-  await page.waitForTimeout(500);
+  console.log('Audit Modal Debug:', auditDebug);
+  await page.waitForTimeout(600);
   await page.screenshot({ path: '/Users/rbiswas/.gemini/antigravity/brain/c91b06ab-752a-418c-b228-95c444e7031b/modal_audit_component.png' });
   console.log('Saved modal_audit_component.png');
 
