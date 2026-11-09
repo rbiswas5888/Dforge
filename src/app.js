@@ -50,6 +50,7 @@ import {
   AITokenWizard,
   ResponsiveTokenEngine,
   ComponentVariableExtractor,
+  ComponentVariableManager,
   ReactDesignSystemImporter,
   DesignSystemUIController,
   insertMuiComponentToCanvas,
@@ -101,8 +102,10 @@ export class DesignForgeApp {
     this.aiTokenWizard = new AITokenWizard(this.dsRegistry);
     this.responsiveTokenEngine = new ResponsiveTokenEngine(this.dsRegistry);
     this.compVarExtractor = new ComponentVariableExtractor(this.dsRegistry, this.engine);
+    this.compVarManager = new ComponentVariableManager(this.dsRegistry, this.engine);
     this.reactDsImporter = new ReactDesignSystemImporter(this.dsRegistry);
     this.dsUi = new DesignSystemUIController(this);
+    this.ai.setRegistry(this.dsRegistry);
     if (typeof window !== 'undefined') {
       window.designForgeApp = this;
     }

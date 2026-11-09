@@ -22,6 +22,8 @@ export const PROVIDERS = {
   LOCAL: 'local',
   OPENAI: 'openai',
   GEMINI: 'gemini',
+  AUTO: 'auto',
+  DUAL: 'dual_reasoning',
   ANTHROPIC: 'anthropic',
   OLLAMA: 'ollama' // Local OpenAI-compatible endpoint
 };

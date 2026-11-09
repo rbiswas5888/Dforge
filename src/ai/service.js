@@ -12,6 +12,8 @@ import { LocalProvider } from './providers/local-provider.js';
 import { OllamaProvider } from './providers/ollama-provider.js';
 import { OpenAIProvider } from './providers/openai-provider.js';
 import { GeminiProvider } from './providers/gemini-provider.js';
+import { DualReasoningOrchestrator } from './dual_reasoning.js';
+import { DesignSystemRepositoryIndexer } from './knowledge/repository_indexer.js';
 import { ReactCompiler } from '../engine/compiler.js';
 
 export class DesignForgeAIService {
@@ -23,6 +25,7 @@ export class DesignForgeAIService {
     this.validator = new OperationValidator(document);
     this.executor = new OperationExecutor(commandEngine);
     this.intelligence = new DesignIntelligenceAnalyzer(document, commandEngine);
+    this.repoIndexer = new DesignSystemRepositoryIndexer(null, document);
 
     // Active controller for request cancellation
     this.activeAbortController = null;
@@ -33,6 +36,12 @@ export class DesignForgeAIService {
     this.registerProvider(new LocalProvider());
     this.registerProvider(new OpenAIProvider());
     this.registerProvider(new GeminiProvider());
+
+    this.dualOrchestrator = new DualReasoningOrchestrator(
+      this.providers.get(PROVIDERS.OPENAI),
+      this.providers.get(PROVIDERS.GEMINI),
+      this.providers.get(PROVIDERS.LOCAL)
+    );
 
     for (const provider of this.providers.values()) {
       const savedKey = this.loadSetting(`api_key_${provider.name}`);
@@ -49,6 +58,13 @@ export class DesignForgeAIService {
     this.contextManager.setPrivacyMode(this.privacyMode);
 
     this.history = [];
+  }
+
+  setRegistry(registry) {
+    this.registry = registry;
+    if (this.repoIndexer) {
+      this.repoIndexer.setRegistryAndDoc(registry, this.doc);
+    }
   }
 
   loadSetting(key) {
@@ -69,11 +85,23 @@ export class DesignForgeAIService {
   }
 
   getProvider(name = this.activeProviderName) {
+    if (name === PROVIDERS.AUTO) {
+      // Automatic Selection: pick configured hosted provider, or fall back to local
+      const gemini = this.providers.get(PROVIDERS.GEMINI);
+      const openai = this.providers.get(PROVIDERS.OPENAI);
+      if (gemini && gemini.apiKey) return gemini;
+      if (openai && openai.apiKey) return openai;
+      const ollama = this.providers.get(PROVIDERS.OLLAMA);
+      return ollama || this.providers.get(PROVIDERS.LOCAL);
+    }
+    if (name === PROVIDERS.DUAL) {
+      return this.dualOrchestrator;
+    }
     return this.providers.get(name) || this.providers.get(PROVIDERS.LOCAL);
   }
 
   setActiveProvider(name) {
-    if (this.providers.has(name)) {
+    if (this.providers.has(name) || name === PROVIDERS.AUTO || name === PROVIDERS.DUAL) {
       this.activeProviderName = name;
       this.saveSetting('ai_active_provider', name);
     }
@@ -147,15 +175,31 @@ export class DesignForgeAIService {
       // 1. Build compact, relevant context
       const context = this.contextManager.buildContext();
 
+      // Retrieve targeted Design System repository context (Spec Part C)
+      const ragContext = this.repoIndexer.retrieveRelevantContext(prompt);
+      context.designSystemRepository = ragContext;
+
       // 2. Check for Code-Aware query
       const lower = prompt.toLowerCase();
       if (lower.startsWith('generate react') || lower.startsWith('explain react') || lower.includes('code export')) {
         return this.handleCodeAwareQuery(prompt, context);
       }
 
-      // 3. Delegate to active provider
-      const provider = this.getProvider();
-      const rawPlan = await provider.generate(prompt, context, { signal, onProgress });
+      // 3. Delegate to active provider or dual-reasoning orchestrator
+      let rawPlan;
+      let activeModelName = 'default';
+      let activeProviderLabel = this.activeProviderName;
+
+      if (this.activeProviderName === PROVIDERS.DUAL) {
+        rawPlan = await this.dualOrchestrator.reason(prompt, context, { signal, onProgress, ragContext });
+        activeModelName = `${rawPlan.models?.openai || 'gpt-4o'} + ${rawPlan.models?.gemini || 'gemini-2.5-pro'}`;
+        activeProviderLabel = 'Dual Reasoning (ChatGPT + Gemini)';
+      } else {
+        const provider = this.getProvider();
+        rawPlan = await provider.generate(prompt, context, { signal, onProgress, ragContext });
+        activeModelName = provider.model;
+        activeProviderLabel = provider.name;
+      }
 
       // 4. Pre-flight strict validation & risk assessment
       const validation = this.validator.validate(rawPlan.operations);
@@ -179,8 +223,12 @@ export class DesignForgeAIService {
         approvalRequired: riskAssessment.approvalRequired,
         risks: riskAssessment.reasons,
         validationReport,
-        provider: provider.name,
-        model: provider.model,
+        provider: activeProviderLabel,
+        model: activeModelName,
+        citations: ragContext.citations || [],
+        retrievedComponents: ragContext.retrievedComponents || [],
+        retrievedTokens: ragContext.retrievedTokens || [],
+        dualReasoningAnalysis: rawPlan.dualReasoningAnalysis || null,
         timestamp: new Date().toISOString()
       };
 

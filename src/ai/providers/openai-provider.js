@@ -7,11 +7,16 @@ import { BaseProvider } from './provider-base.js';
 import { DESIGN_TOOLS_SCHEMA, ProviderError, CancellationError } from '../types.js';
 
 export class OpenAIProvider extends BaseProvider {
+  static get SUPPORTED_MODELS() {
+    return ['gpt-4o', 'gpt-4o-mini', 'o1', 'o3-mini', 'gpt-4-turbo'];
+  }
+
   constructor(config = {}) {
     super({
       name: 'openai',
       model: config.model || 'gpt-4o',
       endpoint: config.endpoint || 'https://api.openai.com/v1',
+      temperature: config.temperature !== undefined ? config.temperature : 0.2,
       ...config
     });
   }

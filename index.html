@@ -747,36 +747,77 @@
             style="display: none; padding: 12px; background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle); font-size: 11px;">
             <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
               <div>
-                <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Inference
-                  Provider</label>
+                <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Inference Provider</label>
                 <select class="prop-select" id="aiProviderSelect" style="width: 100%;">
-                  <option value="ollama" selected>Ollama Local (Llama 3.1) — Recommended</option>
+                  <option value="openai" selected>ChatGPT — OpenAI (GPT-4o / o1 / o3-mini)</option>
+                  <option value="gemini">Gemini — Google (Gemini 2.5 / 1.5 Pro/Flash)</option>
+                  <option value="auto">Automatic Selection (Best Available Engine)</option>
+                  <option value="dual_reasoning">Dual Reasoning Mode (ChatGPT + Gemini Consolidated)</option>
+                  <option value="ollama">Ollama Local (Llama 3.1)</option>
                   <option value="local">Built-in Synth Engine (Zero-Latency Offline)</option>
-                  <option value="openai">OpenAI (GPT-4o) / Custom Endpoint</option>
-                  <option value="gemini">Google Gemini (Gemini 1.5 / 2.0)</option>
                 </select>
               </div>
+
               <div>
-                <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Privacy
-                  Mode</label>
+                <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Model Selection</label>
+                <select class="prop-select" id="aiModelSelect" style="width: 100%;">
+                  <option value="gpt-4o">gpt-4o (Omni Multimodal Reasoning — Recommended)</option>
+                  <option value="gpt-4o-mini">gpt-4o-mini (Fast & Efficient)</option>
+                  <option value="o3-mini">o3-mini (High-Tier Reasoning & Code)</option>
+                  <option value="o1">o1 (Deep Chain-of-Thought)</option>
+                  <option value="gpt-4-turbo">gpt-4-turbo</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Privacy Mode</label>
                 <select class="prop-select" id="aiPrivacySelect" style="width: 100%;">
-                  <option value="local_only">Local-Only Mode (Never Send Outside)</option>
-                  <option value="allow_hosted">Allow Hosted Inference</option>
+                  <option value="allow_hosted" selected>Allow Hosted Inference (OpenAI / Gemini)</option>
+                  <option value="local_only">Local-Only Mode (Never Send Outside Browser)</option>
                   <option value="redact_text">Redact Sensitive Text Content</option>
                 </select>
               </div>
+
+              <!-- Temperature / Creativity Slider -->
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <label style="color: var(--text-dim); font-weight: 600;">Temperature / Creativity</label>
+                  <span id="aiTemperatureValue" style="color: var(--accent-blue); font-weight: 700;">0.2</span>
+                </div>
+                <input type="range" id="aiTemperatureSlider" min="0" max="1" step="0.1" value="0.2" style="width: 100%; accent-color: #8b5cf6;">
+              </div>
             </div>
-            <div id="aiKeyFields" style="display: none; flex-direction: column; gap: 8px;">
-              <input type="password" class="prop-input" id="aiApiKeyInput" placeholder="API Key (sk-...)"
-                style="background: var(--bg-input); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); width: 100%;">
-              <input type="text" class="prop-input" id="aiEndpointInput" placeholder="Endpoint URL"
-                style="background: var(--bg-input); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); width: 100%;">
+
+            <!-- Provider Specific Key Fields -->
+            <div id="aiKeyFields" style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+              <div id="aiOpenAiKeyGroup">
+                <label style="color: var(--text-dim); display: block; font-size: 10px; margin-bottom: 2px;">OpenAI API Key</label>
+                <input type="password" class="prop-input" id="aiApiKeyInput" placeholder="sk-proj-..."
+                  style="background: var(--bg-input); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); width: 100%;">
+              </div>
+              <div id="aiGeminiKeyGroup">
+                <label style="color: var(--text-dim); display: block; font-size: 10px; margin-bottom: 2px;">Google Gemini API Key</label>
+                <input type="password" class="prop-input" id="aiGeminiKeyInput" placeholder="AIzaSy..."
+                  style="background: var(--bg-input); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); width: 100%;">
+              </div>
+              <div>
+                <label style="color: var(--text-dim); display: block; font-size: 10px; margin-bottom: 2px;">Custom Endpoint (Optional)</label>
+                <input type="text" class="prop-input" id="aiEndpointInput" placeholder="https://api.openai.com/v1"
+                  style="background: var(--bg-input); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); width: 100%;">
+              </div>
             </div>
-            <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between;">
+
+            <!-- Repository Intelligence Status Banner -->
+            <div style="margin-top: 10px; padding: 6px 8px; background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2); border-radius: 6px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 10px; color: #38bdf8;">❖ Design System Indexed: 32 MUI, 13 RNEUI, 24 Tokens</span>
+              <span style="font-size: 9px; padding: 1px 4px; border-radius: 4px; background: rgba(16,185,129,0.2); color: #10b981; font-weight: 700;">RAG Live</span>
+            </div>
+
+            <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between;">
               <button class="btn-inspector-action" id="btnTestAiConnection"
-                style="padding: 4px 10px; font-size: 11px;"><span data-icon="Bot"></span> Test Llama 3.1 Connection</button>
+                style="padding: 4px 10px; font-size: 11px;"><span data-icon="Bot"></span> Test Connection</button>
               <span id="aiModelBadge"
-                style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.15); color: #38bdf8;">llama3.1:latest</span>
+                style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.15); color: #38bdf8;">gpt-4o</span>
             </div>
             <div id="aiConnectionStatus" style="font-size: 11px; margin-top: 6px; color: var(--text-dim);"></div>
           </div>
@@ -1748,6 +1789,148 @@
                 <div class="ds-modal-footer">
                   <button class="ds-action-btn" id="btnCancelCompVars">Cancel</button>
                   <button class="ds-action-btn primary" id="btnCommitCompVars">Bind Approved Variables</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3b. Add Variable to Component Modal (Spec Part A, Section 2) -->
+            <div class="ds-modal-backdrop" id="modalAddVariableToComponent" style="display: none;">
+              <div class="ds-modal-box" style="max-width: 680px;">
+                <div class="ds-modal-header">
+                  <div class="ds-modal-title">
+                    <span style="color: #38bdf8;"><span data-icon="Layers"></span></span>
+                    <span>Which variable would you like to add to this component?</span>
+                  </div>
+                  <button class="menu-dropdown-btn-sm" id="btnCloseModalAddVar" aria-label="Close"><span data-icon="X"></span></button>
+                </div>
+                <div class="ds-modal-body">
+                  <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+                    Select an available variable from your active design system. Type compatibility is strictly verified before binding.
+                  </p>
+
+                  <!-- Target Property Selector -->
+                  <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-main);">Target Property on Layer:</label>
+                    <select class="prop-select" id="addVarTargetProperty" style="min-width: 220px; font-size: 11px;"></select>
+                  </div>
+
+                  <!-- Search & Category Filters -->
+                  <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <input type="text" class="prop-input" id="addVarSearchInput" placeholder="Search variables by name, value or type..." style="flex: 1; padding: 6px 10px; font-size: 11px;">
+                  </div>
+                  <div class="ds-filter-pills" id="addVarCategoryPills" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px;">
+                    <button type="button" class="ds-filter-pill active" data-category="all">All</button>
+                    <button type="button" class="ds-filter-pill" data-category="color">Color</button>
+                    <button type="button" class="ds-filter-pill" data-category="typography">Typography</button>
+                    <button type="button" class="ds-filter-pill" data-category="spacing">Spacing</button>
+                    <button type="button" class="ds-filter-pill" data-category="sizing">Sizing</button>
+                    <button type="button" class="ds-filter-pill" data-category="radius">Radius</button>
+                    <button type="button" class="ds-filter-pill" data-category="border">Border</button>
+                    <button type="button" class="ds-filter-pill" data-category="shadow">Shadow</button>
+                    <button type="button" class="ds-filter-pill" data-category="opacity">Opacity</button>
+                    <button type="button" class="ds-filter-pill" data-category="layout">Layout</button>
+                    <button type="button" class="ds-filter-pill" data-category="boolean">Boolean</button>
+                    <button type="button" class="ds-filter-pill" data-category="custom">Custom</button>
+                  </div>
+
+                  <!-- Variable Items Grid/List -->
+                  <div id="addVarItemsList" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px;"></div>
+                </div>
+                <div class="ds-modal-footer">
+                  <button class="ds-action-btn" id="btnCancelAddVar">Cancel</button>
+                  <button class="ds-action-btn primary" id="btnCommitAddVar" disabled style="opacity: 0.6; cursor: not-allowed;">Bind Variable</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3c. Replace Component Modal (Spec Part A, Section 3) -->
+            <div class="ds-modal-backdrop" id="modalReplaceComponent" style="display: none;">
+              <div class="ds-modal-box" style="max-width: 740px;">
+                <div class="ds-modal-header">
+                  <div class="ds-modal-title">
+                    <span style="color: #a855f7;"><span data-icon="RefreshCw"></span></span>
+                    <span>Replace Component</span>
+                  </div>
+                  <button class="menu-dropdown-btn-sm" id="btnCloseModalReplaceComp" aria-label="Close"><span data-icon="X"></span></button>
+                </div>
+                <div class="ds-modal-body">
+                  <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+                    Select a replacement component from Material UI or your Design System catalog. Transferable properties, compatible variable bindings, and prototype interactions will be safely preserved.
+                  </p>
+
+                  <div style="margin-bottom: 10px;">
+                    <input type="text" class="prop-input" id="replaceCompSearchInput" placeholder="Search replacement components (Button, Card, TextField, Alert, etc.)..." style="width: 100%; padding: 6px 10px; font-size: 11px;">
+                  </div>
+
+                  <div id="replaceCompCatalogGrid" style="max-height: 240px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin-bottom: 14px;"></div>
+
+                  <!-- Transferability Analysis Preview -->
+                  <div id="replaceCompTransferReport" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px; font-size: 11px; display: none;">
+                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Transfer Compatibility Analysis:</div>
+                    <div id="replaceCompTransferDetails" style="color: var(--text-dim); line-height: 1.5;"></div>
+                  </div>
+                </div>
+                <div class="ds-modal-footer">
+                  <button class="ds-action-btn" id="btnCancelReplaceComp">Cancel</button>
+                  <button class="ds-action-btn primary" id="btnConfirmReplaceComp" disabled style="opacity: 0.6; cursor: not-allowed; background: #a855f7;">Confirm Replacement</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3d. Replace Variable Modal (Spec Part A, Section 3) -->
+            <div class="ds-modal-backdrop" id="modalReplaceVariable" style="display: none;">
+              <div class="ds-modal-box" style="max-width: 600px;">
+                <div class="ds-modal-header">
+                  <div class="ds-modal-title">
+                    <span style="color: #38bdf8;"><span data-icon="Repeat"></span></span>
+                    <span>Replace Variable Binding</span>
+                  </div>
+                  <button class="menu-dropdown-btn-sm" id="btnCloseModalReplaceVar" aria-label="Close"><span data-icon="X"></span></button>
+                </div>
+                <div class="ds-modal-body">
+                  <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+                    Select a compatible replacement variable. Current bindings on this layer will update cleanly without altering unrelated properties.
+                  </p>
+                  <div id="replaceVarCurrentInfo" style="margin-bottom: 12px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border-subtle); font-size: 11px;"></div>
+                  <div id="replaceVarCandidatesList" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
+                </div>
+                <div class="ds-modal-footer">
+                  <button class="ds-action-btn" id="btnCancelReplaceVar">Cancel</button>
+                  <button class="ds-action-btn primary" id="btnConfirmReplaceVar" disabled style="opacity: 0.6; cursor: not-allowed;">Confirm Replacement</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3e. Component & Variable Comprehensive Audit Modal (Spec Part A, Section 1) -->
+            <div class="ds-modal-backdrop" id="modalAuditComponent" style="display: none;">
+              <div class="ds-modal-box" style="max-width: 820px;">
+                <div class="ds-modal-header">
+                  <div class="ds-modal-title">
+                    <span style="color: #10b981;"><span data-icon="CheckCircle2"></span></span>
+                    <span id="auditModalTitle">Component & Variable Audit</span>
+                  </div>
+                  <button class="menu-dropdown-btn-sm" id="btnCloseModalAuditComp" aria-label="Close"><span data-icon="X"></span></button>
+                </div>
+                <div class="ds-modal-body">
+                  <div id="auditMetricsSummary" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px;"></div>
+                  <div style="max-height: 320px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: 8px;">
+                    <table class="ds-proposal-table" id="auditTable">
+                      <thead>
+                        <tr>
+                          <th>Property</th>
+                          <th>Category</th>
+                          <th>Current Value</th>
+                          <th>Bound Variable / Token</th>
+                          <th>Compatibility</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="auditTableBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="ds-modal-footer">
+                  <button class="ds-action-btn primary" id="btnCloseAuditCompFooter">Done</button>
                 </div>
               </div>
             </div>

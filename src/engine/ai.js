@@ -22,6 +22,10 @@ export class AIEngine {
     this.mcp = manager;
   }
 
+  setRegistry(registry) {
+    this.service.setRegistry(registry);
+  }
+
   setApiKey(key) {
     this.service.configureProvider(this.service.activeProviderName, { apiKey: key });
   }
