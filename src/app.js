@@ -64,6 +64,7 @@ import { buildSelectionColorUpdates, collectSelectionColors } from './editor-cor
 import { WorkspaceStore } from './engine/workspace_store.js';
 import { AuthService, DEMO_ACCOUNTS } from './engine/auth_service.js';
 import { mountLucideIcons } from './ui/lucide-icons.js';
+import { FontManager, defaultFontManager } from './editor-core/font-manager.js';
 
 export class DesignForgeApp {
   constructor() {
@@ -105,6 +106,7 @@ export class DesignForgeApp {
     this.compVarManager = new ComponentVariableManager(this.dsRegistry, this.engine);
     this.reactDsImporter = new ReactDesignSystemImporter(this.dsRegistry);
     this.dsUi = new DesignSystemUIController(this);
+    this.fontManager = defaultFontManager;
     this.ai.setRegistry(this.dsRegistry);
     if (typeof window !== 'undefined') {
       window.designForgeApp = this;
@@ -1940,6 +1942,9 @@ export class DesignForgeApp {
     // Initialize Unified Design System UI Controller
     this.dsUi.init();
 
+    // Initialize Figma-Inspired Typography & Missing Fonts Subsystem
+    this.initFontManagement();
+
     // Initialize Axiom Layout Design System (Section 3 & 8)
     this.initAxiomLayout();
 
@@ -2163,6 +2168,7 @@ export class DesignForgeApp {
     document.getElementById('menuDuplicate')?.addEventListener('click', () => this.duplicateSelected());
     document.getElementById('menuDelete')?.addEventListener('click', () => this.deleteSelected());
     document.getElementById('menuSelectAll')?.addEventListener('click', () => this.selectAll());
+    document.getElementById('menuMissingFonts')?.addEventListener('click', () => this.openMissingFontsModal());
 
     // View Menu Actions
     document.getElementById('menuZoomIn')?.addEventListener('click', () => this.zoomIn());
@@ -4377,55 +4383,93 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       </div>
 
       <!-- 8. Typography Section if text node -->
-      ${isText ? `
-      <div class="section-group">
-        <div class="section-title">Typography</div>
-        <div class="props-row">
-          <div class="prop-field">
-            <select class="prop-select" id="propFontFamily">
-              <option value="Inter, sans-serif" ${node.text?.fontFamily?.includes('Inter') ? 'selected' : ''}>Inter</option>
-              <option value="'Outfit', sans-serif" ${node.text?.fontFamily?.includes('Outfit') ? 'selected' : ''}>Outfit</option>
-              <option value="'Roboto', sans-serif" ${node.text?.fontFamily?.includes('Roboto') ? 'selected' : ''}>Roboto</option>
-              <option value="'JetBrains Mono', monospace" ${node.text?.fontFamily?.includes('Mono') ? 'selected' : ''}>JetBrains Mono</option>
-              <option value="'Playfair Display', serif" ${node.text?.fontFamily?.includes('Playfair') ? 'selected' : ''}>Playfair Display</option>
-            </select>
+      ${(() => {
+        if (!isText) return '';
+        const rawFont = node.text?.fontFamily || 'Inter';
+        const cleanFont = this.fontManager.cleanFontFamily(rawFont);
+        const isMissing = !this.fontManager.isFontAvailable(cleanFont);
+        const isSkipped = this.fontManager.isFontSkipped(cleanFont);
+        const avail = this.fontManager.getAvailableFonts();
+
+        let optHtml = '';
+        if (isMissing) {
+          optHtml += `<optgroup label="⚠️ Missing font (not installed)">
+            <option value="${cleanFont}" selected>⚠️ ${cleanFont} (Missing)</option>
+          </optgroup>`;
+        }
+        optHtml += `<optgroup label="Installed System Fonts">
+          ${avail.systemFonts.map(f => `<option value="${f}" ${!isMissing && cleanFont.toLowerCase() === f.toLowerCase() ? 'selected' : ''}>${f}</option>`).join('')}
+        </optgroup>`;
+        optHtml += `<optgroup label="Popular Web Fonts">
+          ${avail.webFonts.map(f => `<option value="${f}" ${!isMissing && cleanFont.toLowerCase() === f.toLowerCase() ? 'selected' : ''}>${f}</option>`).join('')}
+        </optgroup>`;
+
+        const alertBoxHtml = (isMissing && !isSkipped) ? `
+          <div class="missing-font-alert-box" id="missingFontInspectorAlert">
+            <div class="missing-font-alert-header">
+              <span class="missing-font-alert-icon">⚠️</span>
+              <div class="missing-font-alert-text">
+                <strong>Missing font:</strong> "${cleanFont}" is not installed on this system.
+              </div>
+            </div>
+            <div class="missing-font-alert-actions">
+              <button class="missing-font-alert-btn-change" id="btnInspectorChangeMissingFont" type="button">Change font</button>
+              <button class="missing-font-alert-btn-skip" id="btnInspectorSkipMissingFont" type="button">Skip</button>
+            </div>
+          </div>
+        ` : '';
+
+        return `
+        <div class="section-group">
+          <div class="section-title" style="display: flex; align-items: center; justify-content: space-between;">
+            <span>Typography</span>
+            ${isMissing ? `<span class="missing-font-badge-warning" title="Font missing on system">⚠️ Missing</span>` : ''}
+          </div>
+          <div class="props-row">
+            <div class="prop-field" style="width: 100%;">
+              <select class="prop-select" id="propFontFamily">
+                ${optHtml}
+              </select>
+            </div>
+          </div>
+          ${alertBoxHtml}
+          <div class="props-row">
+            <div class="prop-field">
+              <span class="prop-label scrubbable" id="lblFontSize">Size</span>
+              <input type="text" class="prop-input" id="propFontSize" value="${node.text?.fontSize || 16}">
+            </div>
+            <div class="prop-field">
+              <select class="prop-select" id="propFontWeight">
+                <option value="400" ${node.text?.fontWeight === '400' ? 'selected' : ''}>Regular (400)</option>
+                <option value="500" ${node.text?.fontWeight === '500' ? 'selected' : ''}>Medium (500)</option>
+                <option value="600" ${node.text?.fontWeight === '600' ? 'selected' : ''}>Semibold (600)</option>
+                <option value="700" ${node.text?.fontWeight === '700' ? 'selected' : ''}>Bold (700)</option>
+                <option value="800" ${node.text?.fontWeight === '800' ? 'selected' : ''}>Extra Bold (800)</option>
+              </select>
+            </div>
+          </div>
+          <div class="props-row">
+            <div class="sizing-pill-selector" style="width: 100%;">
+              <button class="sizing-pill-btn ${node.text?.textAlign === 'left' || !node.text?.textAlign ? 'active' : ''}" id="btnAlignLeft">Left</button>
+              <button class="sizing-pill-btn ${node.text?.textAlign === 'center' ? 'active' : ''}" id="btnAlignCenter">Center</button>
+              <button class="sizing-pill-btn ${node.text?.textAlign === 'right' ? 'active' : ''}" id="btnAlignRight">Right</button>
+            </div>
+          </div>
+          <div class="props-row">
+            <button type="button" class="color-swatch-box paint-swatch" id="swatchTextColor"
+              style="background: ${node.text?.color || '#f8fafc'};" title="Choose text color"
+              aria-label="Choose text color"></button>
+            <div class="prop-field">
+              <span class="prop-label">Color</span>
+              <input type="text" class="prop-input" id="propTextColor" value="${node.text?.color || '#f8fafc'}">
+            </div>
+          </div>
+          <div class="props-row">
+            <textarea class="prop-input" id="propTextContent" rows="3" style="padding: 6px; width: 100%; border-radius: 4px; border: 1px solid var(--border-subtle);">${node.text?.content || ''}</textarea>
           </div>
         </div>
-        <div class="props-row">
-          <div class="prop-field">
-            <span class="prop-label scrubbable" id="lblFontSize">Size</span>
-            <input type="text" class="prop-input" id="propFontSize" value="${node.text?.fontSize || 16}">
-          </div>
-          <div class="prop-field">
-            <select class="prop-select" id="propFontWeight">
-              <option value="400" ${node.text?.fontWeight === '400' ? 'selected' : ''}>Regular (400)</option>
-              <option value="500" ${node.text?.fontWeight === '500' ? 'selected' : ''}>Medium (500)</option>
-              <option value="600" ${node.text?.fontWeight === '600' ? 'selected' : ''}>Semibold (600)</option>
-              <option value="700" ${node.text?.fontWeight === '700' ? 'selected' : ''}>Bold (700)</option>
-              <option value="800" ${node.text?.fontWeight === '800' ? 'selected' : ''}>Extra Bold (800)</option>
-            </select>
-          </div>
-        </div>
-        <div class="props-row">
-          <div class="sizing-pill-selector" style="width: 100%;">
-            <button class="sizing-pill-btn ${node.text?.textAlign === 'left' || !node.text?.textAlign ? 'active' : ''}" id="btnAlignLeft">Left</button>
-            <button class="sizing-pill-btn ${node.text?.textAlign === 'center' ? 'active' : ''}" id="btnAlignCenter">Center</button>
-            <button class="sizing-pill-btn ${node.text?.textAlign === 'right' ? 'active' : ''}" id="btnAlignRight">Right</button>
-          </div>
-        </div>
-        <div class="props-row">
-          <button type="button" class="color-swatch-box paint-swatch" id="swatchTextColor"
-            style="background: ${node.text?.color || '#f8fafc'};" title="Choose text color"
-            aria-label="Choose text color"></button>
-          <div class="prop-field">
-            <span class="prop-label">Color</span>
-            <input type="text" class="prop-input" id="propTextColor" value="${node.text?.color || '#f8fafc'}">
-          </div>
-        </div>
-        <div class="props-row">
-          <textarea class="prop-input" id="propTextContent" rows="3" style="padding: 6px; width: 100%; border-radius: 4px; border: 1px solid var(--border-subtle);">${node.text?.content || ''}</textarea>
-        </div>
-      </div>` : ''}
+        `;
+      })()}
 
       <!-- 9. Image Section if image node -->
       ${isImage ? `
@@ -5300,6 +5344,20 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     // 8. Typography
     document.getElementById('propFontFamily')?.addEventListener('change', (e) => {
       this.engine.updateNode(node.id, { text: { fontFamily: e.target.value } }, 'Change Font Family');
+      this.updateMissingFontsBadge();
+    });
+    document.getElementById('btnInspectorChangeMissingFont')?.addEventListener('click', () => {
+      const rawFont = node.text?.fontFamily || 'Inter';
+      const cleanFont = this.fontManager.cleanFontFamily(rawFont);
+      this.openMissingFontsModal({ targetFont: cleanFont });
+    });
+    document.getElementById('btnInspectorSkipMissingFont')?.addEventListener('click', () => {
+      const rawFont = node.text?.fontFamily || 'Inter';
+      const cleanFont = this.fontManager.cleanFontFamily(rawFont);
+      this.fontManager.skipMissingFont(cleanFont);
+      this.showToast(`Skipped font change for "${cleanFont}". Layer kept as-is.`, 'info');
+      this.updateInspector();
+      this.updateMissingFontsBadge();
     });
     document.getElementById('propFontSize')?.addEventListener('change', (e) => {
       this.engine.updateNode(node.id, { text: { fontSize: this.evalExpr(e.target.value, 16) } }, 'Change Font Size');
@@ -7362,6 +7420,15 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     this.updateRulers();
     this.storage.scheduleAutosave(this.doc);
     this.refreshOpenPrototypePreview();
+    this.updateMissingFontsBadge();
+    try {
+      const report = this.fontManager.scanDocumentForMissingFonts(this.doc, this.engine.activePageId);
+      if (report.hasUnskippedMissingFonts && typeof document !== 'undefined' && document.getElementById('modalMissingFonts')) {
+        this.openMissingFontsModal();
+      }
+    } catch (e) {
+      // Non-blocking in tests or background loads
+    }
   }
 
   saveProject() {
@@ -7376,6 +7443,176 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   openProjectPicker() {
     document.getElementById('dforgeFileInput')?.click();
   }
+
+  // --- Figma-Inspired Typography & Missing Fonts Subsystem ---
+  initFontManagement() {
+    if (typeof window === 'undefined') return;
+
+    // 1. Asynchronously scan local system typography via Local Font Access API
+    this.fontManager.scanSystemFonts().then(res => {
+      const scanStatus = document.getElementById('systemFontsScanStatus');
+      if (scanStatus) {
+        scanStatus.textContent = res.nativeCount > 0
+          ? `${res.totalInstalled} system & web fonts available (${res.nativeCount} local)`
+          : `${res.totalInstalled} system & web fonts available`;
+      }
+    }).catch(() => {});
+
+    // 2. Wire Topbar Missing Fonts Badge
+    document.getElementById('btnTopMissingFontsBadge')?.addEventListener('click', () => {
+      this.openMissingFontsModal();
+    });
+
+    // 3. Wire Missing Fonts Modal Actions
+    document.getElementById('btnCloseMissingFontsModal')?.addEventListener('click', () => {
+      this.closeMissingFontsModal();
+    });
+
+    document.getElementById('btnScanLocalFonts')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btnScanLocalFonts');
+      const scanStatus = document.getElementById('systemFontsScanStatus');
+      if (btn) btn.disabled = true;
+      if (scanStatus) scanStatus.textContent = 'Querying system typography...';
+      try {
+        const res = await this.fontManager.scanSystemFonts({ requestPermission: true });
+        this.showToast(`System typography scanned: ${res.totalInstalled} fonts detected.`, 'success');
+        if (scanStatus) {
+          scanStatus.textContent = `${res.totalInstalled} fonts available (${res.nativeCount} local)`;
+        }
+        this.openMissingFontsModal();
+        this.updateInspector();
+      } catch (err) {
+        this.showToast(`System font scan: ${err.message}`, 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+
+    document.getElementById('btnSkipMissingFonts')?.addEventListener('click', () => {
+      const report = this.fontManager.scanDocumentForMissingFonts(this.doc, this.engine.activePageId);
+      for (const m of report.missingFonts) {
+        this.fontManager.skipMissingFont(m.fontFamily);
+      }
+      this.showToast('Skipped font changes. All text layers kept as-is.', 'info');
+      this.closeMissingFontsModal();
+      this.updateInspector();
+      this.updateMissingFontsBadge();
+    });
+
+    document.getElementById('btnApplyMissingFonts')?.addEventListener('click', () => {
+      const selects = document.querySelectorAll('.missing-font-replacement-select');
+      let totalReplaced = 0;
+      selects.forEach(sel => {
+        const missingFont = sel.dataset.missingFont;
+        const replacementFont = sel.value;
+        if (missingFont && replacementFont && missingFont !== replacementFont) {
+          const res = this.fontManager.replaceMissingFont(this.engine, missingFont, replacementFont);
+          totalReplaced += res.replacedCount;
+        }
+      });
+      if (totalReplaced > 0) {
+        this.showToast(`Successfully replaced fonts across ${totalReplaced} text layer(s)!`, 'success');
+        this.renderer.render();
+        this.updateInspector();
+        this.updateMissingFontsBadge();
+      } else {
+        this.showToast('No font replacements applied.', 'info');
+      }
+      this.closeMissingFontsModal();
+    });
+
+    // 4. Initial badge check
+    this.updateMissingFontsBadge();
+  }
+
+  updateMissingFontsBadge() {
+    if (typeof document === 'undefined') return;
+    const report = this.fontManager.scanDocumentForMissingFonts(this.doc, this.engine.activePageId);
+    const badge = document.getElementById('btnTopMissingFontsBadge');
+    const countEl = document.getElementById('topMissingFontsCount');
+    const unskippedCount = report.missingFonts.filter(m => !m.isSkipped).length;
+
+    if (badge && countEl) {
+      if (unskippedCount > 0) {
+        badge.style.display = 'inline-flex';
+        countEl.textContent = unskippedCount;
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  }
+
+  openMissingFontsModal(options = {}) {
+    if (typeof document === 'undefined') return;
+    const report = this.fontManager.scanDocumentForMissingFonts(this.doc, this.engine.activePageId);
+    const tbody = document.getElementById('missingFontsTableBody');
+    const modal = document.getElementById('modalMissingFonts');
+    const summaryText = document.getElementById('missingFontsSummaryText');
+    const availableFonts = this.fontManager.getAvailableFonts();
+
+    if (!tbody || !modal) return;
+
+    if (report.missingFonts.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="3" style="text-align: center; padding: 36px 16px; color: #10b981;">
+            <div style="font-size: 24px; margin-bottom: 8px;">✓</div>
+            <div style="font-weight: 600; font-size: 13px;">All fonts are available!</div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">Zero missing fonts detected in the current document.</div>
+          </td>
+        </tr>
+      `;
+      if (summaryText) summaryText.textContent = 'All fonts installed & available';
+      modal.style.display = 'flex';
+      return;
+    }
+
+    tbody.innerHTML = report.missingFonts.map(m => {
+      const isTarget = options.targetFont && options.targetFont.toLowerCase() === m.fontFamily.toLowerCase();
+      const suggested = m.suggestedReplacement || 'Inter';
+
+      return `
+        <tr style="${isTarget ? 'background: rgba(245, 158, 11, 0.08);' : ''}">
+          <td>
+            <div class="missing-font-cell-title">
+              <span class="missing-font-badge-warning">⚠️ Missing</span>
+              <strong>${m.fontFamily}</strong>
+            </div>
+            ${m.isSkipped ? '<div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">(Currently skipped)</div>' : ''}
+          </td>
+          <td>
+            <span class="missing-font-cell-count">${m.count} layer${m.count > 1 ? 's' : ''}</span>
+          </td>
+          <td>
+            <select class="missing-font-select missing-font-replacement-select" data-missing-font="${m.fontFamily}">
+              <optgroup label="Recommended Replacement">
+                <option value="${suggested}" selected>${suggested} (Recommended)</option>
+              </optgroup>
+              <optgroup label="Installed System Fonts">
+                ${availableFonts.systemFonts.map(f => `<option value="${f}" ${f === suggested ? 'selected' : ''}>${f}</option>`).join('')}
+              </optgroup>
+              <optgroup label="Popular Web Fonts">
+                ${availableFonts.webFonts.map(f => `<option value="${f}" ${f === suggested ? 'selected' : ''}>${f}</option>`).join('')}
+              </optgroup>
+            </select>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    if (summaryText) {
+      summaryText.textContent = `${report.missingFonts.length} missing font family(s) across ${report.totalMissingLayers} text layer(s)`;
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  closeMissingFontsModal() {
+    if (typeof document === 'undefined') return;
+    const modal = document.getElementById('modalMissingFonts');
+    if (modal) modal.style.display = 'none';
+  }
+
 
   exportSelectedAsSvg() {
     try {

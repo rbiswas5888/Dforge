@@ -6,6 +6,10 @@
  * - Styled range overrides
  */
 
+import { FontManager, defaultFontManager, SYSTEM_FONTS_CATALOG, WEB_FONTS_CATALOG } from './font-manager.js';
+
+export { FontManager, defaultFontManager, SYSTEM_FONTS_CATALOG, WEB_FONTS_CATALOG };
+
 export const TextAutoResize = {
   AUTO_WIDTH: 'AUTO_WIDTH',
   AUTO_HEIGHT: 'AUTO_HEIGHT',
@@ -20,6 +24,8 @@ export const TextCase = {
 };
 
 export class TypographyEngine {
+  static fontManager = defaultFontManager;
+
   /**
    * Format OpenType feature settings into CSS string
    * e.g. { liga: true, tnum: true, frac: false } -> '"liga" 1, "tnum" 1, "frac" 0'

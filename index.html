@@ -64,6 +64,8 @@
               <button class="dropdown-item" id="menuDelete">Delete (⌫)</button>
               <button class="dropdown-item" id="menuSelectAll">Select All (⌘A)</button>
               <button class="dropdown-item" id="menuBulkRename">Rename Layers... (⌘R)</button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" id="menuMissingFonts">Missing Fonts... (Figma)</button>
             </div>
           </div>
 
@@ -169,6 +171,9 @@
             <span class="dot"></span>
             <span id="saveStatusText">Saved locally</span>
           </div>
+          <button class="missing-fonts-top-badge" id="btnTopMissingFontsBadge" style="display: none;" title="Missing fonts detected in document" type="button">
+            <span data-icon="AlertTriangle"></span> Missing fonts (<span id="topMissingFontsCount">0</span>)
+          </button>
           <button class="menu-dropdown-btn workspace-top-action" id="btnWorkspaceDashboard" type="button" title="Open Workspace Projects">Projects</button>
           <button class="menu-dropdown-btn workspace-top-action" id="btnTopbarProjectCrumb" type="button" title="View containing project in Workspace" style="display: none;"><span data-icon="Folder" data-icon-size="13"></span> <span id="topbarProjectCrumbName">Project</span></button>
           <button class="menu-dropdown-btn workspace-top-action" id="btnQuickFileSwitcher" type="button" title="Switch design file (⌘P)">Switch file</button>
@@ -2077,6 +2082,54 @@
                 <div class="ds-modal-footer">
                   <button class="ds-action-btn" id="btnCancelPublish">Cancel</button>
                   <button class="ds-action-btn primary" id="btnConfirmPublish">Publish Release</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Figma-Inspired Missing Fonts Modal -->
+            <div class="ds-modal-backdrop" id="modalMissingFonts" style="display: none;">
+              <div class="missing-fonts-modal-box">
+                <div class="ds-modal-header">
+                  <div class="ds-modal-title">
+                    <span style="color: #f59e0b;"><span data-icon="AlertTriangle"></span></span>
+                    <span>Missing fonts</span>
+                  </div>
+                  <button class="menu-dropdown-btn-sm" id="btnCloseMissingFontsModal" aria-label="Close" type="button"><span data-icon="X"></span></button>
+                </div>
+                <div class="ds-modal-body" style="padding: 20px;">
+                  <div class="missing-fonts-description-banner">
+                    <span class="banner-icon"><span data-icon="AlertTriangle"></span></span>
+                    <div>
+                      Some fonts used in this document are not installed on your system. You can choose a replacement font for each missing font, or skip and keep them as-is (just like in Figma).
+                    </div>
+                  </div>
+
+                  <div class="missing-fonts-scan-toolbar">
+                    <button class="ds-action-btn" id="btnScanLocalFonts" type="button" title="Scan installed fonts via browser Local Font Access API">
+                      <span data-icon="RefreshCw"></span> Scan System Fonts
+                    </button>
+                    <span id="systemFontsScanStatus" style="font-size: 11px; color: var(--text-dim);">Probed standard system typography</span>
+                  </div>
+
+                  <div class="missing-fonts-table-container">
+                    <table class="missing-fonts-table">
+                      <thead>
+                        <tr>
+                          <th style="width: 38%;">Missing Font</th>
+                          <th style="width: 22%;">Used In</th>
+                          <th style="width: 40%;">Replace With</th>
+                        </tr>
+                      </thead>
+                      <tbody id="missingFontsTableBody">
+                        <!-- Populated dynamically -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="ds-modal-footer">
+                  <span id="missingFontsSummaryText" style="font-size: 12px; color: var(--text-dim); margin-right: auto;">0 missing fonts detected</span>
+                  <button class="ds-action-btn" id="btnSkipMissingFonts" type="button">Skip / Keep Missing</button>
+                  <button class="ds-primary-btn" id="btnApplyMissingFonts" type="button" style="background: #f59e0b; color: #0f172a; font-weight: 600;">Replace Fonts</button>
                 </div>
               </div>
             </div>

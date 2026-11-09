@@ -455,3 +455,234 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* ==========================================================================
+   8. FIGMA MISSING FONTS MODAL & TYPOGRAPHY INSPECTOR STYLES
+   ========================================================================== */
+
+.missing-fonts-top-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 14px;
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.missing-fonts-top-badge:hover {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: rgba(245, 158, 11, 0.7);
+  color: #fef3c7;
+}
+
+.missing-fonts-modal-box {
+  background: var(--bg-panel, #121826);
+  border: 1px solid var(--border-subtle, #26334d);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 680px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  color: var(--text-main, #f8fafc);
+}
+
+.missing-fonts-description-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e2e8f0;
+}
+
+.missing-fonts-description-banner .banner-icon {
+  font-size: 16px;
+  color: #f59e0b;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.missing-fonts-scan-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle, #26334d);
+}
+
+.missing-fonts-table-container {
+  max-height: 340px;
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle, #26334d);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.missing-fonts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.missing-fonts-table th {
+  text-align: left;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border-subtle, #26334d);
+  color: var(--text-dim, #94a3b8);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.missing-fonts-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  vertical-align: middle;
+}
+
+.missing-fonts-table tr:last-child td {
+  border-bottom: none;
+}
+
+.missing-font-cell-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.missing-font-badge-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 4px;
+  color: #fbbf24;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.missing-font-cell-count {
+  font-size: 11px;
+  color: var(--text-dim, #94a3b8);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 3px 8px;
+  border-radius: 10px;
+  display: inline-block;
+}
+
+.missing-font-select {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg-card, #1a2234);
+  border: 1px solid var(--border-subtle, #26334d);
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.missing-font-select:focus {
+  outline: none;
+  border-color: var(--brand-primary, #38bdf8);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+/* Typography Inspector Missing Font Alert Card */
+.missing-font-alert-box {
+  margin-top: 8px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.missing-font-alert-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.missing-font-alert-icon {
+  font-size: 13px;
+  color: #f59e0b;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.missing-font-alert-text {
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.missing-font-alert-text strong {
+  color: #fbbf24;
+}
+
+.missing-font-alert-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 21px;
+}
+
+.missing-font-alert-btn-change {
+  padding: 4px 10px;
+  background: #f59e0b;
+  color: #0f172a;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.missing-font-alert-btn-change:hover {
+  background: #fbbf24;
+}
+
+.missing-font-alert-btn-skip {
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.missing-font-alert-btn-skip:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #f8fafc;
+}
+
