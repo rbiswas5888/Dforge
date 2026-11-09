@@ -1,0 +1,710 @@
+/**
+ * Enterprise Banking Operations Platform — Professional Theme & Design System
+ * Inspired by Bloomberg Terminal / Goldman Sachs Marquee / Modern FinTech UI
+ */
+
+:root {
+  --b-bg-darkest: #070a12;
+  --b-bg-main: #0c111d;
+  --b-bg-card: #131b2e;
+  --b-bg-card-hover: #18223a;
+  --b-bg-sidebar: #090e1a;
+  --b-border: #1e293b;
+  --b-border-subtle: #162032;
+  --b-border-highlight: #38bdf8;
+  
+  --b-text-primary: #f8fafc;
+  --b-text-secondary: #94a3b8;
+  --b-text-muted: #64748b;
+  
+  --b-cyan: #38bdf8;
+  --b-indigo: #6366f1;
+  --b-green: #10b981;
+  --b-amber: #f59e0b;
+  --b-red: #ef4444;
+  --b-purple: #a855f7;
+  
+  --b-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --b-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body.banking-body {
+  background: var(--b-bg-darkest);
+  color: var(--b-text-primary);
+  font-family: var(--b-font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Master Layout --- */
+.banking-app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* Header */
+.banking-header {
+  height: 52px;
+  background: var(--b-bg-main);
+  border-bottom: 1px solid var(--b-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.banking-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.banking-logo-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.3px;
+  color: #ffffff;
+}
+
+.banking-logo-icon {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #070a12;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.banking-env-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  letter-spacing: 0.5px;
+}
+
+.banking-header-center {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  max-width: 600px;
+  margin: 0 24px;
+}
+
+.banking-global-search {
+  position: relative;
+  width: 100%;
+}
+
+.banking-search-input {
+  width: 100%;
+  padding: 6px 12px 6px 32px;
+  background: var(--b-bg-card);
+  border: 1px solid var(--b-border);
+  border-radius: 6px;
+  color: var(--b-text-primary);
+  font-size: 12px;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.banking-search-input:focus {
+  border-color: var(--b-cyan);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.banking-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--b-text-muted);
+  font-size: 12px;
+}
+
+.banking-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rail-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.btn-banking-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--b-bg-card);
+  border: 1px solid var(--b-border);
+  border-radius: 6px;
+  color: var(--b-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-banking-icon:hover {
+  color: var(--b-text-primary);
+  border-color: var(--b-text-muted);
+}
+
+.btn-banking-copilot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  border: 1px solid #818cf8;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-banking-copilot:hover {
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Main Body with Sidebar + Content */
+.banking-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.banking-sidebar {
+  width: 250px;
+  background: var(--b-bg-sidebar);
+  border-right: 1px solid var(--b-border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.sidebar-category {
+  padding: 14px 16px 6px 16px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--b-text-muted);
+  letter-spacing: 0.8px;
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  color: var(--b-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--b-text-primary);
+}
+
+.sidebar-nav-item.active {
+  background: rgba(56, 189, 248, 0.08);
+  border-left-color: var(--b-cyan);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.sidebar-nav-item .nav-badge {
+  margin-left: auto;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.nav-badge.danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.nav-badge.warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.nav-badge.info {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+/* Workspace Canvas / Views */
+.banking-workspace {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  background: var(--b-bg-darkest);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* View Header */
+.view-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--b-border-subtle);
+}
+
+.view-title-group h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-description {
+  font-size: 12px;
+  color: var(--b-text-secondary);
+  margin-top: 4px;
+}
+
+.view-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-action-primary {
+  padding: 6px 14px;
+  background: #0284c7;
+  color: #ffffff;
+  border: 1px solid #38bdf8;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-action-primary:hover {
+  background: #0369a1;
+}
+
+.btn-action-secondary {
+  padding: 6px 14px;
+  background: var(--b-bg-card);
+  color: var(--b-text-primary);
+  border: 1px solid var(--b-border);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-action-secondary:hover {
+  background: var(--b-bg-card-hover);
+  border-color: var(--b-text-muted);
+}
+
+/* Metrics Row */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  background: var(--b-bg-card);
+  border: 1px solid var(--b-border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--b-text-muted);
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.metric-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
+
+.metric-footer {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metric-trend.up {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.metric-trend.down {
+  color: #f87171;
+  font-weight: 600;
+}
+
+/* Data Tables */
+.banking-table-card {
+  background: var(--b-bg-card);
+  border: 1px solid var(--b-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table-toolbar {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--b-border);
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.table-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.banking-select {
+  padding: 5px 10px;
+  background: var(--b-bg-darkest);
+  border: 1px solid var(--b-border);
+  border-radius: 6px;
+  color: var(--b-text-primary);
+  font-size: 12px;
+  outline: none;
+}
+
+.banking-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.banking-table th {
+  text-align: left;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--b-border);
+  color: var(--b-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.banking-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--b-border-subtle);
+  color: var(--b-text-secondary);
+  vertical-align: middle;
+}
+
+.banking-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--b-text-primary);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.status-pill.settled {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.status-pill.flagged {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.status-pill.pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.status-pill.optimal {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.mono-hash {
+  font-family: var(--b-font-mono);
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+/* XML / Code Blocks */
+.xml-viewer-container {
+  background: #050811;
+  border: 1px solid var(--b-border);
+  border-radius: 6px;
+  padding: 16px;
+  font-family: var(--b-font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  color: #93c5fd;
+  overflow-x: auto;
+  max-height: 480px;
+  white-space: pre;
+}
+
+/* Entity Graph SVG Canvas */
+.graph-canvas-container {
+  width: 100%;
+  height: 460px;
+  background: #060913;
+  border: 1px solid var(--b-border);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.graph-node {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.graph-node:hover {
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.8));
+}
+
+/* AI Copilot Drawer */
+.banking-copilot-drawer {
+  position: fixed;
+  top: 52px;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  background: var(--b-bg-main);
+  border-left: 1px solid var(--b-border);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  z-index: 500;
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.banking-copilot-drawer.open {
+  transform: translateX(0);
+}
+
+.copilot-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--b-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.copilot-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.copilot-msg {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.copilot-msg.ai {
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #e0e7ff;
+}
+
+.copilot-msg.user {
+  background: var(--b-bg-card);
+  border: 1px solid var(--b-border);
+  color: #ffffff;
+  align-self: flex-end;
+}
+
+.copilot-input-area {
+  padding: 14px;
+  border-top: 1px solid var(--b-border);
+  display: flex;
+  gap: 8px;
+}
+
+.copilot-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--b-bg-card);
+  border: 1px solid var(--b-border);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 12px;
+  outline: none;
+}
+
+/* Modal Windows */
+.banking-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.banking-modal {
+  width: 90%;
+  max-width: 640px;
+  background: var(--b-bg-main);
+  border: 1px solid var(--b-border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+}
+
+.banking-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--b-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.banking-modal-body {
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.banking-modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--b-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive Rules */
+@media (max-width: 1024px) {
+  .banking-sidebar {
+    width: 200px;
+  }
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .banking-sidebar {
+    display: none;
+  }
+  .banking-header-center {
+    display: none;
+  }
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
