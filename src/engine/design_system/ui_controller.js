@@ -5,6 +5,7 @@
 
 import { TOKEN_CATEGORIES, VARIABLE_TYPES, THEME_MODES, DESIGN_SYSTEM_STARTERS } from './types.js';
 import { RNEUI_COMPONENT_CATALOG, addRneuiComponentToRegistry } from './rneui_catalog.js';
+import { MUI_COMPONENT_CATALOG, MUI_DESIGN_TOKENS, addMuiComponentToRegistry, insertMuiComponentToCanvas } from './mui_catalog.js';
 
 export class DesignSystemUIController {
   constructor(app) {
@@ -18,6 +19,8 @@ export class DesignSystemUIController {
     this.activeView = 'overview';
     this.activeTokenCategory = 'all';
     this.activeTheme = 'dark';
+    this.activeComponentLibrary = 'mui';
+    this.activeMuiCategory = 'all';
     this.tokenSearchQuery = '';
     this.varSearchQuery = '';
 
@@ -840,50 +843,173 @@ export class DesignSystemUIController {
 
   renderComponentsView(container) {
     const comps = this.registry.getAllComponents();
+    const isMui = this.activeComponentLibrary === 'mui';
+
+    const muiCategories = ['all', 'Inputs', 'Surfaces', 'Feedback', 'Data Display', 'Navigation', 'Layout'];
+    const filteredMuiComps = this.activeMuiCategory === 'all'
+      ? MUI_COMPONENT_CATALOG
+      : MUI_COMPONENT_CATALOG.filter(c => c.category.toLowerCase() === this.activeMuiCategory.toLowerCase());
 
     container.innerHTML = `
       <section class="ds-card" style="margin-bottom: 20px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
+        <!-- Library Selector Header -->
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
           <div>
-            <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">React Native Elements catalog</div>
+            <div style="font-size: 15px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+              <span>Component Library Catalog</span>
+              <span style="font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(25, 118, 210, 0.15); color: #42a5f5; font-weight: 600;">
+                ${isMui ? '@mui/material · React v10' : '@rneui/themed · Mobile v5'}
+              </span>
+            </div>
             <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
-              Add reusable component references from @rneui/themed. These are React Native components and are catalog entries, not live browser-rendered widgets.
+              ${isMui 
+                ? 'Official Material UI React components. Insert directly onto the canvas with live styling or register into your active design system.'
+                : 'React Native Elements component references for cross-platform mobile interface architecture.'}
             </div>
           </div>
-          <span style="font-size: 10px; color: var(--text-muted);">@rneui/themed · v5.0.0</span>
+
+          <!-- Library Toggle Switcher -->
+          <div style="display: flex; background: var(--bg-surface); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); gap: 4px;">
+            <button type="button" class="ds-filter-pill ${isMui ? 'active' : ''}" data-ds-lib="mui" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
+              Material UI (@mui/material)
+            </button>
+            <button type="button" class="ds-filter-pill ${!isMui ? 'active' : ''}" data-ds-lib="rneui" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
+              React Native (@rneui/themed)
+            </button>
+          </div>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px;">
-          ${RNEUI_COMPONENT_CATALOG.map(component => {
-            const added = comps.some(item => item.sourceMetadata?.catalogId === component.id);
-            return `
-              <article style="border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;">
-                <div style="font-size: 12px; font-weight: 700; color: var(--text-main);">${component.name}</div>
-                <div style="font-size: 10px; color: var(--text-dim); min-height: 28px;">${component.description}</div>
-                <button type="button" class="ds-action-btn" data-rneui-component="${component.id}" ${added ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''}>
-                  ${added ? 'Added to system' : 'Add to system'}
-                </button>
-              </article>
-            `;
-          }).join('')}
-        </div>
+
+        ${isMui ? `
+          <!-- MUI Category Filter Pills -->
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;">
+            ${muiCategories.map(cat => `
+              <button type="button" class="ds-filter-pill ${this.activeMuiCategory === cat.toLowerCase() ? 'active' : ''}" data-mui-category="${cat.toLowerCase()}" style="font-size: 11px; padding: 4px 10px; cursor: pointer;">
+                ${cat === 'all' ? 'All Categories (' + MUI_COMPONENT_CATALOG.length + ')' : cat}
+              </button>
+            `).join('')}
+          </div>
+
+          <!-- MUI Component Grid -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px;">
+            ${filteredMuiComps.map(component => {
+              const added = comps.some(item => item.sourceMetadata?.catalogId === component.id && item.sourceMetadata?.package === '@mui/material');
+              return `
+                <article style="border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--bg-surface); transition: border-color 0.15s ease;">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="font-size: 13px; font-weight: 700; color: var(--text-main);">${component.name}</div>
+                    <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(25,118,210,0.12); color: #42a5f5; font-weight: 600;">
+                      ${component.category}
+                    </span>
+                  </div>
+                  <div style="font-size: 11px; color: var(--text-dim); min-height: 32px; line-height: 1.4;">${component.description}</div>
+                  
+                  <div style="display: flex; gap: 6px; margin-top: auto; padding-top: 6px;">
+                    <button type="button" class="ds-action-btn" data-mui-insert="${component.id}" title="Insert directly onto design canvas" style="flex: 1; background: #1976d2; color: #ffffff; border: none; font-weight: 600;">
+                      ↵ Insert
+                    </button>
+                    <button type="button" class="ds-action-btn" data-mui-add="${component.id}" ${added ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''} style="flex: 1;">
+                      ${added ? '✓ In System' : '+ System'}
+                    </button>
+                  </div>
+                </article>
+              `;
+            }).join('')}
+          </div>
+        ` : `
+          <!-- RNEUI Component Grid -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px;">
+            ${RNEUI_COMPONENT_CATALOG.map(component => {
+              const added = comps.some(item => item.sourceMetadata?.catalogId === component.id && item.sourceMetadata?.package === '@rneui/themed');
+              return `
+                <article style="border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;">
+                  <div style="font-size: 12px; font-weight: 700; color: var(--text-main);">${component.name}</div>
+                  <div style="font-size: 10px; color: var(--text-dim); min-height: 28px;">${component.description}</div>
+                  <button type="button" class="ds-action-btn" data-rneui-component="${component.id}" ${added ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''}>
+                    ${added ? 'Added to system' : 'Add to system'}
+                  </button>
+                </article>
+              `;
+            }).join('')}
+          </div>
+        `}
       </section>
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
-        ${comps.length === 0 ? `
-          <div style="grid-column: 1 / -1; text-align: center; color: var(--text-dim); padding: 28px;">No components registered yet. Add one from the catalog above or import a component library.</div>
-        ` : comps.map(c => `
-          <div class="ds-card" style="display: flex; flex-direction: column; gap: 8px;">
-            <div style="height: 90px; background: var(--bg-surface); border-radius: 6px; display: flex; align-items: center; justify-content: center;"><span data-icon="Box" data-icon-size="28"></span></div>
-            <div style="font-size: 13px; font-weight: 700; color: var(--text-main);">${c.name}</div>
-            <div style="font-size: 11px; color: var(--text-dim);">${c.description || 'Governed component definition'}</div>
-            <div style="display: flex; gap: 6px; margin-top: auto; padding-top: 8px;">
-              <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(13,153,255,0.15); color: var(--accent-blue);">${c.variants?.length || 1} variants</span>
-              <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(16,185,129,0.15); color: var(--accent-green);">${c.status || 'published'}</span>
+
+      <!-- Registered Components List in Active Design System -->
+      <div style="margin-top: 24px;">
+        <div style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+          <span>Registered Design System Components (${comps.length})</span>
+          <span style="font-size: 11px; color: var(--text-dim);">Authoritative definitions</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
+          ${comps.length === 0 ? `
+            <div style="grid-column: 1 / -1; text-align: center; color: var(--text-dim); padding: 28px; border: 1px dashed var(--border-subtle); border-radius: 8px;">
+              No components registered yet. Use "+ System" on any Material UI or RNEUI component above.
             </div>
-          </div>
-        `).join('')}
+          ` : comps.map(c => `
+            <div class="ds-card" style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="height: 70px; background: var(--bg-surface); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+                <span data-icon="Box" data-icon-size="28"></span>
+              </div>
+              <div style="font-size: 13px; font-weight: 700; color: var(--text-main);">${c.name}</div>
+              <div style="font-size: 11px; color: var(--text-dim);">${c.description || 'Governed component definition'}</div>
+              <div style="display: flex; gap: 6px; margin-top: auto; padding-top: 8px;">
+                <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(13,153,255,0.15); color: var(--accent-blue);">${c.sourceMetadata?.package || 'custom'}</span>
+                <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(16,185,129,0.15); color: var(--accent-green);">${c.status || 'published'}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
       </div>
     `;
 
+    // Library toggle buttons
+    container.querySelectorAll('[data-ds-lib]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.activeComponentLibrary = btn.dataset.dsLib;
+        this.renderComponentsView(container);
+      });
+    });
+
+    // MUI category filter buttons
+    container.querySelectorAll('[data-mui-category]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.activeMuiCategory = btn.dataset.muiCategory;
+        this.renderComponentsView(container);
+      });
+    });
+
+    // MUI Insert directly onto canvas
+    container.querySelectorAll('[data-mui-insert]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        try {
+          const compId = btn.dataset.muiInsert;
+          insertMuiComponentToCanvas(this.app, compId);
+          // Return to Design workspace to see and manipulate the new node
+          this.app.setAxiomMode('design');
+        } catch (error) {
+          this.app.showToast(`Error inserting MUI component: ${error.message}`);
+        }
+      });
+    });
+
+    // MUI Add to system
+    container.querySelectorAll('[data-mui-add]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        try {
+          const compId = btn.dataset.muiAdd;
+          const result = addMuiComponentToRegistry(this.registry, compId);
+          if (result.added) {
+            this.updateHeaderInfo();
+            this.renderComponentsView(container);
+            this.app.showToast(`${result.component.name} registered in design system.`);
+          }
+        } catch (error) {
+          this.app.showToast(`Could not register MUI component: ${error.message}`);
+        }
+      });
+    });
+
+    // RNEUI Add to system
     container.querySelectorAll('[data-rneui-component]').forEach(button => {
       button.addEventListener('click', () => {
         try {
@@ -942,20 +1068,89 @@ export class DesignSystemUIController {
 
   renderLibrariesView(container) {
     container.innerHTML = `
-      <div class="ds-card" style="max-width: 600px;">
-        <div class="ds-card-title">
-          <span>Active Design System Library</span>
-          <span style="font-size: 11px; color: var(--accent-blue);">Authoritative</span>
+      <div style="display: flex; flex-direction: column; gap: 20px; max-width: 800px;">
+        <!-- Active Design System -->
+        <div class="ds-card">
+          <div class="ds-card-title">
+            <span>Active Design System Library</span>
+            <span style="font-size: 11px; color: var(--accent-blue);">Authoritative</span>
+          </div>
+          <div style="font-size: 12px; line-height: 1.8; color: var(--text-muted);">
+            <div><strong>Library ID:</strong> <code>${this.registry.system.id}</code></div>
+            <div><strong>Library Name:</strong> ${this.registry.system.name}</div>
+            <div><strong>Semantic Version:</strong> ${this.registry.system.version}</div>
+            <div><strong>Publication State:</strong> ${this.registry.system.status}</div>
+            <div><strong>Provenance:</strong> native-registry</div>
+          </div>
         </div>
-        <div style="font-size: 12px; line-height: 1.8; color: var(--text-muted);">
-          <div><strong>Library ID:</strong> <code>${this.registry.system.id}</code></div>
-          <div><strong>Library Name:</strong> ${this.registry.system.name}</div>
-          <div><strong>Semantic Version:</strong> ${this.registry.system.version}</div>
-          <div><strong>Publication State:</strong> ${this.registry.system.status}</div>
-          <div><strong>Provenance:</strong> native-registry</div>
+
+        <!-- Integrated External Libraries -->
+        <div class="ds-card">
+          <div class="ds-card-title">
+            <span>Integrated Component Libraries & Token Sets</span>
+            <span style="font-size: 11px; color: var(--accent-green);">2 Libraries Available</span>
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+            DesignForge AI integrates production React and React Native frameworks directly into your workflow.
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <!-- Material UI Card -->
+            <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <strong style="color: var(--text-main); font-size: 13px;">Material UI (@mui/material)</strong>
+                  <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(25,118,210,0.15); color: #42a5f5; font-weight: 600;">v10.0.0-alpha.0</span>
+                  <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(16,185,129,0.15); color: var(--accent-green);">React / Web</span>
+                </div>
+                <button type="button" class="ds-action-btn" id="btnSeedMuiTokens" style="font-size: 11px; padding: 4px 10px;">
+                  + Seed Material Tokens
+                </button>
+              </div>
+              <div style="font-size: 11px; color: var(--text-dim); line-height: 1.6;">
+                32+ core components (Buttons, Cards, Inputs, Dialogs, AppBar, Tabs, Alerts). Includes authentic Roboto typography scale, 8px grid spacing, and 24 elevation shadow depths.
+              </div>
+            </div>
+
+            <!-- React Native Elements Card -->
+            <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <strong style="color: var(--text-main); font-size: 13px;">React Native Elements (@rneui/themed)</strong>
+                  <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(13,153,255,0.15); color: var(--accent-blue); font-weight: 600;">v5.0.0</span>
+                  <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(16,185,129,0.15); color: var(--accent-green);">React Native</span>
+                </div>
+              </div>
+              <div style="font-size: 11px; color: var(--text-dim); line-height: 1.6;">
+                13 mobile cross-platform component schemas with theme-based styling properties and mobile design patterns.
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     `;
+
+    // Seed Material tokens button
+    container.querySelector('#btnSeedMuiTokens')?.addEventListener('click', () => {
+      try {
+        const primaryColor = MUI_DESIGN_TOKENS.palette.primary.main;
+        const secondaryColor = MUI_DESIGN_TOKENS.palette.secondary.main;
+        const errorColor = MUI_DESIGN_TOKENS.palette.error.main;
+        const successColor = MUI_DESIGN_TOKENS.palette.success.main;
+
+        this.registry.addToken(TOKEN_CATEGORIES.COLOR, 'MUI / Primary', primaryColor);
+        this.registry.addToken(TOKEN_CATEGORIES.COLOR, 'MUI / Secondary', secondaryColor);
+        this.registry.addToken(TOKEN_CATEGORIES.COLOR, 'MUI / Error', errorColor);
+        this.registry.addToken(TOKEN_CATEGORIES.COLOR, 'MUI / Success', successColor);
+        this.registry.addToken(TOKEN_CATEGORIES.SPACING, 'MUI / Spacing Base', '8px');
+        this.registry.addToken(TOKEN_CATEGORIES.TYPOGRAPHY, 'MUI / Font Family', 'Roboto, sans-serif');
+
+        this.updateHeaderInfo();
+        this.app.showToast('Material UI tokens seeded into design system.', 'success');
+      } catch (err) {
+        this.app.showToast(`Error seeding tokens: ${err.message}`);
+      }
+    });
   }
 
   renderImportsView(container) {

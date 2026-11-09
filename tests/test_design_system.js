@@ -13,6 +13,11 @@ import {
   ComponentVariableExtractor,
   ReactDesignSystemImporter,
   addRneuiComponentToRegistry,
+  addMuiComponentToRegistry,
+  MUI_COMPONENT_CATALOG,
+  MUI_DESIGN_TOKENS,
+  createMuiNode,
+  insertMuiComponentToCanvas,
   createDesignSystem,
   TOKEN_CATEGORIES,
   VARIABLE_TYPES,
@@ -240,6 +245,46 @@ assert.strictEqual(addedRneuiButton.component.sourceMetadata.package, '@rneui/th
 assert.strictEqual(addedRneuiButton.component.sourceMetadata.platform, 'react-native');
 assert.strictEqual(addRneuiComponentToRegistry(catalogRegistry, 'button').added, false, 'Catalog additions must be idempotent');
 assert.throws(() => addRneuiComponentToRegistry(catalogRegistry, 'not-a-component'), /Unknown RNEUI catalog component/);
+
+// Material UI (@mui/material v10) Catalog Verification
+assert.ok(MUI_COMPONENT_CATALOG.length >= 25, 'MUI catalog must contain at least 25 components');
+const muiButton = addMuiComponentToRegistry(catalogRegistry, 'button');
+assert.strictEqual(muiButton.added, true);
+assert.strictEqual(muiButton.component.sourceMetadata.package, '@mui/material');
+assert.strictEqual(muiButton.component.sourceMetadata.packageVersion, '10.0.0-alpha.0');
+assert.strictEqual(muiButton.component.sourceMetadata.platform, 'react-web');
+assert.strictEqual(addMuiComponentToRegistry(catalogRegistry, 'button').added, false, 'MUI additions must be idempotent');
+assert.throws(() => addMuiComponentToRegistry(catalogRegistry, 'non-existent'), /Unknown MUI catalog component/);
+
+// MUI Node creation verification
+const { rootNode: btnNode, childNodes: btnChildren } = createMuiNode('button', { x: 50, y: 50 });
+assert.strictEqual(btnNode.name, 'MUI / Button (Contained)');
+assert.strictEqual(btnNode.style.cornerRadius, 4);
+assert.strictEqual(btnNode.style.fills[0].color, '#1976d2');
+assert.strictEqual(btnChildren.length, 1);
+assert.strictEqual(btnChildren[0].text.content, 'BUTTON');
+
+const { rootNode: cardNode, childNodes: cardChildren } = createMuiNode('card', { x: 100, y: 100 });
+assert.strictEqual(cardNode.name, 'MUI / Card');
+assert.ok(cardChildren.length >= 6);
+
+// MUI Canvas Insertion verification
+const mockApp = {
+  engine: new CommandEngine(createInitialDocument('MUI Canvas Test')),
+  dsRegistry: catalogRegistry,
+  getCanvasCenter: () => ({ x: 150, y: 150 }),
+  selectionManager: { setSelection: () => {} },
+  storage: { scheduleAutosave: () => {} },
+  render: () => {},
+  renderLayersTree: () => {},
+  showToast: () => {}
+};
+const insertedNode = insertMuiComponentToCanvas(mockApp, 'alert');
+assert.ok(insertedNode.id);
+assert.strictEqual(insertedNode.name, 'MUI / Alert (Success)');
+const pageNodes = mockApp.engine.getActivePage().nodes;
+assert.ok(pageNodes[insertedNode.id]);
+console.log('   ✓ Material UI (@mui/material v10) catalog, node generators, and canvas insertion verified.');
 console.log('   ✓ DTCG token schema parsed and transactionally registered into Design System Registry.');
 
 // 7. Versioning & Releases (Section 17)

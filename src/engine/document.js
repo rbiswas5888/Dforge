@@ -131,8 +131,13 @@ export function createNode(type, overrides = {}) {
   if (type === 'frame') {
     baseNode.transform.width = overrides.transform?.width || 360;
     baseNode.transform.height = overrides.transform?.height || 240;
-    baseNode.style.fills = overrides.style?.fills || [{ type: 'solid', color: '#1e293b', opacity: 1 }];
-    baseNode.style.cornerRadius = overrides.style?.cornerRadius !== undefined ? overrides.style.cornerRadius : 12;
+    baseNode.style.fills = overrides.style?.fills || overrides.fills || [{ type: 'solid', color: '#1e293b', opacity: 1 }];
+    baseNode.style.cornerRadius = overrides.style?.cornerRadius !== undefined
+      ? overrides.style.cornerRadius
+      : (overrides.cornerRadius !== undefined ? overrides.cornerRadius : 12);
+    if (overrides.strokes || overrides.style?.strokes) {
+      baseNode.style.strokes = overrides.style?.strokes || overrides.strokes;
+    }
   } else if (type === 'text') {
     baseNode.transform.width = overrides.transform?.width || 180;
     baseNode.transform.height = overrides.transform?.height || 32;

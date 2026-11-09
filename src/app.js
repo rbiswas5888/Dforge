@@ -51,7 +51,10 @@ import {
   ResponsiveTokenEngine,
   ComponentVariableExtractor,
   ReactDesignSystemImporter,
-  DesignSystemUIController
+  DesignSystemUIController,
+  insertMuiComponentToCanvas,
+  addMuiComponentToRegistry,
+  MUI_COMPONENT_CATALOG
 } from './engine/design_system/index.js';
 import { generateQRCodeSVG } from './editor-core/qr-code.js';
 import { ColorPickerPopover } from './editor-core/color-picker.js';
@@ -2605,6 +2608,12 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     // 1-Click Component Inserts
     document.querySelectorAll('.btn-insert-asset').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (btn.dataset.muiComponent) {
+          const muiComp = btn.dataset.muiComponent;
+          const coords = this.getCanvasCenter();
+          insertMuiComponentToCanvas(this, muiComp, coords);
+          return;
+        }
         const type = btn.dataset.type;
         const coords = this.getCanvasCenter();
         this.handleShapeCreation(type === 'button' ? 'button' : 'frame', coords);
