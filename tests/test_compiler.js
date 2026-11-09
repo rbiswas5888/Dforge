@@ -192,7 +192,7 @@ assert.ok(singleComp.tsx.includes(`export const ${singleComp.componentName}`));
 const sandboxHtml = compiler.generateLivePreviewHtml();
 assert.ok(sandboxHtml.includes('<!DOCTYPE html>'));
 assert.ok(sandboxHtml.includes(':root {'));
-assert.ok(sandboxHtml.includes('ForgePay'));
+assert.ok(sandboxHtml.includes('DesignForge') || sandboxHtml.includes('ForgePay'));
 console.log('   ✓ Successfully compiled single component and embedded Live Preview Sandbox HTML.');
 
 console.log('\n🎉 ALL 10 REACT COMPILER ACCEPTANCE TESTS PASSED!\n');

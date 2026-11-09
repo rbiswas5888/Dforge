@@ -363,18 +363,20 @@ export function blendColors(backdrop, source, mode = 'normal') {
 
 // --- Gradient & OKLab Interpolation ---
 export function interpolateGradient(color1, color2, t, space = 'oklab') {
+  const c1 = typeof color1 === 'string' ? CanonicalColor.fromHex(color1) : color1;
+  const c2 = typeof color2 === 'string' ? CanonicalColor.fromHex(color2) : color2;
   t = Math.max(0, Math.min(1, t));
   if (space === 'oklab') {
-    const lab1 = color1.toOklab();
-    const lab2 = color2.toOklab();
+    const lab1 = c1.toOklab();
+    const lab2 = c2.toOklab();
     const L = lab1.L + (lab2.L - lab1.L) * t;
     const a = lab1.a + (lab2.a - lab1.a) * t;
     const b = lab1.b + (lab2.b - lab1.b) * t;
-    const alpha = color1.a + (color2.a - color1.a) * t;
+    const alpha = c1.a + (c2.a - c1.a) * t;
     return CanonicalColor.fromOklab(L, a, b, alpha);
   } else if (space === 'oklch') {
-    const lch1 = color1.toOklch();
-    const lch2 = color2.toOklch();
+    const lch1 = c1.toOklch();
+    const lch2 = c2.toOklch();
     const L = lch1.L + (lch2.L - lch1.L) * t;
     const C = lch1.C + (lch2.C - lch1.C) * t;
     // Shortest-arc hue interpolation
@@ -382,14 +384,14 @@ export function interpolateGradient(color1, color2, t, space = 'oklab') {
     if (dH > 180) dH -= 360;
     if (dH < -180) dH += 360;
     const h = (lch1.h + dH * t + 360) % 360;
-    const alpha = color1.a + (color2.a - color1.a) * t;
+    const alpha = c1.a + (c2.a - c1.a) * t;
     return CanonicalColor.fromOklch(L, C, h, alpha);
   } else {
     // Linear light
-    const r = color1.r + (color2.r - color1.r) * t;
-    const g = color1.g + (color2.g - color1.g) * t;
-    const b = color1.b + (color2.b - color1.b) * t;
-    const alpha = color1.a + (color2.a - color1.a) * t;
+    const r = c1.r + (c2.r - c1.r) * t;
+    const g = c1.g + (c2.g - c1.g) * t;
+    const b = c1.b + (c2.b - c1.b) * t;
+    const alpha = c1.a + (c2.a - c1.a) * t;
     return new CanonicalColor(r, g, b, alpha, 'srgb');
   }
 }
@@ -503,3 +505,98 @@ export const PANTONE_PRESETS = [
   { code: 'PMS Cool Gray 9 C', name: 'Pantone Cool Gray 9 C', hex: '#75787B' },
   { code: 'PMS Black 6 C', name: 'Pantone Black 6 C', hex: '#101820' }
 ];
+
+// --- Color Guide Harmonies & Gradient Midpoint (Figma & Illustrator Reference) ---
+
+/**
+ * Interpolates gradient between two colors with custom midpoint diamond bias (0.0 to 1.0, default 0.5)
+ * Matches Illustrator & Figma Gradient Controller midpoint bias behavior (Part C1 & B4)
+ */
+export function interpolateGradientWithMidpoint(color1, color2, t, midpoint = 0.5, space = 'oklab') {
+  const mid = Math.max(0.01, Math.min(0.99, midpoint));
+  const clampedT = Math.max(0, Math.min(1, t));
+  
+  // Midpoint remapping: biases transition curve toward color1 or color2
+  let remappedT = clampedT;
+  if (clampedT < mid) {
+    remappedT = 0.5 * (clampedT / mid);
+  } else {
+    remappedT = 0.5 + 0.5 * ((clampedT - mid) / (1 - mid));
+  }
+  
+  return interpolateGradient(color1, color2, remappedT, space);
+}
+
+/**
+ * Generates harmonic color sets based on a base color (Color Guide - Part C3)
+ * Provides complementary, analogous, triadic, split-complementary, tetradic, and monochromatic shades.
+ */
+export function generateColorHarmonies(baseColor) {
+  const col = typeof baseColor === 'string' ? CanonicalColor.fromHex(baseColor) : baseColor;
+  const lch = col.toOklch();
+
+  const wrapHue = (h) => (h % 360 + 360) % 360;
+  const fromLch = (L, C, h, a = col.a) => CanonicalColor.fromOklch(Math.max(0.05, Math.min(0.98, L)), Math.max(0, C), wrapHue(h), a);
+
+  // 1. Complementary (180° offset)
+  const complementary = fromLch(lch.L, lch.C, lch.h + 180);
+
+  // 2. Analogous (±30° offset)
+  const analogous = [
+    fromLch(lch.L, lch.C, lch.h - 30),
+    col,
+    fromLch(lch.L, lch.C, lch.h + 30)
+  ];
+
+  // 3. Triadic (+120°, +240° offset)
+  const triadic = [
+    col,
+    fromLch(lch.L, lch.C, lch.h + 120),
+    fromLch(lch.L, lch.C, lch.h + 240)
+  ];
+
+  // 4. Split-Complementary (+150°, +210° offset)
+  const splitComplementary = [
+    col,
+    fromLch(lch.L, lch.C, lch.h + 150),
+    fromLch(lch.L, lch.C, lch.h + 210)
+  ];
+
+  // 5. Tetradic / Square (+90°, +180°, +270° offset)
+  const tetradic = [
+    col,
+    fromLch(lch.L, lch.C, lch.h + 90),
+    fromLch(lch.L, lch.C, lch.h + 180),
+    fromLch(lch.L, lch.C, lch.h + 270)
+  ];
+
+  // 6. Monochromatic shades (5 steps)
+  const monochromatic = [
+    fromLch(0.2, lch.C * 0.7, lch.h),
+    fromLch(0.38, lch.C * 0.85, lch.h),
+    col,
+    fromLch(0.72, lch.C * 0.9, lch.h),
+    fromLch(0.9, lch.C * 0.6, lch.h)
+  ];
+
+  // 7. Standard 10-step numerical shades scale (50 - 900)
+  const shadeLightness = {
+    50: 0.96, 100: 0.90, 200: 0.82, 300: 0.72, 400: 0.62,
+    500: lch.L, 600: lch.L * 0.85, 700: lch.L * 0.70, 800: lch.L * 0.52, 900: lch.L * 0.35
+  };
+  const shades = {};
+  for (const [weight, L] of Object.entries(shadeLightness)) {
+    shades[weight] = fromLch(L, lch.C * (weight < 200 ? 0.5 : 1), lch.h).toHex();
+  }
+
+  return {
+    base: col,
+    complementary,
+    analogous,
+    triadic,
+    splitComplementary,
+    tetradic,
+    monochromatic,
+    shades
+  };
+}

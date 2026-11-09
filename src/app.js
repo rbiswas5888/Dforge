@@ -1952,7 +1952,7 @@ export class DesignForgeApp {
     const projectTitleInput = document.getElementById('projectTitleInput');
     const placeAppMenu = () => {
       if (!appMenuBar || !responsiveMenuSection || !responsiveWorkspaceSection || !topBarLeft || !topBarRight) return;
-      if (window.innerWidth <= 900) {
+      if (window.innerWidth <= 1150) {
         responsiveMenuSection.appendChild(appMenuBar);
         if (breakpointBar) responsiveWorkspaceSection.appendChild(breakpointBar);
       } else {
@@ -2254,6 +2254,7 @@ export class DesignForgeApp {
   initRightSidebar() {
     const btnDesign = document.getElementById('btnTabDesign') || document.getElementById('btnTabProperties');
     const btnProto = document.getElementById('btnTabPrototype');
+    const btnDs = document.getElementById('btnTabDesignSystem');
     const btnInspect = document.getElementById('btnTabInspect');
     const btnExport = document.getElementById('btnTabExport');
     const btnAi = document.getElementById('btnTabAiAssistant');
@@ -2300,11 +2301,31 @@ export class DesignForgeApp {
     };
     this.rightSidebarModeSwitcher = setSidebarMode;
 
-    btnDesign?.addEventListener('click', () => setSidebarMode('design'));
-    btnProto?.addEventListener('click', () => setSidebarMode('prototype'));
-    btnInspect?.addEventListener('click', () => setSidebarMode('inspect'));
-    btnExport?.addEventListener('click', () => setSidebarMode('export'));
-    btnAi?.addEventListener('click', () => setSidebarMode('ai'));
+    btnDesign?.addEventListener('click', () => {
+      this.switchToDesignMode();
+      setSidebarMode('design');
+      document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === 'design'));
+    });
+    btnProto?.addEventListener('click', () => {
+      this.switchToDesignMode();
+      setSidebarMode('prototype');
+      document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === 'prototype'));
+    });
+    btnDs?.addEventListener('click', () => {
+      this.setAxiomMode('system');
+    });
+    btnInspect?.addEventListener('click', () => {
+      this.switchToDesignMode();
+      setSidebarMode('inspect');
+    });
+    btnExport?.addEventListener('click', () => {
+      this.switchToDesignMode();
+      setSidebarMode('export');
+    });
+    btnAi?.addEventListener('click', () => {
+      this.switchToDesignMode();
+      setSidebarMode('ai');
+    });
 
     // Pin side-by-side button
     btnPin?.addEventListener('click', () => {
@@ -3385,7 +3406,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     // Update Axiom Status Bar Tool Hint (Section 3.1 & 3.2)
     const hints = {
       select: 'Tool: Select / Move (V) • Hold Space to Pan Canvas',
-      scale: 'Tool: Scale Proportionally (K)',
+      scale: 'Tool: Scale (K)',
       hand: 'Tool: Hand / Pan Canvas (H or hold Space)',
       frame: 'Tool: Frame / Artboard (F) • Click & drag on canvas',
       section: 'Tool: Section Tool (⇧S) • Group visual frames',
@@ -3467,29 +3488,46 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const initialColor = this.normalizeHexColor(color, '#3B82F6');
     let committedColor = initialColor;
     const syncColorControls = nextColor => {
-      targetElement.style.background = nextColor;
+      if (options.gradient && options.gradient.type?.includes('gradient')) {
+        const stops = options.gradient.stops || [];
+        targetElement.style.background = `linear-gradient(135deg, ${stops[0]?.color || '#334155'}, ${stops[1]?.color || '#8B5CF6'})`;
+      } else {
+        targetElement.style.background = nextColor;
+      }
       const input = targetElement.closest('.props-row')?.querySelector('input');
-      if (input) input.value = nextColor;
+      if (input && !options.gradient) input.value = nextColor;
     };
     this.colorPicker.open({
       targetElement,
       initialColor,
       documentColors: this.getDocumentColorPalette(),
       designTokens: this.getDocumentColorTokens(),
+      contrastBackground: this.engine.getActivePage()?.background || '#090D16',
+      mode: options.mode || (options.gradient ? 'gradient' : 'solid'),
+      gradient: options.gradient || null,
+      activeStopIndex: options.activeStopIndex || 0,
       onInput: nextColor => {
         const previewColor = this.normalizeHexColor(nextColor, committedColor);
-        options.preview(previewColor);
+        if (options.preview) options.preview(previewColor);
         syncColorControls(previewColor);
         this.renderer.render();
         this.refreshOpenPrototypePreview();
       },
       onChange: nextColor => {
         const colorToCommit = this.normalizeHexColor(nextColor, committedColor);
-        options.preview(committedColor);
+        if (options.preview) options.preview(committedColor);
         syncColorControls(colorToCommit);
-        if (colorToCommit !== committedColor) {
+        if (colorToCommit !== committedColor && options.commit) {
           this.engine.updateNode(options.node.id, options.commit(colorToCommit), options.description);
           committedColor = colorToCommit;
+        }
+      },
+      onGradientChange: nextGradient => {
+        if (options.onGradientChange) {
+          options.onGradientChange(nextGradient);
+          syncColorControls();
+          this.renderer.render();
+          this.refreshOpenPrototypePreview();
         }
       }
     });
@@ -3954,84 +3992,224 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         </div>
       </div>
 
-      <!-- 5. Fills Section (Solid, Linear Gradient, Token Chips, Eyedropper) -->
+      <!-- 5. Fills Section (Solid, Gradients, Video, Image, Tokens) -->
       <div class="section-group">
         <div class="section-title">
-          <span>Fill</span>
+          <span>Fill (${fills.length})</span>
           <button class="btn-icon-xs" id="btnAddFill" title="Add Fill">+</button>
         </div>
         ${fills.length ? fills.map((f, idx) => {
-          const fillType = f.type === 'gradient' ? 'linear-gradient'
-            : ['solid', 'linear-gradient', 'image', 'video'].includes(f.type) ? f.type : 'solid';
+          const fillType = f.type || 'solid';
+          const isGrad = ['linear-gradient', 'gradient', 'radial-gradient', 'angular-gradient', 'conic-gradient', 'diamond-gradient'].includes(fillType);
           const firstStop = f.stops?.[0]?.color || f.color || '#334155';
           const lastStop = f.stops?.[1]?.color || '#8b5cf6';
-          const swatchStyle = fillType === 'linear-gradient'
-            ? `linear-gradient(135deg, ${this.escapeAttr(firstStop)}, ${this.escapeAttr(lastStop)})`
-            : fillType === 'image' || fillType === 'video' ? '#334155' : this.escapeAttr(f.color || '#334155');
+          let swatchStyle = f.color || '#334155';
+          if (fillType === 'linear-gradient' || fillType === 'gradient') {
+            swatchStyle = `linear-gradient(135deg, ${firstStop}, ${lastStop})`;
+          } else if (fillType === 'radial-gradient') {
+            swatchStyle = `radial-gradient(circle, ${firstStop}, ${lastStop})`;
+          } else if (fillType === 'angular-gradient' || fillType === 'conic-gradient') {
+            swatchStyle = `conic-gradient(from 0deg, ${firstStop}, ${lastStop})`;
+          } else if (fillType === 'diamond-gradient') {
+            swatchStyle = `radial-gradient(circle at center, ${firstStop} 0%, ${lastStop} 70%)`;
+          } else if (fillType === 'image' || fillType === 'video') {
+            swatchStyle = f.url ? `url(${f.url}) center/cover` : '#334155';
+          }
+          const isVisible = f.visible !== false;
+          const opacityPct = Math.round((f.opacity !== undefined ? f.opacity : 1) * 100);
+
           return `
-          <div class="fill-paint-card" style="margin-bottom: 8px; padding: 8px; border: 1px solid var(--border-subtle); border-radius: 6px;">
-            <div class="props-row" style="margin-bottom: 6px;">
+          <div class="paint-row-card fill-paint-card" data-index="${idx}">
+            <!-- Primary Row: Visibility, Swatch, Hex/Type, Opacity, More, Delete -->
+            <div class="paint-primary-row">
+              <button type="button" class="btn-icon-xs btn-toggle-fill-vis" data-index="${idx}" title="${isVisible ? 'Hide fill' : 'Show fill'}">
+                <span data-icon="${isVisible ? 'Eye' : 'EyeOff'}" data-icon-size="12"></span>
+              </button>
               <button type="button" class="color-swatch-box paint-swatch" style="background: ${swatchStyle};"
-                id="swatchFill_${idx}" data-index="${idx}" title="Choose fill color" aria-label="Choose fill color"></button>
-              <select class="prop-select fill-type-select" data-index="${idx}" aria-label="Paint type">
-                <option value="solid" ${fillType === 'solid' ? 'selected' : ''}>Solid</option>
-                <option value="linear-gradient" ${fillType === 'linear-gradient' ? 'selected' : ''}>Linear gradient</option>
-                <option value="image" ${fillType === 'image' ? 'selected' : ''}>Image</option>
-                <option value="video" ${fillType === 'video' ? 'selected' : ''}>Video</option>
-              </select>
-              <button class="btn-icon-xs btn-remove-fill" data-index="${idx}" title="Remove Fill" aria-label="Remove fill"><span data-icon="X"></span></button>
+                id="swatchFill_${idx}" data-index="${idx}" title="Click to open color picker" aria-label="Choose fill color"></button>
+              
+              ${fillType === 'solid' ? `
+                <div class="paint-val-field">
+                  <input type="text" class="paint-val-input fill-hex-input" data-index="${idx}" value="${this.escapeAttr(f.color || '#334155')}" aria-label="Solid fill color" spellcheck="false">
+                </div>
+              ` : isGrad ? `
+                <div class="paint-type-badge btn-edit-gradient" data-index="${idx}" title="Edit gradient stops">
+                  <span>${fillType.replace('-gradient', '').replace('gradient', 'Linear')}</span>
+                </div>
+              ` : `
+                <div class="paint-type-badge btn-upload-fill" data-index="${idx}" title="Click to upload/replace ${fillType}">
+                  <span>${fillType === 'image' ? 'Image' : 'Video'}</span>
+                  <input type="file" class="fill-media-input" data-index="${idx}" accept="${fillType}/*" style="display: none;">
+                </div>
+              `}
+
+              <div class="paint-opacity-box" title="Fill opacity">
+                <input type="number" class="prop-input fill-opacity-input" data-index="${idx}" min="0" max="100" value="${opacityPct}">
+              </div>
+
+              <button type="button" class="btn-icon-xs btn-toggle-fill-more" data-index="${idx}" title="More options (blend mode, reorder, duplicate)">
+                <span data-icon="SlidersHorizontal" data-icon-size="12"></span>
+              </button>
+
+              <button type="button" class="btn-icon-xs btn-remove-fill" data-index="${idx}" title="Remove fill" aria-label="Remove fill">
+                <span data-icon="Minus" data-icon-size="12"></span>
+              </button>
             </div>
-            ${fillType === 'solid' ? `
-              <div class="props-row">
-                <div class="prop-field"><input type="text" class="prop-input fill-hex-input" data-index="${idx}" value="${this.escapeAttr(f.color || '#334155')}" aria-label="Solid fill color"></div>
-                <button class="btn-icon-xs btn-bind-token" data-index="${idx}" title="Bind to Theme Token"><span data-icon="Link"></span></button>
+
+            <!-- Advanced Drawer (visible if blendMode != normal OR tokenName OR expanded) -->
+            <div class="paint-sub-drawer fill-details-drawer" id="fillDrawer_${idx}" style="${(f.blendMode && f.blendMode !== 'normal') || f.tokenName ? 'display: flex;' : 'display: none;'} flex-direction: column; gap: 6px; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <select class="prop-select fill-blend-select" data-index="${idx}" style="flex: 1; font-size: 11px; height: 26px;">
+                  <option value="normal" ${!f.blendMode || f.blendMode === 'normal' ? 'selected' : ''}>Pass through</option>
+                  <option value="multiply" ${f.blendMode === 'multiply' ? 'selected' : ''}>Multiply</option>
+                  <option value="screen" ${f.blendMode === 'screen' ? 'selected' : ''}>Screen</option>
+                  <option value="overlay" ${f.blendMode === 'overlay' ? 'selected' : ''}>Overlay</option>
+                  <option value="darken" ${f.blendMode === 'darken' ? 'selected' : ''}>Darken</option>
+                  <option value="lighten" ${f.blendMode === 'lighten' ? 'selected' : ''}>Lighten</option>
+                  <option value="color-dodge" ${f.blendMode === 'color-dodge' ? 'selected' : ''}>Color Dodge</option>
+                  <option value="color-burn" ${f.blendMode === 'color-burn' ? 'selected' : ''}>Color Burn</option>
+                  <option value="hard-light" ${f.blendMode === 'hard-light' ? 'selected' : ''}>Hard Light</option>
+                  <option value="soft-light" ${f.blendMode === 'soft-light' ? 'selected' : ''}>Soft Light</option>
+                  <option value="difference" ${f.blendMode === 'difference' ? 'selected' : ''}>Difference</option>
+                </select>
+                <button class="btn-icon-xs btn-bind-token" data-index="${idx}" title="Bind to Theme Token / Variable"><span data-icon="Link" data-icon-size="12"></span></button>
+                <button class="btn-icon-xs btn-move-fill-up" data-index="${idx}" title="Move fill up" ${idx === 0 ? 'disabled style="opacity: 0.3;"' : ''}>▲</button>
+                <button class="btn-icon-xs btn-move-fill-down" data-index="${idx}" title="Move fill down" ${idx === fills.length - 1 ? 'disabled style="opacity: 0.3;"' : ''}>▼</button>
+                <button class="btn-icon-xs btn-duplicate-fill" data-index="${idx}" title="Duplicate fill"><span data-icon="Copy" data-icon-size="11"></span></button>
+                <select class="prop-select fill-type-select" data-index="${idx}" aria-label="Paint type" style="display: none;">
+                  <option value="solid" ${fillType === 'solid' ? 'selected' : ''}>Solid</option>
+                  <option value="linear-gradient" ${fillType === 'linear-gradient' || fillType === 'gradient' ? 'selected' : ''}>Linear</option>
+                  <option value="radial-gradient" ${fillType === 'radial-gradient' ? 'selected' : ''}>Radial</option>
+                  <option value="angular-gradient" ${fillType === 'angular-gradient' || fillType === 'conic-gradient' ? 'selected' : ''}>Angular</option>
+                  <option value="diamond-gradient" ${fillType === 'diamond-gradient' ? 'selected' : ''}>Diamond</option>
+                  <option value="image" ${fillType === 'image' ? 'selected' : ''}>Image</option>
+                  <option value="video" ${fillType === 'video' ? 'selected' : ''}>Video</option>
+                </select>
               </div>
-              ${f.tokenName ? `<span class="token-chip-badge" title="Bound to token">${this.escapeAttr(f.tokenName)}</span>` : ''}
-            ` : ''}
-            ${fillType === 'linear-gradient' ? `
-              <div class="props-row">
-                <label class="prop-field" title="Gradient start"><span class="prop-label">Start</span><input type="color" class="gradient-stop-input" data-index="${idx}" data-stop="0" value="${this.escapeAttr(firstStop)}"></label>
-                <label class="prop-field" title="Gradient end"><span class="prop-label">End</span><input type="color" class="gradient-stop-input" data-index="${idx}" data-stop="1" value="${this.escapeAttr(lastStop)}"></label>
-              </div>
-            ` : ''}
-            ${fillType === 'image' || fillType === 'video' ? `
-              <div class="props-row">
-                <button type="button" class="btn-inspector-action btn-upload-fill" data-index="${idx}">
-                  ${f.url ? 'Replace' : 'Upload'} ${fillType}
-                </button>
-                <input type="file" class="fill-media-input" data-index="${idx}" accept="${fillType}/*" style="display: none;">
-                <span class="fill-media-name" style="font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis;">${this.escapeAttr(f.name || (f.url ? `Attached ${fillType}` : 'No media selected'))}</span>
-              </div>
-              <div class="props-row">
-                <button type="button" class="btn-inspector-action btn-generate-fill" data-type="${fillType}"><span data-icon="Sparkles"></span> Generate with AI</button>
-                <span style="font-size: 10px; color: var(--text-muted);" title="Media generation is not connected in this build.">Provider not connected</span>
-              </div>
-            ` : ''}
+              ${f.tokenName ? `
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span class="token-chip-badge" title="Bound variable: ${this.escapeAttr(f.tokenName)}">${this.escapeAttr(f.tokenName)}</span>
+                  <button class="btn-icon-xs btn-detach-token" data-index="${idx}" title="Detach variable">✕</button>
+                </div>
+              ` : ''}
+              ${isGrad ? `
+                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 10px; color: var(--text-muted);">
+                  <span>Stops: ${f.stops?.length || 2}</span>
+                  <div style="display: flex; gap: 4px;">
+                    <button class="btn-inspector-action btn-reverse-fill-stops" data-index="${idx}" style="font-size: 10px; padding: 2px 6px; width: auto;">Reverse ⇄</button>
+                    <button class="btn-inspector-action btn-edit-gradient" data-index="${idx}" style="font-size: 10px; padding: 2px 6px; width: auto;">Edit Stops</button>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
           </div>`;
         }).join('') : '<div style="font-size: 11px; color: var(--text-dim);">No fill applied</div>'}
       </div>
 
-      <!-- 6. Strokes Section -->
+      <!-- 6. Strokes Section (Multi-stroke stack, Align, Per-side, Caps/Joins, Dashes) -->
       <div class="section-group">
         <div class="section-title">
-          <span>Stroke</span>
+          <span>Stroke (${strokes.length})</span>
           <button class="btn-icon-xs" id="btnAddStroke" title="Add Stroke">+</button>
         </div>
-        ${strokes.length > 0 ? strokes.map((st, idx) => `
-        <div class="props-row">
-          <button type="button" class="color-swatch-box paint-swatch stroke-swatch"
-            style="background: ${st.color || '#3b82f6'};" data-index="${idx}" title="Choose stroke color"
-            aria-label="Choose stroke color"></button>
-          <div class="prop-field">
-            <input type="text" class="prop-input stroke-hex-input" data-index="${idx}" value="${st.color || '#3b82f6'}">
+        ${strokes.length > 0 ? strokes.map((st, idx) => {
+          const isVisible = st.visible !== false;
+          const align = st.align || st.strokeAlign || 'center';
+          const cap = st.strokeCap || st.cap || 'butt';
+          const join = st.strokeJoin || st.join || 'miter';
+          const dash = Array.isArray(st.dashPattern || st.dash) ? (st.dashPattern || st.dash).join(', ') : '';
+          const weights = st.strokeWeights || {};
+          const isPerSide = Boolean(weights.top || weights.right || weights.bottom || weights.left);
+
+          return `
+          <div class="paint-row-card stroke-card" data-index="${idx}">
+            <!-- Row 1: Visibility, Swatch, Hex, Opacity, Delete -->
+            <div class="paint-primary-row">
+              <button type="button" class="btn-icon-xs btn-toggle-stroke-vis" data-index="${idx}" title="${isVisible ? 'Hide stroke' : 'Show stroke'}">
+                <span data-icon="${isVisible ? 'Eye' : 'EyeOff'}" data-icon-size="12"></span>
+              </button>
+              <button type="button" class="color-swatch-box paint-swatch stroke-swatch"
+                style="background: ${st.color || '#3b82f6'};" data-index="${idx}" title="Choose stroke color"
+                aria-label="Choose stroke color"></button>
+              <div class="paint-val-field">
+                <input type="text" class="paint-val-input stroke-hex-input" data-index="${idx}" value="${st.color || '#3b82f6'}" spellcheck="false">
+              </div>
+              <div class="paint-opacity-box" title="Stroke opacity">
+                <input type="number" class="prop-input stroke-opacity-input" data-index="${idx}" min="0" max="100" value="${Math.round((st.opacity !== undefined ? st.opacity : 1) * 100)}">
+              </div>
+              <button type="button" class="btn-icon-xs btn-remove-stroke" data-index="${idx}" title="Remove stroke" aria-label="Remove stroke">
+                <span data-icon="Minus" data-icon-size="12"></span>
+              </button>
+            </div>
+
+            <!-- Row 2: Alignment, Width, Settings -->
+            <div class="paint-primary-row" style="margin-top: 4px;">
+              <select class="prop-select stroke-align-select" data-index="${idx}" style="flex: 1; font-size: 11px; height: 26px;" title="Stroke Alignment">
+                <option value="inside" ${align === 'inside' ? 'selected' : ''}>Inside</option>
+                <option value="center" ${align === 'center' ? 'selected' : ''}>Center</option>
+                <option value="outside" ${align === 'outside' ? 'selected' : ''}>Outside</option>
+              </select>
+              <div class="prop-field" style="width: 70px; flex: 0 0 70px; height: 26px; padding: 2px 6px;" title="Stroke Width">
+                <span class="prop-label">W</span>
+                <input type="number" class="prop-input stroke-width-input" data-index="${idx}" min="1" max="100" value="${st.width || 1}">
+              </div>
+              <button type="button" class="btn-icon-xs btn-toggle-stroke-more" data-index="${idx}" title="Advanced Stroke Options">
+                <span data-icon="SlidersHorizontal" data-icon-size="12"></span>
+              </button>
+            </div>
+
+            <!-- Advanced Stroke Drawer (visible if custom caps/joins/dashes/weights are applied OR expanded) -->
+            <div class="paint-sub-drawer stroke-details-drawer" id="strokeDrawer_${idx}" style="${cap !== 'butt' || join !== 'miter' || dash || isPerSide ? 'display: flex;' : 'display: none;'} flex-direction: column; gap: 6px; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+              <!-- Sub-row 1: Cap & Join (ONLY 2 items, NEVER clips!) -->
+              <div style="display: flex; gap: 6px;">
+                <div class="prop-field" style="flex: 1; height: 26px; padding: 2px 6px;" title="Stroke Cap">
+                  <span class="prop-label">Cap</span>
+                  <select class="prop-select stroke-cap-select" data-index="${idx}" style="font-size: 11px; border: none; background: transparent; padding: 0;">
+                    <option value="butt" ${cap === 'butt' ? 'selected' : ''}>Butt</option>
+                    <option value="round" ${cap === 'round' ? 'selected' : ''}>Round</option>
+                    <option value="square" ${cap === 'square' ? 'selected' : ''}>Square</option>
+                  </select>
+                </div>
+                <div class="prop-field" style="flex: 1; height: 26px; padding: 2px 6px;" title="Stroke Join">
+                  <span class="prop-label">Join</span>
+                  <select class="prop-select stroke-join-select" data-index="${idx}" style="font-size: 11px; border: none; background: transparent; padding: 0;">
+                    <option value="miter" ${join === 'miter' ? 'selected' : ''}>Miter</option>
+                    <option value="round" ${join === 'round' ? 'selected' : ''}>Round</option>
+                    <option value="bevel" ${join === 'bevel' ? 'selected' : ''}>Bevel</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Sub-row 2: Dash & Custom Sides -->
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <div class="prop-field" style="flex: 1; height: 26px; padding: 2px 6px;" title="Dash pattern (e.g. 8, 4)">
+                  <span class="prop-label">Dash</span>
+                  <input type="text" class="prop-input stroke-dash-input" data-index="${idx}" placeholder="e.g. 8, 4" value="${dash}">
+                </div>
+                <button type="button" class="btn-inspector-action btn-toggle-stroke-sides" data-index="${idx}" style="font-size: 10px; padding: 2px 8px; width: auto; height: 26px;">
+                  ${isPerSide ? 'Custom Sides' : 'Per Side'}
+                </button>
+              </div>
+
+              <!-- Sub-row 3: Stroke Actions -->
+              <div style="display: flex; gap: 6px; align-items: center; justify-content: flex-end;">
+                <button class="btn-icon-xs btn-bind-stroke-token" data-index="${idx}" title="Bind Stroke to Variable"><span data-icon="Link" data-icon-size="12"></span></button>
+                <button class="btn-icon-xs btn-move-stroke-up" data-index="${idx}" title="Move stroke up" ${idx === 0 ? 'disabled style="opacity: 0.3;"' : ''}>▲</button>
+                <button class="btn-icon-xs btn-move-stroke-down" data-index="${idx}" title="Move stroke down" ${idx === strokes.length - 1 ? 'disabled style="opacity: 0.3;"' : ''}>▼</button>
+                <button class="btn-icon-xs btn-duplicate-stroke" data-index="${idx}" title="Duplicate stroke"><span data-icon="Copy" data-icon-size="11"></span></button>
+              </div>
+
+              <!-- Sub-row 3: Per-side weights -->
+              <div class="stroke-sides-row" id="strokeSides_${idx}" style="display: ${isPerSide ? 'flex' : 'none'}; gap: 4px; margin-top: 2px;">
+                <div class="prop-field" style="height: 24px; padding: 2px 4px;"><span class="prop-label">T</span><input type="number" class="prop-input stroke-weight-top" data-index="${idx}" min="0" value="${weights.top || 0}"></div>
+                <div class="prop-field" style="height: 24px; padding: 2px 4px;"><span class="prop-label">R</span><input type="number" class="prop-input stroke-weight-right" data-index="${idx}" min="0" value="${weights.right || 0}"></div>
+                <div class="prop-field" style="height: 24px; padding: 2px 4px;"><span class="prop-label">B</span><input type="number" class="prop-input stroke-weight-bottom" data-index="${idx}" min="0" value="${weights.bottom || 0}"></div>
+                <div class="prop-field" style="height: 24px; padding: 2px 4px;"><span class="prop-label">L</span><input type="number" class="prop-input stroke-weight-left" data-index="${idx}" min="0" value="${weights.left || 0}"></div>
+              </div>
+            </div>
           </div>
-          <div class="prop-field" style="max-width: 65px;">
-            <span class="prop-label">W</span>
-            <input type="text" class="prop-input stroke-width-input" data-index="${idx}" value="${st.width || 1}">
-          </div>
-          <button class="btn-icon-xs btn-remove-stroke" data-index="${idx}" title="Remove stroke" aria-label="Remove stroke"><span data-icon="X"></span></button>
-        </div>
-        `).join('') : '<div style="font-size: 11px; color: var(--text-dim);">No stroke applied</div>'}
+          `;
+        }).join('') : '<div style="font-size: 11px; color: var(--text-dim);">No stroke applied</div>'}
       </div>
 
       <!-- 7. Effects Section (Drop Shadow, Inner Shadow, Blur) -->
@@ -4044,7 +4222,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         <div style="background: var(--bg-surface); padding: 8px; border-radius: 4px; border: 1px solid var(--border-subtle); margin-bottom: 6px;">
           <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px;">
             <span>Drop Shadow</span>
-            <button class="btn-icon-xs btn-remove-effect" data-index="${idx}" title="Remove effect" aria-label="Remove effect"><span data-icon="X"></span></button>
+            <button class="btn-icon-xs btn-remove-effect" data-index="${idx}" title="Remove effect" aria-label="Remove effect"><span data-icon="Minus"></span></button>
           </div>
           <div class="props-row">
             <div class="prop-field"><span class="prop-label">X</span><input type="text" class="prop-input effect-x" data-index="${idx}" value="${sh.x || 0}"></div>
@@ -4126,17 +4304,22 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         </div>
         <div class="selection-colors-list">
           ${selectionColors.map((sc, index) => `
-          <div class="selection-color-item">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div class="color-swatch-box" style="background: ${sc.color}; width: 16px; height: 16px;"></div>
-              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">${sc.color}</span>
+          <div class="selection-color-item" data-color-index="${index}">
+            <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+              <div class="color-swatch-box paint-swatch" style="background: ${sc.color}; width: 18px; height: 18px; border-radius: 4px; cursor: pointer;"
+                title="Click to recolor" data-color-index="${index}"></div>
+              <span class="selection-color-hex" style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; cursor: pointer;" title="Click to recolor" data-color-index="${index}">${sc.color}</span>
               <span style="color: var(--text-dim); font-size: 10px;">×${sc.count}</span>
-              <span style="color: var(--text-muted); font-size: 9px;">${this.escapeAttr(sc.kinds.join(', '))}</span>
+              <span style="color: var(--text-muted); font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escapeAttr(sc.kinds.join(', '))}</span>
             </div>
-            <div style="display: flex; gap: 4px; align-items: center;">
-              ${sc.tokenName ? `<span class="token-chip-badge" title="${sc.unresolved ? 'Unresolved color resource' : 'Linked color resource'}">${sc.unresolved ? 'Unresolved: ' : ''}${this.escapeAttr(sc.tokenName)}</span>` : ''}
-              <button class="menu-dropdown-btn-sm btn-select-color-matches" data-color-index="${index}" title="Select matching objects">Select matches</button>
-              <button class="menu-dropdown-btn-sm btn-recolor-selection-color" data-color-index="${index}">${sc.tokenId || sc.tokenName || sc.unresolved ? 'Detach & Change' : 'Change'}</button>
+            <div style="display: flex; gap: 4px; align-items: center; flex-shrink: 0;">
+              ${sc.tokenName ? `<span class="token-chip-badge" title="${sc.unresolved ? 'Unresolved color resource' : 'Linked color resource'}">${this.escapeAttr(sc.tokenName)}</span>` : ''}
+              <button type="button" class="btn-icon-xs btn-select-color-matches" data-color-index="${index}" title="Select matching layers (${sc.count})">
+                <span data-icon="Target" data-icon-size="12"></span>
+              </button>
+              <button type="button" class="btn-icon-xs btn-recolor-selection-color" data-color-index="${index}" title="${sc.tokenId || sc.tokenName || sc.unresolved ? 'Detach & Change' : 'Change color'}">
+                <span data-icon="Palette" data-icon-size="12"></span>
+              </button>
             </div>
           </div>
           `).join('')}
@@ -4152,6 +4335,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         </div>
       </div>
     `;
+
+    mountLucideIcons(container);
 
     // --- Wire Event Handlers for Figma-Identical Design Controls ---
     // 1. Top Alignment Bar
@@ -4486,23 +4671,184 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         this.showToast(`AI ${button.dataset.type} generation needs an image/video provider connection. Upload a media file to use this fill.`, 'error');
       });
     });
-    document.querySelectorAll('.paint-swatch:not(.stroke-swatch)').forEach(swatch => {
-      swatch.addEventListener('click', (e) => {
-        const idx = Number(swatch.dataset.index || 0);
+
+    // Fills Event Listeners
+    document.querySelectorAll('.btn-toggle-fill-vis').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        const curFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+        if (curFills[idx]) {
+          curFills[idx].visible = curFills[idx].visible === false ? true : false;
+          this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Toggle Fill Visibility');
+          this.updateInspector();
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-toggle-fill-more').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = btn.dataset.index;
+        const drawer = document.getElementById(`fillDrawer_${idx}`);
+        if (drawer) {
+          const isHidden = drawer.style.display === 'none' || !drawer.style.display;
+          drawer.style.display = isHidden ? 'flex' : 'none';
+        }
+      });
+    });
+
+    document.querySelectorAll('.fill-opacity-input').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const idx = parseInt(inp.dataset.index, 10);
+        const val = Math.max(0, Math.min(100, parseFloat(e.target.value) || 100)) / 100;
+        const curFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+        if (curFills[idx]) {
+          curFills[idx].opacity = val;
+          this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Change Fill Opacity');
+        }
+      });
+    });
+
+    document.querySelectorAll('.fill-blend-select').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = parseInt(sel.dataset.index, 10);
+        const curFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+        if (curFills[idx]) {
+          curFills[idx].blendMode = e.target.value;
+          this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Change Fill Blend Mode');
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-move-fill-up').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        if (idx <= 0) return;
+        const curFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+        const temp = curFills[idx];
+        curFills[idx] = curFills[idx - 1];
+        curFills[idx - 1] = temp;
+        this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Reorder Fills');
+        this.updateInspector();
+      });
+    });
+
+    document.querySelectorAll('.btn-move-fill-down').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        const curFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+        if (idx >= curFills.length - 1) return;
+        const temp = curFills[idx];
+        curFills[idx] = curFills[idx + 1];
+        curFills[idx + 1] = temp;
+        this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Reorder Fills');
+        this.updateInspector();
+      });
+    });
+
+    document.querySelectorAll('.btn-duplicate-fill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        const curFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+        if (curFills[idx]) {
+          const copy = JSON.parse(JSON.stringify(curFills[idx]));
+          curFills.splice(idx + 1, 0, copy);
+          this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Duplicate Fill');
+          this.updateInspector();
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-detach-token').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        const curFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+        if (curFills[idx]) {
+          delete curFills[idx].tokenId;
+          delete curFills[idx].tokenName;
+          this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Detach Fill Token');
+          this.updateInspector();
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-reverse-fill-stops').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        const curFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+        const f = curFills[idx];
+        if (f && f.stops && f.stops.length > 1) {
+          f.stops.reverse();
+          f.stops.forEach(s => { s.offset = Math.round((1 - s.offset) * 100) / 100; });
+          f.stops.sort((a, b) => a.offset - b.offset);
+          this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Reverse Gradient Stops');
+          this.updateInspector();
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-edit-gradient').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.index);
         const fill = node.style?.fills?.[idx];
-        if (!fill || fill.type === 'image' || fill.type === 'video' || fill.type === 'gradient' || fill.type === 'linear-gradient') return;
-        this.openNodeColorPicker(e.currentTarget, fill.color || '#334155', {
+        if (!fill) return;
+        const swatch = document.getElementById(`swatchFill_${idx}`) || btn;
+        this.openNodeColorPicker(swatch, fill.stops?.[0]?.color || '#3b82f6', {
           node,
-          description: 'Change Fill Color',
-          preview: color => { node.style.fills[idx].color = color; },
-          commit: color => {
+          mode: 'gradient',
+          gradient: fill,
+          description: 'Edit Gradient Fill',
+          preview: () => {},
+          commit: () => ({ style: { fills: node.style?.fills } }),
+          onGradientChange: nextGradient => {
             const nextFills = JSON.parse(JSON.stringify(node.style?.fills || []));
-            if (nextFills[idx]) nextFills[idx].color = color;
-            return { style: { fills: nextFills } };
+            if (nextFills[idx]) {
+              nextFills[idx] = { ...nextFills[idx], ...nextGradient };
+              this.engine.updateNode(node.id, { style: { fills: nextFills } }, 'Edit Gradient Fill');
+            }
           }
         });
       });
     });
+
+    document.querySelectorAll('.paint-swatch:not(.stroke-swatch)').forEach(swatch => {
+      swatch.addEventListener('click', (e) => {
+        const idx = Number(swatch.dataset.index || 0);
+        const fill = node.style?.fills?.[idx];
+        if (!fill || fill.type === 'image' || fill.type === 'video') return;
+
+        const isGrad = ['linear-gradient', 'gradient', 'radial-gradient', 'angular-gradient', 'conic-gradient', 'diamond-gradient'].includes(fill.type);
+        if (isGrad) {
+          this.openNodeColorPicker(e.currentTarget, fill.stops?.[0]?.color || fill.color || '#3b82f6', {
+            node,
+            mode: 'gradient',
+            gradient: fill,
+            description: 'Edit Gradient Fill',
+            preview: () => {},
+            commit: () => ({ style: { fills: node.style?.fills } }),
+            onGradientChange: nextGradient => {
+              const nextFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+              if (nextFills[idx]) {
+                nextFills[idx] = { ...nextFills[idx], ...nextGradient };
+                this.engine.updateNode(node.id, { style: { fills: nextFills } }, 'Edit Gradient Fill');
+              }
+            }
+          });
+        } else {
+          this.openNodeColorPicker(e.currentTarget, fill.color || '#334155', {
+            node,
+            mode: 'solid',
+            description: 'Change Fill Color',
+            preview: color => { node.style.fills[idx].color = color; },
+            commit: color => {
+              const nextFills = JSON.parse(JSON.stringify(node.style?.fills || []));
+              if (nextFills[idx]) nextFills[idx].color = color;
+              return { style: { fills: nextFills } };
+            }
+          });
+        }
+      });
+    });
+
     document.querySelectorAll('.btn-remove-fill').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.index, 10);
@@ -4511,6 +4857,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         this.engine.updateNode(node.id, { style: { fills: curFills } }, 'Remove Fill');
       });
     });
+
     document.querySelectorAll('.btn-bind-token').forEach(btn => {
       btn.addEventListener('click', async () => {
         const idx = parseInt(btn.dataset.index, 10);
@@ -4540,12 +4887,25 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       });
     });
 
-    // 6. Strokes
+    // 6. Strokes Event Listeners
     document.getElementById('btnAddStroke')?.addEventListener('click', () => {
       const curStrokes = JSON.parse(JSON.stringify(s.strokes || []));
       curStrokes.push({ color: '#38bdf8', width: 1, align: 'inside' });
       this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Add Stroke');
     });
+
+    document.querySelectorAll('.btn-toggle-stroke-vis').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        const curStrokes = JSON.parse(JSON.stringify(node.style?.strokes || []));
+        if (curStrokes[idx]) {
+          curStrokes[idx].visible = curStrokes[idx].visible === false ? true : false;
+          this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Toggle Stroke Visibility');
+          this.updateInspector();
+        }
+      });
+    });
+
     document.querySelectorAll('.stroke-hex-input').forEach(inp => {
       inp.addEventListener('change', (e) => {
         const idx = parseInt(inp.dataset.index, 10);
@@ -4556,6 +4916,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         }
       });
     });
+
     document.querySelectorAll('.stroke-swatch').forEach(swatch => {
       swatch.addEventListener('click', (e) => {
         const idx = Number(swatch.dataset.index);
@@ -4573,6 +4934,30 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         });
       });
     });
+
+    document.querySelectorAll('.stroke-opacity-input').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const idx = parseInt(inp.dataset.index, 10);
+        const val = Math.max(0, Math.min(100, parseFloat(e.target.value) || 100)) / 100;
+        const curStrokes = JSON.parse(JSON.stringify(node.style?.strokes || []));
+        if (curStrokes[idx]) {
+          curStrokes[idx].opacity = val;
+          this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Change Stroke Opacity');
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-toggle-stroke-more').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = btn.dataset.index;
+        const drawer = document.getElementById(`strokeDrawer_${idx}`);
+        if (drawer) {
+          const isHidden = drawer.style.display === 'none' || !drawer.style.display;
+          drawer.style.display = isHidden ? 'flex' : 'none';
+        }
+      });
+    });
+
     document.querySelectorAll('.stroke-width-input').forEach(inp => {
       inp.addEventListener('change', (e) => {
         const idx = parseInt(inp.dataset.index, 10);
@@ -4583,6 +4968,157 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         }
       });
     });
+
+    document.querySelectorAll('.stroke-align-select').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = parseInt(sel.dataset.index, 10);
+        const curStrokes = JSON.parse(JSON.stringify(node.style?.strokes || []));
+        if (curStrokes[idx]) {
+          curStrokes[idx].align = e.target.value;
+          curStrokes[idx].strokeAlign = e.target.value;
+          this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Change Stroke Alignment');
+        }
+      });
+    });
+
+    document.querySelectorAll('.stroke-cap-select').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = parseInt(sel.dataset.index, 10);
+        const curStrokes = JSON.parse(JSON.stringify(node.style?.strokes || []));
+        if (curStrokes[idx]) {
+          curStrokes[idx].strokeCap = e.target.value;
+          this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Change Stroke Cap');
+        }
+      });
+    });
+
+    document.querySelectorAll('.stroke-join-select').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = parseInt(sel.dataset.index, 10);
+        const curStrokes = JSON.parse(JSON.stringify(node.style?.strokes || []));
+        if (curStrokes[idx]) {
+          curStrokes[idx].strokeJoin = e.target.value;
+          this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Change Stroke Join');
+        }
+      });
+    });
+
+    document.querySelectorAll('.stroke-dash-input').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const idx = parseInt(inp.dataset.index, 10);
+        const curStrokes = JSON.parse(JSON.stringify(node.style?.strokes || []));
+        if (curStrokes[idx]) {
+          const raw = String(e.target.value || '').trim();
+          if (!raw) {
+            curStrokes[idx].dashPattern = [];
+          } else {
+            const parts = raw.split(/[\s,]+/).map(Number).filter(n => !isNaN(n) && n > 0);
+            curStrokes[idx].dashPattern = parts.length > 0 ? parts : [];
+          }
+          this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Change Stroke Dash');
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-toggle-stroke-sides').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = btn.dataset.index;
+        const row = document.getElementById(`strokeSides_${idx}`);
+        if (row) {
+          row.style.display = row.style.display === 'none' ? 'flex' : 'none';
+        }
+      });
+    });
+
+    const updateStrokeWeight = (idx, side, val) => {
+      const curStrokes = JSON.parse(JSON.stringify(node.style?.strokes || []));
+      if (curStrokes[idx]) {
+        if (!curStrokes[idx].strokeWeights) curStrokes[idx].strokeWeights = {};
+        curStrokes[idx].strokeWeights[side] = Math.max(0, parseFloat(val) || 0);
+        this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, `Change ${side} Stroke Weight`);
+      }
+    };
+    document.querySelectorAll('.stroke-weight-top').forEach(inp => {
+      inp.addEventListener('change', (e) => updateStrokeWeight(parseInt(inp.dataset.index, 10), 'top', e.target.value));
+    });
+    document.querySelectorAll('.stroke-weight-right').forEach(inp => {
+      inp.addEventListener('change', (e) => updateStrokeWeight(parseInt(inp.dataset.index, 10), 'right', e.target.value));
+    });
+    document.querySelectorAll('.stroke-weight-bottom').forEach(inp => {
+      inp.addEventListener('change', (e) => updateStrokeWeight(parseInt(inp.dataset.index, 10), 'bottom', e.target.value));
+    });
+    document.querySelectorAll('.stroke-weight-left').forEach(inp => {
+      inp.addEventListener('change', (e) => updateStrokeWeight(parseInt(inp.dataset.index, 10), 'left', e.target.value));
+    });
+
+    document.querySelectorAll('.btn-move-stroke-up').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        if (idx <= 0) return;
+        const curStrokes = JSON.parse(JSON.stringify(node.style?.strokes || []));
+        const temp = curStrokes[idx];
+        curStrokes[idx] = curStrokes[idx - 1];
+        curStrokes[idx - 1] = temp;
+        this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Reorder Strokes');
+        this.updateInspector();
+      });
+    });
+
+    document.querySelectorAll('.btn-move-stroke-down').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        const curStrokes = JSON.parse(JSON.stringify(node.style?.strokes || []));
+        if (idx >= curStrokes.length - 1) return;
+        const temp = curStrokes[idx];
+        curStrokes[idx] = curStrokes[idx + 1];
+        curStrokes[idx + 1] = temp;
+        this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Reorder Strokes');
+        this.updateInspector();
+      });
+    });
+
+    document.querySelectorAll('.btn-duplicate-stroke').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        const curStrokes = JSON.parse(JSON.stringify(node.style?.strokes || []));
+        if (curStrokes[idx]) {
+          const copy = JSON.parse(JSON.stringify(curStrokes[idx]));
+          curStrokes.splice(idx + 1, 0, copy);
+          this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Duplicate Stroke');
+          this.updateInspector();
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-bind-stroke-token').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        const colorTokens = this.linter.getAllTokens().filter(t => t.type === 'color');
+        const chosen = await this.showPromptModal({
+          title: 'Bind Stroke to Design Token',
+          subtitle: 'Select from available design tokens or type token name:',
+          defaultValue: colorTokens[0]?.name || '',
+          presets: colorTokens.map(t => t.name),
+          icon: 'Box',
+          confirmText: 'Bind Token'
+        });
+        if (chosen) {
+          const tok = colorTokens.find(t => t.name.toLowerCase() === chosen.toLowerCase() || chosen.includes(t.name)) || 
+                      colorTokens[parseInt(chosen, 10) - 1];
+          if (tok) {
+            const curStrokes = JSON.parse(JSON.stringify(node.style?.strokes || []));
+            if (curStrokes[idx]) {
+              curStrokes[idx].color = tok.value;
+              curStrokes[idx].tokenId = tok.id;
+              curStrokes[idx].tokenName = tok.name;
+              this.engine.updateNode(node.id, { style: { strokes: curStrokes } }, 'Bind Stroke to Token');
+              this.showToast(`Bound stroke to "${tok.name}"`, 'success');
+            }
+          }
+        }
+      });
+    });
+
     document.querySelectorAll('.btn-remove-stroke').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.index, 10);
@@ -4686,6 +5222,14 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         } catch (error) {
           this.showToast(`Could not recolor selection: ${error.message}`, 'error');
         }
+      });
+    });
+
+    document.querySelectorAll('.selection-color-item .paint-swatch, .selection-color-item .selection-color-hex').forEach(el => {
+      el.addEventListener('click', () => {
+        const idx = el.dataset.colorIndex;
+        const btn = document.querySelector(`.btn-recolor-selection-color[data-color-index="${idx}"]`);
+        if (btn) btn.click();
       });
     });
 
@@ -6893,6 +7437,8 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     if (dsWorkspace) dsWorkspace.style.display = 'flex';
     if (canvasWrapper) canvasWrapper.style.display = 'none';
     if (rightSidebar) rightSidebar.style.display = 'none';
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === 'design-system'));
+    document.querySelectorAll('.right-tab-btn').forEach(t => t.classList.toggle('active', t.dataset.mode === 'design-system'));
     this.dsUi.renderView(this.dsUi.activeView || 'overview');
   }
 
@@ -7319,6 +7865,23 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
           e.preventDefault();
           this.openFigmaAiPromptBar();
         }
+      } else if (e.key === 'Escape') {
+        const cmdModal = document.getElementById('commandPaletteModal');
+        if (cmdModal && cmdModal.style.display !== 'none') {
+          cmdModal.style.display = 'none';
+        }
+        const aiBar = document.getElementById('figmaAiFloatingBar');
+        if (aiBar && aiBar.classList.contains('active')) {
+          aiBar.classList.remove('active');
+        }
+        const exportModal = document.getElementById('modalExport');
+        if (exportModal && exportModal.style.display !== 'none') {
+          exportModal.style.display = 'none';
+        }
+        const promptModal = document.getElementById('figmaPromptModal');
+        if (promptModal && promptModal.style.display !== 'none') {
+          promptModal.style.display = 'none';
+        }
       }
     });
   }
@@ -7534,27 +8097,25 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   }
 
   setAxiomMode(mode) {
-    const topMode = mode === 'system' ? 'design-system' : mode;
+    const topMode = (mode === 'system' || mode === 'design-system') ? 'design-system' : mode;
     document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === topMode));
+    document.querySelectorAll('.right-tab-btn').forEach(t => t.classList.toggle('active', t.dataset.mode === topMode || (topMode === 'design' && t.dataset.mode === 'properties')));
     document.querySelectorAll('.mode-rail-btn').forEach(button => {
       button.classList.toggle('active', button.dataset.mode === mode);
     });
 
     if (mode === 'design') {
       this.switchToDesignMode();
-      const tabBtn = document.querySelector('.right-tab-btn[data-mode="design"]') || document.querySelector('.right-tab-btn[data-mode="properties"]');
-      tabBtn?.click();
+      this.rightSidebarModeSwitcher?.('design');
     } else if (mode === 'prototype') {
       this.switchToDesignMode();
-      const tabBtn = document.querySelector('.right-tab-btn[data-mode="prototype"]');
-      tabBtn?.click();
-    } else if (mode === 'system') {
+      this.rightSidebarModeSwitcher?.('prototype');
+    } else if (mode === 'system' || mode === 'design-system') {
       this.switchToDesignSystemMode();
     } else if (mode === 'dev') {
       this.switchToDesignMode();
       this.toggleDevMode(true);
-      const tabBtn = document.querySelector('.right-tab-btn[data-mode="inspect"]');
-      tabBtn?.click();
+      this.rightSidebarModeSwitcher?.('inspect');
     } else if (mode === 'comments') {
       this.switchToDesignMode();
       this.setTool('comment');

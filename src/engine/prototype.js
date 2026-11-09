@@ -299,6 +299,28 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     }
     if (node.type === 'frame') {
       element.style.overflow = node.clipContent === false ? 'visible' : 'hidden';
+      if (node.overflowDirection) {
+        if (node.overflowDirection === 'horizontal') {
+          element.style.overflowX = 'auto';
+          element.style.overflowY = 'hidden';
+        } else if (node.overflowDirection === 'vertical') {
+          element.style.overflowY = 'auto';
+          element.style.overflowX = 'hidden';
+        } else if (node.overflowDirection === 'both') {
+          element.style.overflow = 'auto';
+        }
+      }
+    }
+
+    // Fixed & Sticky Elements (Chapter 9: Scrolling, Fixed Elements, and Sticky Behavior)
+    if (node.fixedPosition === true || node.constraints?.vertical === 'fixed') {
+      element.style.position = 'sticky';
+      element.style.top = (bounds && parentBounds ? bounds.y - parentBounds.y : transform.y || 0) + 'px';
+      element.style.zIndex = '20';
+    } else if (node.sticky === true) {
+      element.style.position = 'sticky';
+      element.style.top = '0px';
+      element.style.zIndex = '15';
     }
 
     parentElement.appendChild(element);
@@ -312,9 +334,9 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
       element.dataset.interactive = 'true';
       element.style.cursor = 'pointer';
 
-      // Setup gesture drag tracking if on-drag trigger present
+      // Setup gesture drag tracking if on-drag trigger present with axis constraints
       let dragStartX = 0, dragStartY = 0, isDragging = false;
-      const dragInteraction = interactions.find(i => i.trigger === 'drag');
+      const dragInteraction = interactions.find(i => i.trigger === 'drag' || i.trigger === 'on_drag');
       if (dragInteraction) {
         element.addEventListener('pointerdown', (e) => {
           dragStartX = e.clientX;
@@ -323,8 +345,18 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
         });
         window.addEventListener('pointermove', (e) => {
           if (!isDragging) return;
-          const dist = Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY);
-          if (dist > 8) {
+          const dx = e.clientX - dragStartX;
+          const dy = e.clientY - dragStartY;
+          const axis = dragInteraction.dragAxis || dragInteraction.axis || 'both';
+          let shouldFire = false;
+          if (axis === 'horizontal') {
+            shouldFire = Math.abs(dx) > 8 && Math.abs(dx) >= Math.abs(dy);
+          } else if (axis === 'vertical') {
+            shouldFire = Math.abs(dy) > 8 && Math.abs(dy) >= Math.abs(dx);
+          } else {
+            shouldFire = Math.hypot(dx, dy) > 8;
+          }
+          if (shouldFire) {
             isDragging = false;
             runInteraction(dragInteraction, node);
           }
@@ -340,17 +372,71 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
             e.stopPropagation();
             runInteraction(interaction, node);
           });
-        } else if (trigger === 'hover' || trigger === 'enter') {
+        } else if (trigger === 'while_hovering' || trigger === 'while-hovering') {
+          // Chapter 3 & 12: While hovering with auto-revert on leave
+          let prevHoverStyle = null;
+          element.addEventListener('pointerenter', (e) => {
+            e.stopPropagation();
+            prevHoverStyle = {
+              background: element.style.background,
+              border: element.style.border,
+              boxShadow: element.style.boxShadow,
+              transform: element.style.transform,
+              opacity: element.style.opacity
+            };
+            runInteraction(interaction, node);
+          });
+          element.addEventListener('pointerleave', (e) => {
+            e.stopPropagation();
+            if (prevHoverStyle) {
+              element.style.background = prevHoverStyle.background;
+              element.style.border = prevHoverStyle.border;
+              element.style.boxShadow = prevHoverStyle.boxShadow;
+              element.style.transform = prevHoverStyle.transform;
+              element.style.opacity = prevHoverStyle.opacity;
+              prevHoverStyle = null;
+            }
+            if (interaction.revertAction) {
+              runInteraction(interaction.revertAction, node);
+            }
+          });
+        } else if (trigger === 'while_pressing' || trigger === 'while-pressing') {
+          // Chapter 3: While pressing with auto-revert on release
+          let prevPressStyle = null;
+          const handlePress = (e) => {
+            e.stopPropagation();
+            prevPressStyle = {
+              background: element.style.background,
+              boxShadow: element.style.boxShadow,
+              transform: element.style.transform
+            };
+            runInteraction(interaction, node);
+          };
+          const handleRelease = (e) => {
+            if (prevPressStyle) {
+              element.style.background = prevPressStyle.background;
+              element.style.boxShadow = prevPressStyle.boxShadow;
+              element.style.transform = prevPressStyle.transform;
+              prevPressStyle = null;
+            }
+            if (interaction.revertAction) {
+              runInteraction(interaction.revertAction, node);
+            }
+          };
+          element.addEventListener('pointerdown', handlePress);
+          element.addEventListener('pointerup', handleRelease);
+          element.addEventListener('pointerleave', handleRelease);
+        } else if (trigger === 'hover' || trigger === 'enter' || trigger === 'mouse_enter') {
           element.addEventListener('pointerenter', (e) => {
             e.stopPropagation();
             runInteraction(interaction, node);
           });
-        } else if (trigger === 'leave') {
+        } else if (trigger === 'leave' || trigger === 'mouse_leave') {
           element.addEventListener('pointerleave', (e) => {
             e.stopPropagation();
             runInteraction(interaction, node);
           });
-        } else if (trigger === 'press' || trigger === 'down') {
+        } else if (trigger === 'press' || trigger === 'down' || trigger === 'on_press' || trigger === 'touch_down') {
           element.addEventListener('pointerdown', (e) => {
             e.stopPropagation();
             runInteraction(interaction, node);
@@ -455,12 +541,25 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     frame.style.marginBottom = Math.max(0, frame.offsetHeight * (scale - 1)) + 'px';
   }
 
-  function renderOverlay(frameId, interaction = {}) {
+  function renderOverlay(frameId, interaction = {}, sourceNode = null) {
     const frame = getNode(frameId);
     if (!frame) return;
     const pos = interaction.overlayPosition || interaction.position || 'center';
+    const backdropMode = interaction.overlayBackdrop || interaction.backdrop || 'dim';
     const backdrop = document.createElement('div');
     backdrop.className = 'prototype-overlay-backdrop';
+
+    // Chapter 8: Overlay Backgrounds (none, dim, blur)
+    if (backdropMode === 'blur') {
+      backdrop.style.background = 'rgba(15, 23, 42, 0.45)';
+      backdrop.style.backdropFilter = 'blur(10px)';
+      backdrop.style.webkitBackdropFilter = 'blur(10px)';
+    } else if (backdropMode === 'none') {
+      backdrop.style.background = 'transparent';
+    } else {
+      backdrop.style.background = 'rgba(0, 0, 0, 0.55)';
+    }
+
     if (pos === 'top-center' || pos === 'top-left' || pos === 'top-right') backdrop.style.alignItems = 'flex-start';
     if (pos === 'bottom-center' || pos === 'bottom-left' || pos === 'bottom-right') backdrop.style.alignItems = 'flex-end';
     if (pos === 'top-left' || pos === 'bottom-left') backdrop.style.justifyContent = 'flex-start';
@@ -479,11 +578,27 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     overlayFrame.style.background = fillStyle(frame);
     overlayFrame.style.overflow = frame.clipContent === false ? 'visible' : 'hidden';
     overlayFrame.addEventListener('click', event => event.stopPropagation());
+
+    // Chapter 8: Anchored overlay positioning relative to trigger node
+    if ((pos === 'anchored' || pos === 'relative') && sourceNode) {
+      const sourceEl = screen.querySelector('[data-node-id="' + sourceNode.id + '"]');
+      if (sourceEl) {
+        const sRect = sourceEl.getBoundingClientRect();
+        const scrRect = screen.getBoundingClientRect();
+        backdrop.style.display = 'block';
+        overlayFrame.style.position = 'absolute';
+        const topPos = Math.max(8, sRect.bottom - scrRect.top + 4);
+        const leftPos = Math.max(8, Math.min(sRect.left - scrRect.left, screen.clientWidth - (frame.transform.width || 360) - 16));
+        overlayFrame.style.top = topPos + 'px';
+        overlayFrame.style.left = leftPos + 'px';
+      }
+    }
+
     for (const childId of frame.childIds || []) mountNode(page.nodes[childId], overlayFrame, frame.id);
     backdrop.appendChild(overlayFrame);
     screen.appendChild(backdrop);
     overlays.push(backdrop);
-    logEvent('overlay', frame.name, 'Overlay opened at ' + pos);
+    logEvent('overlay', frame.name, 'Overlay opened (' + pos + ', ' + backdropMode + ')');
   }
 
   function closeOverlay() {
@@ -493,6 +608,16 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
   }
 
   function runInteraction(interaction, sourceNode = null) {
+    if (!interaction) return;
+
+    // Chapter 4: Action Chaining (e.g. set variable -> navigate -> open overlay)
+    if (Array.isArray(interaction.actions) && interaction.actions.length > 0) {
+      for (const chainedAction of interaction.actions) {
+        runInteraction(chainedAction, sourceNode);
+      }
+      return;
+    }
+
     // Condition Guard Evaluation
     if (interaction.condition || interaction.guard) {
       const cond = interaction.condition || interaction.guard;
@@ -514,11 +639,11 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     } else if (action === 'overlay' || action === 'open_overlay') {
       const target = interaction.targetId || interaction.overlayFrameId || interaction.destinationFrameId;
       if (!getNode(target)) return;
-      renderOverlay(target, interaction);
+      renderOverlay(target, interaction, sourceNode);
     } else if (action === 'swap_overlay') {
       closeOverlay();
       const target = interaction.targetId || interaction.overlayFrameId;
-      if (getNode(target)) renderOverlay(target, interaction);
+      if (getNode(target)) renderOverlay(target, interaction, sourceNode);
     } else if (action === 'close_overlay' || action === 'close') {
       closeOverlay();
     } else if (action === 'back') {
@@ -569,8 +694,25 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
       } else if (!passed && interaction.elseAction) {
         runInteraction(interaction.elseAction, sourceNode);
       }
-    } else if (action === 'change_to' || action === 'change_variant') {
-      logEvent('change_to', sourceNode?.name, 'Variant swapped to ' + (interaction.targetVariantId || interaction.variant));
+    } else if (action === 'change_to' || action === 'change_variant' || action === 'set_variant') {
+      // Chapter 4 & 12: Interactive component variant swap
+      const targetVariantId = interaction.targetVariantId || interaction.variantId || interaction.variant;
+      const targetVariant = getNode(targetVariantId);
+      const targetEl = sourceNode ? screen.querySelector('[data-node-id="' + sourceNode.id + '"]') : null;
+      if (targetEl && targetVariant) {
+        targetEl.style.background = fillStyle(targetVariant);
+        if (typeof targetVariant.style?.cornerRadius === 'number') {
+          targetEl.style.borderRadius = targetVariant.style.cornerRadius + 'px';
+        }
+        const stroke = (targetVariant.style?.strokes || []).find(item => item.visible !== false);
+        if (stroke) {
+          targetEl.style.border = (stroke.width || 1) + 'px ' + (stroke.style === 'dashed' ? 'dashed' : 'solid') + ' ' + cssColor(stroke.color, '#3b82f6');
+        }
+        if (targetVariant.type === 'text' && targetVariant.text) {
+          targetEl.textContent = interpolateText(escapeText(targetVariant.text.content));
+        }
+      }
+      logEvent('change_to', sourceNode?.name, 'Variant swapped to ' + (targetVariantId || 'variant'));
     }
   }
 
@@ -716,7 +858,7 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
     });
   });
 
-  // Global Keyboard Shortcuts for presentation player
+  // Global Keyboard Shortcuts for presentation player (Chapter 10: Presentation & Player)
   window.addEventListener('keydown', (e) => {
     // Avoid capturing inputs if active
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -727,10 +869,15 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
       btnToggleHints?.click();
     } else if (e.key === 'd' || e.key === 'D') {
       btnToggleDebugger?.click();
+    } else if (e.key === 'z' || e.key === 'Z') {
+      activeScaleMode = activeScaleMode === 'fit' ? '100' : 'fit';
+      if (scaleSelect) scaleSelect.value = activeScaleMode;
+      const cur = screen.querySelector('.prototype-frame');
+      if (cur) fitFrame(cur);
     } else if (e.key === 'Escape') {
       if (overlays.length > 0) closeOverlay();
       else if (debuggerDrawer?.style.display === 'flex') btnCloseDebugger?.click();
-    } else if (e.key === 'ArrowLeft') {
+    } else if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
       btnPrev?.click();
     } else if (e.key === 'ArrowRight') {
       btnNext?.click();
@@ -743,7 +890,8 @@ const PROTOTYPE_RUNTIME_SCRIPT = String.raw`
         const n = getNode(nodeId);
         if (!n) return;
         for (const inter of n.interactions || []) {
-          if (inter.trigger === 'key' && (!inter.key || inter.key.toLowerCase() === e.key.toLowerCase())) {
+          const isKeyTrigger = inter.trigger === 'key' || inter.trigger === 'key_press' || inter.trigger === 'gamepad';
+          if (isKeyTrigger && (!inter.key || inter.key.toLowerCase() === e.key.toLowerCase())) {
             runInteraction(inter, n);
           }
         }
@@ -1082,6 +1230,35 @@ export class PrototypeEngine {
     return flows;
   }
 
+  getFlowStartingPoints() {
+    return this.getFlows();
+  }
+
+  addFlowStartingPoint(frameId, name = 'Flow', description = '') {
+    const frame = this.findNode(frameId);
+    if (!frame) return null;
+    frame.isFlowStart = true;
+    frame.flowName = name;
+    frame.flowDescription = description;
+    this.flows = this.getFlows();
+    return {
+      id: `flow_${frame.id}`,
+      name,
+      startingFrameId: frame.id,
+      description
+    };
+  }
+
+  removeFlowStartingPoint(frameId) {
+    const frame = this.findNode(frameId);
+    if (!frame) return false;
+    delete frame.isFlowStart;
+    delete frame.flowName;
+    delete frame.flowDescription;
+    this.flows = this.getFlows();
+    return true;
+  }
+
   setFlowStartingPoints(flows) {
     this.flows = Array.isArray(flows) ? [...flows] : [];
     return this.flows;
@@ -1203,18 +1380,18 @@ export class PrototypeEngine {
       const tr = (i.trigger || 'click').toLowerCase();
       const ev = (eventType || 'click').toLowerCase();
 
-      // Pointer triggers
+      // Pointer triggers (Chapter 3: Triggers)
       if ((ev === 'click' || ev === 'tap') && (tr === 'click' || tr === 'tap')) return true;
       if (ev === 'double_tap' && (tr === 'double_tap' || tr === 'doubleclick')) return true;
       if (ev === 'long_press' && tr === 'long_press') return true;
-      if (ev === 'hover' && (tr === 'hover' || tr === 'enter' || tr === 'hover_enter' || tr === 'mouse_enter')) return true;
+      if ((ev === 'hover' || ev === 'while_hovering') && (tr === 'hover' || tr === 'while_hovering' || tr === 'while-hovering' || tr === 'enter' || tr === 'hover_enter' || tr === 'mouse_enter')) return true;
       if (ev === 'leave' && (tr === 'leave' || tr === 'hover_leave' || tr === 'mouse_leave')) return true;
-      if (ev === 'press' && (tr === 'press' || tr === 'press_down' || tr === 'mouse_down')) return true;
-      if (ev === 'drag' && (tr === 'drag' || tr === 'drag_start' || tr === 'drag_move')) return true;
+      if ((ev === 'press' || ev === 'while_pressing' || ev === 'on_press' || ev === 'touch_down') && (tr === 'press' || tr === 'while_pressing' || tr === 'while-pressing' || tr === 'on_press' || tr === 'touch_down' || tr === 'press_down' || tr === 'mouse_down')) return true;
+      if (ev === 'drag' && (tr === 'drag' || tr === 'drag_start' || tr === 'drag_move' || tr === 'on_drag')) return true;
       if (ev.startsWith('swipe_') && tr === ev) return true;
 
       // Keyboard triggers
-      if (ev === 'key' && (tr === 'key' || tr === 'keyboard')) {
+      if ((ev === 'key' || ev === 'key_press' || ev === 'gamepad') && (tr === 'key' || tr === 'keyboard' || tr === 'key_press' || tr === 'gamepad')) {
         if (!i.key) return true;
         return String(i.key).toLowerCase() === String(eventData.key || '').toLowerCase();
       }
@@ -1300,6 +1477,22 @@ export class PrototypeEngine {
   // =========================================================================
 
   executeAction(interaction, sourceNodeId = null, eventData = {}) {
+    if (!interaction) return { success: true };
+
+    // Chapter 4: Action Chaining (e.g. set variable -> navigate -> open overlay)
+    if (Array.isArray(interaction.actions) && interaction.actions.length > 0) {
+      const results = [];
+      for (const chained of interaction.actions) {
+        results.push(this.executeAction(chained, sourceNodeId, eventData));
+      }
+      return {
+        success: true,
+        action: 'chained_actions',
+        actions: results,
+        lastResult: results[results.length - 1]
+      };
+    }
+
     const action = interaction.action || 'navigate';
 
     // 1. Navigation
@@ -1355,19 +1548,27 @@ export class PrototypeEngine {
       }
     }
 
-    // 4. Overlays Stack
+    // 4. Overlays Stack (Chapter 8: Overlays in Depth - centered, anchored, blur, dim)
     if (action === 'overlay' || action === 'open_overlay') {
       const targetId = interaction.overlayFrameId || interaction.targetId;
       const targetFrame = this.findNode(targetId);
       if (!targetFrame) {
         return { success: false, error: `Overlay target ${targetId} not found` };
       }
-      const opts = interaction.overlaySettings || interaction.overlayOptions || {
-        position: 'centered',
-        closeOnClickOutside: true,
-        closeOnEscape: true,
-        dimBackground: true
+      const opts = interaction.overlaySettings || interaction.overlayOptions || interaction.options || {
+        position: interaction.overlayPosition || interaction.position || 'centered',
+        closeOnClickOutside: interaction.closeOnClickOutside !== false,
+        closeOnEscape: interaction.closeOnEscape !== false,
+        backdrop: interaction.overlayBackdrop || interaction.backdrop || 'dim',
+        dimBackground: interaction.dimBackground !== false
       };
+      if (opts.position === 'anchored' && sourceNodeId) {
+        const srcNode = this.findNode(sourceNodeId);
+        if (srcNode) {
+          opts.anchorNodeId = sourceNodeId;
+          opts.anchorBounds = srcNode.transform;
+        }
+      }
       const overlayEntry = {
         overlayFrameId: targetId,
         targetId,

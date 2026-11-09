@@ -429,4 +429,81 @@ assert.doesNotThrow(() => {
 });
 console.log('   ✓ CanvasRenderer draws flow badges and interaction connectors with trigger labels.');
 
+// -------------------------------------------------------------
+// Test 7: Figma Prototyping Complete Guide Parity Tests
+// -------------------------------------------------------------
+console.log('\n7. Testing Figma Prototyping Complete Guide Alignment...');
+
+// 7a. Flow Starting Points API (Chapter 2)
+const startingPoints = engine.getFlowStartingPoints();
+assert.ok(Array.isArray(startingPoints), 'Flow starting points must be an array');
+assert.strictEqual(startingPoints.length, 1);
+assert.strictEqual(startingPoints[0].name, 'Primary Onboarding Flow');
+
+const newFlow = engine.addFlowStartingPoint('screen_cart', 'Checkout Journey', 'Cart to Payment flow');
+assert.ok(newFlow, 'New flow starting point created');
+assert.strictEqual(engine.getFlowStartingPoints().length, 2);
+
+const removed = engine.removeFlowStartingPoint('screen_cart');
+assert.strictEqual(removed, true);
+assert.strictEqual(engine.getFlowStartingPoints().length, 1);
+console.log('   ✓ Flow starting points addition, removal, and querying verified (Chapter 2).');
+
+// 7b. Action Chaining (Chapter 4)
+const chainedInteraction = {
+  trigger: 'click',
+  actions: [
+    { action: 'set_variable', variableId: 'cartCount', op: '+=', value: 2 },
+    { action: 'open_overlay', targetId: 'modal_filter', overlayPosition: 'anchored', overlayBackdrop: 'blur' }
+  ]
+};
+const chainRes = engine.executeAction(chainedInteraction, 'btn_cart');
+assert.ok(chainRes.success, 'Chained actions must succeed');
+assert.strictEqual(chainRes.action, 'chained_actions');
+assert.strictEqual(chainRes.actions.length, 2);
+assert.strictEqual(engine.getVariable('cartCount').value, 2); // 0 + 2
+assert.strictEqual(engine.overlays.length, 1);
+assert.strictEqual(engine.overlays[0].options.position, 'anchored');
+assert.strictEqual(engine.overlays[0].options.backdrop, 'blur');
+console.log('   ✓ Action chaining (sequence of actions on one trigger) verified (Chapter 4).');
+
+// 7c. While Hovering & While Pressing Triggers (Chapter 3)
+const hoverNode = {
+  id: 'node_hover_btn',
+  name: 'Interactive Button',
+  transform: { x: 10, y: 10, width: 120, height: 40 },
+  interactions: [
+    {
+      trigger: 'while_hovering',
+      action: 'change_to',
+      targetVariantId: 'state_hovered'
+    },
+    {
+      trigger: 'while_pressing',
+      action: 'change_to',
+      targetVariantId: 'state_pressed'
+    }
+  ]
+};
+doc.pages[0].nodes['node_hover_btn'] = hoverNode;
+const hoverRes = engine.handleEvent('node_hover_btn', 'while_hovering');
+assert.ok(hoverRes.success);
+assert.strictEqual(hoverRes.action, 'change_to');
+assert.strictEqual(engine.instanceVariants.get('node_hover_btn'), 'state_hovered');
+
+const pressRes = engine.handleEvent('node_hover_btn', 'while_pressing');
+assert.ok(pressRes.success);
+assert.strictEqual(pressRes.action, 'change_to');
+assert.strictEqual(engine.instanceVariants.get('node_hover_btn'), 'state_pressed');
+console.log('   ✓ While Hovering and While Pressing triggers verified (Chapter 3).');
+
+// 7d. Presentation HTML Guide Elements (Chapter 8, 9, 10)
+const updatedHtml = engine.generatePrototypeHtml();
+assert.ok(updatedHtml.includes("backdropMode === 'blur'"), 'Overlay backdrop blur support verified');
+assert.ok(updatedHtml.includes("e.key === 'z' || e.key === 'Z'"), 'Zoom fit toggle shortcut verified');
+assert.ok(updatedHtml.includes("e.key === 'Backspace'"), 'Backspace navigation shortcut verified');
+assert.ok(updatedHtml.includes("dragInteraction.dragAxis"), 'Drag axis constraint handling verified');
+assert.ok(updatedHtml.includes("node.fixedPosition === true"), 'Fixed position elements support verified');
+console.log('   ✓ Player runtime contains anchored overlays, backdrop blur, drag constraints, and fixed elements.');
+
 console.log('\n🎉 ALL ADVANCED FIGMA PROTOTYPING & LOGIC ENGINE CHECKS PASSED (100% SUCCESS)!');

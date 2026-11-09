@@ -5,6 +5,8 @@
  * and Document / Theme color palettes.
  */
 
+import { CanonicalColor, calculateWcagContrast } from './color-math-engine.js';
+
 // --- Color Space Conversion Math ---
 
 export function hexToRgb(hex) {
@@ -204,6 +206,10 @@ function escapeHtml(value) {
 export class ColorPickerPopover {
   constructor() {
     this.isOpen = false;
+    this.mode = 'solid'; // 'solid' | 'gradient'
+    this.gradient = null;
+    this.activeStopIndex = 0;
+    this.contrastBackground = '#090D16';
     this.currentColor = '#3B82F6';
     this.initialColor = '#3B82F6';
     this.h = 217;
@@ -213,6 +219,7 @@ export class ColorPickerPopover {
     this.format = this.loadColorFormat();
     this.onInputCallback = null;
     this.onChangeCallback = null;
+    this.onGradientChangeCallback = null;
     this.documentColors = [];
     this.recentColors = this.loadRecentColors();
     this.hasPendingChange = false;
@@ -248,7 +255,7 @@ export class ColorPickerPopover {
   loadColorFormat() {
     try {
       const format = globalThis.localStorage?.getItem('designforge_color_format');
-      return ['HEX', 'RGB', 'HSL', 'HSB', 'CSS'].includes(format) ? format : 'HEX';
+      return ['HEX', 'RGB', 'HSL', 'HSB', 'OKLab', 'OKLCH', 'CSS'].includes(format) ? format : 'HEX';
     } catch (error) {
       console.warn('Could not load color format preference:', error);
       return 'HEX';
@@ -265,32 +272,56 @@ export class ColorPickerPopover {
 
   renderColorInputFields(rgb, hex) {
     const formatNumber = value => String(Math.round(value * 100) / 100);
-    const numberInput = (id, label, value, min, max) => `
+    const numberInput = (id, label, value, min, max, step = 0.1) => `
       <div class="cp-input-wrapper">
         <span class="cp-input-label">${label}</span>
-        <input type="number" class="cp-text-input cp-model-input" id="${id}" value="${formatNumber(value)}" min="${min}" max="${max}" step="0.1" aria-label="${label}" aria-describedby="cpColorInputError">
+        <input type="number" class="cp-text-input cp-model-input" id="${id}" value="${formatNumber(value)}" min="${min}" max="${max}" step="${step}" aria-label="${label}" aria-describedby="cpColorInputError">
       </div>`;
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
 
     if (this.format === 'RGB') {
       return `<div class="cp-input-row cp-rgb-row">
-        ${numberInput('cpRInput', 'R', rgb.r, 0, 255)}
-        ${numberInput('cpGInput', 'G', rgb.g, 0, 255)}
-        ${numberInput('cpBInput', 'B', rgb.b, 0, 255)}
+        ${numberInput('cpRInput', 'R', rgb.r, 0, 255, 1)}
+        ${numberInput('cpGInput', 'G', rgb.g, 0, 255, 1)}
+        ${numberInput('cpBInput', 'B', rgb.b, 0, 255, 1)}
       </div>`;
     }
     if (this.format === 'HSL') {
       return `<div class="cp-input-row cp-rgb-row">
-        ${numberInput('cpHslHInput', 'H', hsl.h, 0, 360)}
-        ${numberInput('cpHslSInput', 'S', hsl.s, 0, 100)}
-        ${numberInput('cpHslLInput', 'L', hsl.l, 0, 100)}
+        ${numberInput('cpHslHInput', 'H', hsl.h, 0, 360, 1)}
+        ${numberInput('cpHslSInput', 'S', hsl.s, 0, 100, 1)}
+        ${numberInput('cpHslLInput', 'L', hsl.l, 0, 100, 1)}
       </div>`;
     }
     if (this.format === 'HSB') {
       return `<div class="cp-input-row cp-rgb-row">
-        ${numberInput('cpHsbHInput', 'H', this.h, 0, 360)}
-        ${numberInput('cpHsbSInput', 'S', this.s, 0, 100)}
-        ${numberInput('cpHsbBInput', 'B', this.v, 0, 100)}
+        ${numberInput('cpHsbHInput', 'H', this.h, 0, 360, 1)}
+        ${numberInput('cpHsbSInput', 'S', this.s, 0, 100, 1)}
+        ${numberInput('cpHsbBInput', 'B', this.v, 0, 100, 1)}
+      </div>`;
+    }
+    if (this.format === 'OKLab') {
+      let oklab = { L: 0.6, a: 0, b: 0 };
+      try {
+        const c = CanonicalColor.fromHex(hex);
+        oklab = c.toOklab();
+      } catch (e) {}
+      return `<div class="cp-input-row cp-rgb-row">
+        ${numberInput('cpOklabLInput', 'L', oklab.L, 0, 1, 0.01)}
+        ${numberInput('cpOklabAInput', 'a', oklab.a, -0.4, 0.4, 0.01)}
+        ${numberInput('cpOklabBInput', 'b', oklab.b, -0.4, 0.4, 0.01)}
+      </div>`;
+    }
+    if (this.format === 'OKLCH') {
+      let oklch = { L: 0.6, C: 0.1, h: 0 };
+      try {
+        const c = CanonicalColor.fromHex(hex);
+        oklch = c.toOklch();
+      } catch (e) {}
+      return `<div class="cp-input-row cp-rgb-row">
+        ${numberInput('cpOklchLInput', 'L', oklch.L, 0, 1, 0.01)}
+        ${numberInput('cpOklchCInput', 'C', oklch.C, 0, 0.4, 0.01)}
+        ${numberInput('cpOklchHInput', 'H', oklch.h, 0, 360, 1)}
       </div>`;
     }
 
@@ -310,12 +341,85 @@ export class ColorPickerPopover {
     const rgb = hsvToRgb(this.h, this.s, this.v);
     const hex = rgbToHex(rgb.r, rgb.g, rgb.b, this.a);
 
+    // Calculate contrast against canvas/background
+    let contrastBadgeHtml = '';
+    try {
+      const fg = CanonicalColor.fromHex(hex);
+      const bg = CanonicalColor.fromHex(this.contrastBackground || '#090D16');
+      const contrast = calculateWcagContrast(fg, bg);
+      const level = contrast.passesAAA ? 'AAA' : contrast.passesAA ? 'AA' : contrast.passesAALarge ? 'AA Large' : 'Fail';
+      const statusClass = contrast.passesAA ? 'pass' : (contrast.passesAALarge ? 'warn' : 'fail');
+      contrastBadgeHtml = `
+        <div class="cp-contrast-badge cp-contrast-${statusClass}" id="cpContrastBadge" title="WCAG 2.2 Contrast: ${contrast.ratio}:1 against background (${this.contrastBackground || '#090D16'})">
+          <span class="cp-contrast-ratio">${contrast.ratio}:1</span>
+          <span class="cp-contrast-level">${level}</span>
+        </div>
+      `;
+    } catch (e) {
+      contrastBadgeHtml = '';
+    }
+
+    // Gradient bar & stop state if in gradient mode
+    let gradientHtml = '';
+    if (this.mode === 'gradient') {
+      if (!this.gradient) {
+        this.gradient = {
+          type: 'linear-gradient',
+          stops: [
+            { offset: 0, color: hex },
+            { offset: 1, color: '#8B5CF6' }
+          ]
+        };
+      }
+      const stops = this.gradient.stops || [
+        { offset: 0, color: hex },
+        { offset: 1, color: '#8B5CF6' }
+      ];
+      if (this.activeStopIndex < 0 || this.activeStopIndex >= stops.length) {
+        this.activeStopIndex = 0;
+      }
+      const activeStop = stops[this.activeStopIndex] || stops[0];
+      const gradCss = `linear-gradient(to right, ${stops.map(s => `${s.color} ${Math.round(s.offset * 100)}%`).join(', ')})`;
+
+      gradientHtml = `
+        <div class="cp-gradient-section" id="cpGradientSection">
+          <div class="cp-gradient-type-row">
+            <select class="cp-text-input cp-gradient-type-select" id="cpGradientTypeSelect" aria-label="Gradient Type">
+              <option value="linear-gradient" ${this.gradient.type === 'linear-gradient' || this.gradient.type === 'gradient' ? 'selected' : ''}>Linear Gradient</option>
+              <option value="radial-gradient" ${this.gradient.type === 'radial-gradient' ? 'selected' : ''}>Radial Gradient</option>
+              <option value="angular-gradient" ${this.gradient.type === 'angular-gradient' || this.gradient.type === 'conic-gradient' ? 'selected' : ''}>Angular (Conic)</option>
+              <option value="diamond-gradient" ${this.gradient.type === 'diamond-gradient' ? 'selected' : ''}>Diamond Gradient</option>
+            </select>
+            <button class="cp-icon-btn" id="cpBtnReverseStops" title="Reverse Gradient Stops" style="margin-left: auto;">⇄</button>
+          </div>
+          <div class="cp-gradient-track-wrapper" id="cpGradientTrackWrapper" title="Click bar to add stop">
+            <div class="cp-gradient-track" id="cpGradientTrack" style="background: ${gradCss};"></div>
+            ${stops.map((s, idx) => `
+              <div class="cp-gradient-stop-pin ${idx === this.activeStopIndex ? 'active' : ''}" data-stop-index="${idx}" style="left: ${Math.round(s.offset * 100)}%; background: ${s.color};" title="Stop ${idx + 1}: ${Math.round(s.offset * 100)}% (${s.color})"></div>
+            `).join('')}
+          </div>
+          <div class="cp-gradient-stop-actions">
+            <div class="cp-input-wrapper" style="width: 80px;">
+              <span class="cp-input-label">POS</span>
+              <input type="number" class="cp-text-input" id="cpStopPositionInput" min="0" max="100" value="${Math.round(activeStop.offset * 100)}" step="1">
+              <span class="cp-input-label">%</span>
+            </div>
+            <button class="cp-icon-btn" id="cpBtnDeleteStop" title="Delete Stop" ${stops.length <= 2 ? 'disabled style="opacity: 0.35; cursor: not-allowed;"' : ''}>✕</button>
+          </div>
+        </div>
+      `;
+    }
+
     this.container.innerHTML = `
       <div class="cp-header">
         <div class="cp-tabs">
-          <button class="cp-tab-btn active" data-tab="solid">Solid</button>
+          <button class="cp-tab-btn ${this.mode === 'solid' ? 'active' : ''}" data-tab="solid">Solid</button>
+          <button class="cp-tab-btn ${this.mode === 'gradient' ? 'active' : ''}" data-tab="gradient">Gradient</button>
         </div>
         <div class="cp-header-actions">
+          <button class="cp-icon-btn" id="cpBtnCopyColor" title="Copy color code to clipboard">
+            <span data-icon="Copy" data-icon-size="13"></span>
+          </button>
           ${typeof window !== 'undefined' && 'EyeDropper' in window ? `
           <button class="cp-icon-btn" id="cpBtnEyedropper" title="Pick color from screen">
             <span data-icon="Pipette" data-icon-size="13"></span>
@@ -323,6 +427,8 @@ export class ColorPickerPopover {
           <button class="cp-icon-btn" id="cpBtnClose" title="Close"><span data-icon="X" data-icon-size="13"></span></button>
         </div>
       </div>
+
+      ${gradientHtml}
 
       <!-- 2D Saturation / Value Gradient Canvas -->
       <div class="cp-sb-container">
@@ -357,7 +463,7 @@ export class ColorPickerPopover {
             <div class="cp-input-wrapper">
               <span class="cp-input-label">MODEL</span>
               <select class="cp-text-input" id="cpColorModel" aria-label="Color model">
-                ${['HEX', 'RGB', 'HSL', 'HSB', 'CSS'].map(format => `<option value="${format}" ${this.format === format ? 'selected' : ''}>${format}</option>`).join('')}
+                ${['HEX', 'RGB', 'HSL', 'HSB', 'OKLab', 'OKLCH', 'CSS'].map(format => `<option value="${format}" ${this.format === format ? 'selected' : ''}>${format}</option>`).join('')}
               </select>
             </div>
             <div class="cp-input-wrapper">
@@ -368,8 +474,9 @@ export class ColorPickerPopover {
 
           <div id="cpModelInputs">${this.renderColorInputFields(rgb, hex)}</div>
           <div id="cpColorInputError" role="alert" aria-live="polite" style="display: none; color: #f87171; font-size: 10px; margin-top: 4px;">
-            Enter a valid HEX, RGB, HSL, or CSS color value.
+            Enter a valid HEX, RGB, HSL, HSB, OKLab, or CSS color value.
           </div>
+          ${contrastBadgeHtml}
         </div>
       </div>
 
@@ -445,7 +552,7 @@ export class ColorPickerPopover {
   }
 
   drawSBCanvas() {
-    if (!this.sbCtx || !this.sbCanvas) return;
+    if (typeof document === 'undefined' || !this.sbCtx || !this.sbCanvas) return;
     const ctx = this.sbCtx;
     const w = this.sbCanvas.width;
     const h = this.sbCanvas.height;
@@ -471,6 +578,7 @@ export class ColorPickerPopover {
   }
 
   updateThumbPositions() {
+    if (typeof document === 'undefined') return;
     const sbThumb = document.getElementById('cpSbThumb');
     const hueThumb = document.getElementById('cpHueThumb');
     const alphaThumb = document.getElementById('cpAlphaThumb');
@@ -505,6 +613,10 @@ export class ColorPickerPopover {
     const hex = rgbToHex(rgb.r, rgb.g, rgb.b, this.a);
     this.currentColor = hex;
 
+    if (this.mode === 'gradient' && this.gradient?.stops?.[this.activeStopIndex]) {
+      this.gradient.stops[this.activeStopIndex].color = hex;
+    }
+
     if (typeof document !== 'undefined') {
       const prevCurrent = document.getElementById('cpPreviewCurrent');
       if (prevCurrent) prevCurrent.style.background = hex;
@@ -529,17 +641,56 @@ export class ColorPickerPopover {
       if (bInp && activeElement !== bInp) bInp.value = rgb.b;
 
       const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+      let oklab = { L: 0.6, a: 0, b: 0 };
+      let oklch = { L: 0.6, C: 0.1, h: 0 };
+      try {
+        const c = CanonicalColor.fromHex(hex);
+        oklab = c.toOklab();
+        oklch = c.toOklch();
+      } catch (e) {}
+
       const modelValues = [
         ['cpHslHInput', hsl.h],
         ['cpHslSInput', hsl.s],
         ['cpHslLInput', hsl.l],
         ['cpHsbHInput', this.h],
         ['cpHsbSInput', this.s],
-        ['cpHsbBInput', this.v]
+        ['cpHsbBInput', this.v],
+        ['cpOklabLInput', oklab.L],
+        ['cpOklabAInput', oklab.a],
+        ['cpOklabBInput', oklab.b],
+        ['cpOklchLInput', oklch.L],
+        ['cpOklchCInput', oklch.C],
+        ['cpOklchHInput', oklch.h]
       ];
       for (const [id, value] of modelValues) {
         const input = document.getElementById(id);
         if (input && activeElement !== input) input.value = String(Math.round(value * 100) / 100);
+      }
+
+      // Update contrast badge
+      const contrastEl = document.getElementById('cpContrastBadge');
+      if (contrastEl) {
+        try {
+          const fg = CanonicalColor.fromHex(hex);
+          const bg = CanonicalColor.fromHex(this.contrastBackground || '#090D16');
+          const contrast = calculateWcagContrast(fg, bg);
+          const level = contrast.passesAAA ? 'AAA' : contrast.passesAA ? 'AA' : contrast.passesAALarge ? 'AA Large' : 'Fail';
+          const statusClass = contrast.passesAA ? 'pass' : (contrast.passesAALarge ? 'warn' : 'fail');
+          contrastEl.className = `cp-contrast-badge cp-contrast-${statusClass}`;
+          contrastEl.title = `WCAG 2.2 Contrast: ${contrast.ratio}:1 against background (${this.contrastBackground || '#090D16'})`;
+          contrastEl.innerHTML = `<span class="cp-contrast-ratio">${contrast.ratio}:1</span> <span class="cp-contrast-level">${level}</span>`;
+        } catch (e) {}
+      }
+
+      // Update gradient track & pins if in gradient mode
+      if (this.mode === 'gradient' && this.gradient?.stops) {
+        const gradTrack = document.getElementById('cpGradientTrack');
+        if (gradTrack) {
+          gradTrack.style.background = `linear-gradient(to right, ${this.gradient.stops.map(s => `${s.color} ${Math.round(s.offset * 100)}%`).join(', ')})`;
+        }
+        const activePin = document.querySelector(`.cp-gradient-stop-pin[data-stop-index="${this.activeStopIndex}"]`);
+        if (activePin) activePin.style.background = hex;
       }
 
       this.updateThumbPositions();
@@ -547,6 +698,9 @@ export class ColorPickerPopover {
 
     if (this.onInputCallback) {
       this.onInputCallback(hex, { r: rgb.r, g: rgb.g, b: rgb.b, a: this.a });
+    }
+    if (this.mode === 'gradient' && this.onGradientChangeCallback) {
+      this.onGradientChangeCallback(this.gradient);
     }
   }
 
@@ -556,6 +710,9 @@ export class ColorPickerPopover {
     this.saveRecentColor(hex);
     if (this.onChangeCallback) {
       this.onChangeCallback(hex, { r: rgb.r, g: rgb.g, b: rgb.b, a: this.a });
+    }
+    if (this.mode === 'gradient' && this.onGradientChangeCallback) {
+      this.onGradientChangeCallback(this.gradient);
     }
   }
 
@@ -726,11 +883,134 @@ export class ColorPickerPopover {
       }
     };
 
+    // Tabs Solid vs Gradient
+    this.container.querySelectorAll('.cp-tab-btn').forEach(btn => {
+      btn.onclick = () => {
+        const tab = btn.dataset.tab;
+        if (tab === this.mode) return;
+        this.mode = tab;
+        if (this.mode === 'gradient' && !this.gradient) {
+          const rgb = hsvToRgb(this.h, this.s, this.v);
+          const hex = rgbToHex(rgb.r, rgb.g, rgb.b, this.a);
+          this.gradient = {
+            type: 'linear-gradient',
+            stops: [
+              { offset: 0, color: hex },
+              { offset: 1, color: '#8B5CF6' }
+            ]
+          };
+          this.activeStopIndex = 0;
+        }
+        this.render();
+        if (this.mode === 'gradient' && this.onGradientChangeCallback) {
+          this.onGradientChangeCallback(this.gradient);
+        }
+      };
+    });
+
+    // Copy color button
+    const btnCopy = document.getElementById('cpBtnCopyColor');
+    if (btnCopy) {
+      btnCopy.onclick = () => {
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+          navigator.clipboard.writeText(this.currentColor);
+          btnCopy.style.color = '#10B981';
+          setTimeout(() => { if (btnCopy) btnCopy.style.color = ''; }, 1200);
+        }
+      };
+    }
+
+    // Gradient Controls Listeners
+    if (this.mode === 'gradient' && this.gradient) {
+      const gradTypeSelect = document.getElementById('cpGradientTypeSelect');
+      if (gradTypeSelect) {
+        gradTypeSelect.onchange = e => {
+          this.gradient.type = e.target.value;
+          this.render();
+          if (this.onGradientChangeCallback) this.onGradientChangeCallback(this.gradient);
+        };
+      }
+
+      // Reverse stops
+      const btnReverse = document.getElementById('cpBtnReverseStops');
+      if (btnReverse) {
+        btnReverse.onclick = () => {
+          this.gradient.stops.reverse();
+          this.gradient.stops.forEach((s) => {
+            s.offset = Math.round((1 - s.offset) * 100) / 100;
+          });
+          this.gradient.stops.sort((a, b) => a.offset - b.offset);
+          this.activeStopIndex = Math.min(this.activeStopIndex, this.gradient.stops.length - 1);
+          const active = this.gradient.stops[this.activeStopIndex];
+          if (active) this.setColor(active.color);
+          this.render();
+          if (this.onGradientChangeCallback) this.onGradientChangeCallback(this.gradient);
+        };
+      }
+
+      // Stop position input
+      const stopPosInput = document.getElementById('cpStopPositionInput');
+      if (stopPosInput) {
+        stopPosInput.onchange = e => {
+          const val = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) / 100;
+          if (this.gradient.stops[this.activeStopIndex]) {
+            this.gradient.stops[this.activeStopIndex].offset = val;
+            this.gradient.stops.sort((a, b) => a.offset - b.offset);
+            this.render();
+            if (this.onGradientChangeCallback) this.onGradientChangeCallback(this.gradient);
+          }
+        };
+      }
+
+      // Delete stop
+      const btnDeleteStop = document.getElementById('cpBtnDeleteStop');
+      if (btnDeleteStop && this.gradient.stops.length > 2) {
+        btnDeleteStop.onclick = () => {
+          this.gradient.stops.splice(this.activeStopIndex, 1);
+          this.activeStopIndex = Math.max(0, this.activeStopIndex - 1);
+          const active = this.gradient.stops[this.activeStopIndex];
+          if (active) this.setColor(active.color);
+          this.render();
+          if (this.onGradientChangeCallback) this.onGradientChangeCallback(this.gradient);
+        };
+      }
+
+      // Click on stop pins
+      this.container.querySelectorAll('.cp-gradient-stop-pin').forEach(pin => {
+        pin.onclick = (e) => {
+          e.stopPropagation();
+          const idx = Number(pin.dataset.stopIndex);
+          if (this.gradient.stops[idx]) {
+            this.activeStopIndex = idx;
+            this.setColor(this.gradient.stops[idx].color);
+            this.render();
+          }
+        };
+      });
+
+      // Click on gradient track to add stop
+      const trackWrapper = document.getElementById('cpGradientTrackWrapper');
+      if (trackWrapper) {
+        trackWrapper.onclick = (e) => {
+          if (e.target.closest('.cp-gradient-stop-pin')) return;
+          const rect = trackWrapper.getBoundingClientRect();
+          const offset = Math.max(0, Math.min(1, Math.round(((e.clientX - rect.left) / rect.width) * 100) / 100));
+          const rgb = hsvToRgb(this.h, this.s, this.v);
+          const color = rgbToHex(rgb.r, rgb.g, rgb.b, this.a);
+          this.gradient.stops.push({ offset, color });
+          this.gradient.stops.sort((a, b) => a.offset - b.offset);
+          this.activeStopIndex = this.gradient.stops.findIndex(s => Math.abs(s.offset - offset) < 0.01);
+          this.render();
+          if (this.onGradientChangeCallback) this.onGradientChangeCallback(this.gradient);
+        };
+      }
+    }
+
     const colorModel = document.getElementById('cpColorModel');
     if (colorModel) {
       colorModel.onchange = event => {
         const format = event.target.value;
-        if (!['HEX', 'RGB', 'HSL', 'HSB', 'CSS'].includes(format)) return;
+        if (!['HEX', 'RGB', 'HSL', 'HSB', 'OKLab', 'OKLCH', 'CSS'].includes(format)) return;
         this.format = format;
         this.saveColorFormat(format);
         this.render();
@@ -744,17 +1024,25 @@ export class ColorPickerPopover {
       const applyModelInput = commit => {
         let rgb;
         let hasAlpha = false;
-        if (this.format === 'RGB' || this.format === 'HSL' || this.format === 'HSB') {
+        if (this.format === 'RGB' || this.format === 'HSL' || this.format === 'HSB' || this.format === 'OKLab' || this.format === 'OKLCH') {
           const ids = this.format === 'RGB'
             ? ['cpRInput', 'cpGInput', 'cpBInput']
             : this.format === 'HSL'
               ? ['cpHslHInput', 'cpHslSInput', 'cpHslLInput']
-              : ['cpHsbHInput', 'cpHsbSInput', 'cpHsbBInput'];
+              : this.format === 'HSB'
+                ? ['cpHsbHInput', 'cpHsbSInput', 'cpHsbBInput']
+                : this.format === 'OKLab'
+                  ? ['cpOklabLInput', 'cpOklabAInput', 'cpOklabBInput']
+                  : ['cpOklchLInput', 'cpOklchCInput', 'cpOklchHInput'];
           const inputs = ids.map(id => document.getElementById(id));
           const values = inputs.map(input => input?.value.trim() === '' ? Number.NaN : Number(input.value));
-          const maximums = this.format === 'RGB' ? [255, 255, 255] : [360, 100, 100];
+          const minMax = this.format === 'RGB' ? [[0, 255], [0, 255], [0, 255]]
+            : this.format === 'HSL' ? [[0, 360], [0, 100], [0, 100]]
+            : this.format === 'HSB' ? [[0, 360], [0, 100], [0, 100]]
+            : this.format === 'OKLab' ? [[0, 1], [-0.4, 0.4], [-0.4, 0.4]]
+            : [[0, 1], [0, 0.4], [0, 360]];
           const isValid = values.every((value, index) =>
-            Number.isFinite(value) && value >= 0 && value <= maximums[index]
+            Number.isFinite(value) && value >= minMax[index][0] && value <= minMax[index][1]
           );
           if (!isValid) {
             inputs.forEach(input => input && showInputValidity(input, false));
@@ -766,8 +1054,14 @@ export class ColorPickerPopover {
             rgb = { r: values[0], g: values[1], b: values[2] };
           } else if (this.format === 'HSL') {
             rgb = hslToRgb(values[0], values[1], values[2]);
-          } else {
+          } else if (this.format === 'HSB') {
             rgb = hsvToRgb(values[0], values[1], values[2]);
+          } else if (this.format === 'OKLab') {
+            const canonical = CanonicalColor.fromOklab(values[0], values[1], values[2], this.a);
+            rgb = canonical.toRgb255();
+          } else if (this.format === 'OKLCH') {
+            const canonical = CanonicalColor.fromOklch(values[0], values[1], values[2], this.a);
+            rgb = canonical.toRgb255();
           }
         } else {
           const parsed = parseColorString(modelInput.value);
@@ -894,6 +1188,12 @@ export class ColorPickerPopover {
     const onChange = options.onCommit || options.onChange || options.onInput;
     const documentColors = options.documentColors || options.palette || [];
     const designTokens = options.designTokens || [];
+
+    this.mode = options.mode || (options.gradient ? 'gradient' : 'solid');
+    this.gradient = options.gradient ? JSON.parse(JSON.stringify(options.gradient)) : null;
+    this.activeStopIndex = options.activeStopIndex || 0;
+    this.contrastBackground = options.contrastBackground || '#090D16';
+    this.onGradientChangeCallback = options.onGradientChange || null;
 
     this.initialColor = initialColor;
     this.setColor(this.initialColor);

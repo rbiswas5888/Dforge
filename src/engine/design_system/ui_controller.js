@@ -53,9 +53,31 @@ export class DesignSystemUIController {
         this.renderView(this.activeView);
       });
     });
+
+    const btnBackEditor = document.getElementById('btnDsBackToEditor');
+    if (btnBackEditor) {
+      btnBackEditor.addEventListener('click', () => {
+        this.app.setAxiomMode('design');
+      });
+    }
   }
 
   bindToolbarEvents() {
+    const btnDsDesign = document.getElementById('btnDsSwitchDesign');
+    if (btnDsDesign) {
+      btnDsDesign.addEventListener('click', () => this.app.setAxiomMode('design'));
+    }
+
+    const btnDsProto = document.getElementById('btnDsSwitchPrototype');
+    if (btnDsProto) {
+      btnDsProto.addEventListener('click', () => this.app.setAxiomMode('prototype'));
+    }
+
+    const btnDsSys = document.getElementById('btnDsSwitchSystem');
+    if (btnDsSys) {
+      btnDsSys.addEventListener('click', () => this.app.setAxiomMode('system'));
+    }
+
     const btnAi = document.getElementById('btnDsAiGenerateTokens');
     if (btnAi) btnAi.addEventListener('click', () => this.openAiTokensModal());
 

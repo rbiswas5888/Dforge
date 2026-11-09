@@ -8,10 +8,14 @@ import {
   createDesignSystem,
   createToken,
   createVariable,
+  createStyleDef,
   createComponentDef,
   createAssetRecord,
+  exportToDTCGFormat,
+  importFromDTCGFormat,
   TOKEN_CATEGORIES,
   VARIABLE_TYPES,
+  STYLE_CATEGORIES,
   THEME_MODES,
   DESIGN_SYSTEM_STARTERS,
   generateDSId
@@ -40,6 +44,42 @@ export class DesignSystemRegistry {
     return Object.values(this.system.styles || {});
   }
 
+  getTokensByTier(tier) {
+    const t = String(tier || '').toLowerCase();
+    return this.getAllTokens().filter(token => (token.tier || (token.isSemantic ? 'semantic' : 'primitive')) === t);
+  }
+
+  getVariablesByType(type) {
+    const target = String(type || '').toLowerCase();
+    return this.getAllVariables().filter(v => (v.type || '').toLowerCase() === target);
+  }
+
+  getVariablesByScope(scope) {
+    const target = String(scope || '').toLowerCase();
+    return this.getAllVariables().filter(v => {
+      const scopes = Array.isArray(v.scopes) ? v.scopes : ['all'];
+      return scopes.includes('all') || scopes.includes(target);
+    });
+  }
+
+  setTokenCodeSyntax(tokenId, syntaxObj) {
+    const token = this.system.tokens[tokenId];
+    if (!token) return null;
+    token.codeSyntax = { ...(token.codeSyntax || {}), ...syntaxObj };
+    token.updatedAt = new Date().toISOString();
+    this.persist();
+    return token;
+  }
+
+  setVariableCodeSyntax(varId, syntaxObj) {
+    const variable = this.system.variables[varId];
+    if (!variable) return null;
+    variable.codeSyntax = { ...(variable.codeSyntax || {}), ...syntaxObj };
+    variable.updatedAt = new Date().toISOString();
+    this.persist();
+    return variable;
+  }
+
   getDependents(tokenId) {
     return this.findTokenDependents(tokenId);
   }
@@ -52,7 +92,9 @@ export class DesignSystemRegistry {
       DESIGN_SYSTEM_STARTERS.ENTERPRISE,
       DESIGN_SYSTEM_STARTERS.FINTECH,
       DESIGN_SYSTEM_STARTERS.ECOMMERCE,
-      DESIGN_SYSTEM_STARTERS.MATERIAL
+      DESIGN_SYSTEM_STARTERS.MATERIAL,
+      DESIGN_SYSTEM_STARTERS.HEALTHCARE,
+      DESIGN_SYSTEM_STARTERS.EDUCATION
     ]);
     if (!validStarters.has(starterKey)) {
       throw new Error(`Unknown design system starter: ${starter}`);
@@ -75,9 +117,11 @@ export class DesignSystemRegistry {
       const seedColors = {
         minimal: [['Color / Primary', '#2563eb'], ['Color / Surface', '#ffffff'], ['Color / Text', '#0f172a']],
         enterprise: [['Color / Primary', '#1d4ed8'], ['Color / Surface', '#f8fafc'], ['Color / Text', '#0f172a']],
-        fintech: [['Color / Primary', '#0f766e'], ['Color / Surface', '#f8fafc'], ['Color / Text', '#0f172a']],
+        fintech: [['Color / Primary', '#0f766e'], ['Color / Surface', '#f8fafc'], ['Color / Text', '#0f172a'], ['Color / Gain', '#10b981'], ['Color / Loss', '#ef4444']],
         ecommerce: [['Color / Primary', '#db2777'], ['Color / Surface', '#fff7ed'], ['Color / Text', '#1f2937']],
-        material: [['Color / Primary', '#6750a4'], ['Color / Surface', '#fffbfe'], ['Color / Text', '#1d1b20']]
+        material: [['Color / Primary', '#6750a4'], ['Color / Surface', '#fffbfe'], ['Color / Text', '#1d1b20']],
+        healthcare: [['Color / Primary', '#0284c7'], ['Color / Surface', '#f0f9ff'], ['Color / Text', '#082f49'], ['Color / Safe', '#16a34a'], ['Color / Warning', '#d97706'], ['Color / Alert', '#dc2626']],
+        education: [['Color / Primary', '#7c3aed'], ['Color / Surface', '#fbfbfe'], ['Color / Text', '#1e1b4b'], ['Color / Progress', '#059669'], ['Color / Feedback', '#ea580c']]
       }[starterKey] || [];
       for (const [tokenName, value] of seedColors) {
         if (!this.getAllTokens().some(token => token.name.toLowerCase() === tokenName.toLowerCase())) {
@@ -255,6 +299,10 @@ export class DesignSystemRegistry {
     return variable;
   }
 
+  createVariable(name, type, value, options = {}) {
+    return this.addVariable(name, type, value, options);
+  }
+
   updateVariable(id, updates = {}) {
     const v = this.system.variables[id];
     if (!v) throw new Error(`Variable ${id} not found.`);
@@ -286,6 +334,88 @@ export class DesignSystemRegistry {
     this.syncToAsset(this.system, 'component', comp.name, comp.id, comp.category);
     this.persist();
     return comp;
+  }
+
+  // --- Styles CRUD (Figma 5 Native Style Categories) ---
+
+  addStyle(nameOrStyle, category, properties = {}, options = {}) {
+    const style = (typeof nameOrStyle === 'object' && nameOrStyle !== null && nameOrStyle.id)
+      ? nameOrStyle
+      : createStyleDef(nameOrStyle, category, properties, options);
+    this.system.styles[style.id] = style;
+    this.system.updatedAt = new Date().toISOString();
+
+    this.syncToAsset(this.system, 'style', style.name, style.id, style.category);
+    this.persist();
+    return style;
+  }
+
+  getStyle(idOrName) {
+    if (this.system.styles[idOrName]) return this.system.styles[idOrName];
+    return Object.values(this.system.styles).find(s => s.name === idOrName) || null;
+  }
+
+  getStylesByCategory(category) {
+    const cat = String(category || '').toLowerCase();
+    return Object.values(this.system.styles).filter(s => (s.category || '').toLowerCase() === cat);
+  }
+
+  updateStyle(id, updates = {}) {
+    const style = this.system.styles[id];
+    if (!style) throw new Error(`Style ${id} not found.`);
+
+    Object.assign(style, updates);
+    style.updatedAt = new Date().toISOString();
+    this.system.updatedAt = style.updatedAt;
+
+    this.syncToAsset(this.system, 'style', style.name, style.id, style.category);
+    this.persist();
+    return style;
+  }
+
+  deleteStyle(id) {
+    if (!this.system.styles[id]) return false;
+    delete this.system.styles[id];
+    this.removeFromAsset(this.system, id);
+    this.persist();
+    return true;
+  }
+
+  // --- DTCG (Design Tokens Community Group) Interoperability ---
+
+  exportToDTCG() {
+    return exportToDTCGFormat(this);
+  }
+
+  importFromDTCG(dtcgJson) {
+    const tokens = importFromDTCGFormat(dtcgJson);
+    const added = [];
+    for (const t of tokens) {
+      this.system.tokens[t.id] = t;
+      this.syncToAsset(this.system, 'token', t.name, t.id, t.category);
+      added.push(t);
+    }
+    if (dtcgJson?.styles) {
+      for (const [name, def] of Object.entries(dtcgJson.styles)) {
+        const ext = def.$extensions?.['com.designforge'] || {};
+        const style = createStyleDef(
+          name,
+          ext.category || def.$type || STYLE_CATEGORIES.COLOR,
+          ext.properties || (typeof def.$value === 'object' ? def.$value : { value: def.$value }),
+          {
+            id: ext.id,
+            description: def.$description || '',
+            codeSyntax: ext.codeSyntax,
+            modeOverrides: ext.modeOverrides
+          }
+        );
+        this.addStyle(style);
+      }
+    }
+    this.system.updatedAt = new Date().toISOString();
+    this.syncDocTokensArray();
+    this.persist();
+    return added;
   }
 
   updateComponent(id, updates = {}) {

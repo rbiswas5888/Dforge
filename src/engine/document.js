@@ -85,6 +85,7 @@ export function createNode(type, overrides = {}) {
     },
     layout: {
       mode: 'none', // 'none' | 'stack-horizontal' | 'stack-vertical' | 'grid' | 'absolute'
+      wrap: overrides.layout?.wrap || 'no_wrap', // 'no_wrap' | 'wrap'
       paddingTop: 0,
       paddingRight: 0,
       paddingBottom: 0,
@@ -94,15 +95,30 @@ export function createNode(type, overrides = {}) {
       justifyContent: 'start', // 'start' | 'center' | 'end' | 'space-between'
       sizingHorizontal: 'fixed', // 'fixed' | 'hug' | 'fill'
       sizingVertical: 'fixed', // 'fixed' | 'hug' | 'fill'
+      minWidth: overrides.layout?.minWidth !== undefined ? overrides.layout.minWidth : null,
+      maxWidth: overrides.layout?.maxWidth !== undefined ? overrides.layout.maxWidth : null,
+      minHeight: overrides.layout?.minHeight !== undefined ? overrides.layout.minHeight : null,
+      maxHeight: overrides.layout?.maxHeight !== undefined ? overrides.layout.maxHeight : null,
       ...(overrides.layout || {})
     },
     style: {
       fills: overrides.style?.fills || [{ type: 'solid', color: '#334155', opacity: 1 }],
       strokes: overrides.style?.strokes || [],
+      strokeAlign: overrides.style?.strokeAlign || 'inside', // 'inside' | 'center' | 'outside'
+      strokeCap: overrides.style?.strokeCap || 'none', // 'none' | 'round' | 'square' | 'arrow_lines' | 'arrow_equilateral'
+      strokeJoin: overrides.style?.strokeJoin || 'miter', // 'miter' | 'round' | 'bevel'
+      miterLimit: overrides.style?.miterLimit !== undefined ? overrides.style.miterLimit : 4,
+      strokeWeights: overrides.style?.strokeWeights || null, // { top: number, right: number, bottom: number, left: number }
+      dashPattern: overrides.style?.dashPattern || [], // [dashLength, gapLength]
       cornerRadius: overrides.style?.cornerRadius !== undefined ? overrides.style.cornerRadius : 0,
+      cornerSmoothing: overrides.style?.cornerSmoothing !== undefined ? overrides.style.cornerSmoothing : 0, // 0 to 1 (0.6 for iOS squircle)
       shadows: overrides.style?.shadows || [],
       ...(overrides.style || {})
     },
+    arcData: overrides.arcData || (type === 'ellipse' ? { startingAngle: 0, sweepAngle: 360, innerRadius: 0 } : null),
+    polygonSides: overrides.polygonSides || (type === 'polygon' ? 3 : null),
+    starPoints: overrides.starPoints || (type === 'star' ? 5 : null),
+    starInnerRadius: overrides.starInnerRadius !== undefined ? overrides.starInnerRadius : (type === 'star' ? 0.38 : null),
     interactions: overrides.interactions || [],
     tokenBindings: overrides.tokenBindings || {},
     semanticTag: overrides.semanticTag || (type === 'frame' ? 'div' : type === 'text' ? 'p' : 'div'),
@@ -254,7 +270,7 @@ export function createInitialDocument(name = 'Fintech Experience Platform') {
     parentId: sidebar.id,
     name: 'App Logo',
     transform: { x: 0, y: 0, width: 200, height: 28 },
-    text: { content: '⚡ ForgePay AI', fontSize: 18, fontWeight: '700', color: '#38bdf8' }
+    text: { content: '⚡ DesignForge', fontSize: 18, fontWeight: '700', color: '#38bdf8' }
   });
 
   // Nav Item 1: Overview
@@ -612,7 +628,7 @@ export function createInitialDocument(name = 'Fintech Experience Platform') {
     parentId: mobileFrame.id,
     name: 'Mobile App Title',
     transform: { x: 0, y: 0, width: 335, height: 28 },
-    text: { content: '⚡ ForgePay Mobile', fontSize: 18, fontWeight: '700', color: '#ffffff' }
+    text: { content: '⚡ DesignForge Mobile', fontSize: 18, fontWeight: '700', color: '#ffffff' }
   });
 
   const mobCard = createNode('frame', {

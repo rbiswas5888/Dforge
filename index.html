@@ -155,11 +155,10 @@
       </div>
 
       <div class="top-bar-center">
-        <div class="mode-switcher">
-          <button class="mode-tab active" data-mode="design" id="tabModeDesign">Design</button>
-          <button class="mode-tab" data-mode="design-system" id="tabModeDesignSystem">Design System</button>
-          <button class="mode-tab" data-mode="prototype" id="tabModePrototype">Prototype</button>
-          <button class="mode-tab" data-mode="code" id="tabModeCode">Code</button>
+        <div class="mode-switcher" id="topBarModeSwitcher">
+          <button class="mode-tab active" data-mode="design" id="tabModeDesign" title="Design Canvas Mode (⌥1)">Design</button>
+          <button class="mode-tab" data-mode="prototype" id="tabModePrototype" title="Prototyping & Interactions (⌥3)">Prototype</button>
+          <button class="mode-tab" data-mode="design-system" id="tabModeDesignSystem" title="Design System & Tokens (⌥2)">Design System</button>
         </div>
       </div>
 
@@ -483,9 +482,14 @@
         <!-- Left Sub-navigation -->
         <aside class="ds-subnav">
           <div class="ds-subnav-header">
-            <div class="ds-system-title">
-              <span data-icon="Layers" data-icon-size="16"></span>
-              <span id="dsActiveSystemName">DesignForge DS</span>
+            <div class="ds-header-top-row" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <div class="ds-system-title">
+                <span data-icon="Layers" data-icon-size="16"></span>
+                <span id="dsActiveSystemName">DesignForge DS</span>
+              </div>
+              <button class="ds-back-editor-btn" id="btnDsBackToEditor" title="Return to Canvas Editor">
+                <span data-icon="ArrowLeft" data-icon-size="12"></span> <span>Canvas</span>
+              </button>
             </div>
             <span class="ds-version-pill" id="dsActiveVersionBadge">v1.0.0 (Published)</span>
           </div>
@@ -542,6 +546,18 @@
         <div class="ds-content-area">
           <header class="ds-toolbar">
             <div class="ds-toolbar-left">
+              <div class="mode-switcher ds-mode-switcher" id="dsToolbarModeSwitcher">
+                <button class="mode-tab" data-mode="design" id="btnDsSwitchDesign" title="Switch to Canvas Design (⌥1)">
+                  <span data-icon="Layout" data-icon-size="12"></span> <span>Design</span>
+                </button>
+                <button class="mode-tab" data-mode="prototype" id="btnDsSwitchPrototype" title="Switch to Interactive Prototype (⌥3)">
+                  <span data-icon="Play" data-icon-size="12"></span> <span>Prototype</span>
+                </button>
+                <button class="mode-tab active" data-mode="design-system" id="btnDsSwitchSystem" title="Design System (Current Mode)">
+                  <span data-icon="Layers" data-icon-size="12"></span> <span>Design System</span>
+                </button>
+              </div>
+              <div class="ds-toolbar-divider" style="width: 1px; height: 18px; background: var(--border-subtle); margin: 0 4px;"></div>
               <h2 class="ds-view-heading" id="dsViewTitle">Design System Overview</h2>
               <div class="ds-theme-switcher" id="dsThemeSwitcher">
                 <button class="ds-theme-btn active" data-theme="dark">Dark</button>
@@ -596,7 +612,7 @@
             <button class="right-tab-btn" id="btnTabExport" data-mode="export" title="Asset & Document Export (⌥5)">
               <span>Export</span>
             </button>
-            <button class="right-tab-btn" id="btnTabAiAssistant" data-mode="ai" title="AI Design Assistant (⌥2)">
+            <button class="right-tab-btn" id="btnTabAiAssistant" data-mode="ai" title="AI Design Assistant">
               <span><span data-icon="Sparkles"></span> AI</span>
             </button>
           </div>
@@ -807,7 +823,7 @@
           </div>
           <div id="drawerTimelineGraph"
             style="font-size: 11px; color: var(--text-muted); padding: 8px; background: var(--surface-input); border-radius: 6px;">
-            Active flow: Fintech Treasury User Onboarding • Analytical Springs: Stiff (240ms, damping: 0.82)
+            Active flow: DesignForge Onboarding • Analytical Springs: Stiff (240ms, damping: 0.82)
           </div>
         </div>
 
@@ -829,7 +845,7 @@
         <!-- 5. Console Tab -->
         <div id="drawerTabConsole" class="drawer-pane" style="display: none;">
           <pre id="drawerConsoleLog"
-            style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; margin: 0; line-height: 1.5;">[Axiom Engine] Document loaded: ForgePay AI — Treasury Platform&#10;[Axiom Engine] Design tokens synced: 21 tokens active&#10;[Axiom Engine] Canvas resolution: High-DPI ready&#10;[Axiom Engine] Ready for interaction.</pre>
+            style="font-family: var(--font-mono); font-size: 11px; color: #38bdf8; margin: 0; line-height: 1.5;">[Axiom Engine] Document loaded: DesignForge Experience&#10;[Axiom Engine] Design tokens synced: 21 tokens active&#10;[Axiom Engine] Canvas resolution: High-DPI ready&#10;[Axiom Engine] Ready for interaction.</pre>
         </div>
 
         <!-- 6. AI Activity Tab -->

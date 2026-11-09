@@ -325,18 +325,60 @@ export class CanvasRenderer {
       ctx.setLineDash([]);
       ctx.stroke();
     } else {
-      // Fills (Solid & Linear Gradient)
+      // Fills (Solid, Linear, Radial, Angular, Diamond, Image, Video)
       if (node.style?.fills && node.style.fills.length > 0) {
         for (const fill of node.style.fills) {
           if (fill.visible === false) continue;
           ctx.save();
           ctx.globalAlpha *= Math.max(0, Math.min(1, Number(fill.opacity ?? 1)));
+          if (fill.blendMode && fill.blendMode !== 'normal') {
+            ctx.globalCompositeOperation = fill.blendMode;
+          }
           if (fill.type === 'linear-gradient' || fill.type === 'gradient') {
             const grad = ctx.createLinearGradient(bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height);
             const stops = fill.stops || [{ offset: 0, color: fill.color || '#3b82f6' }, { offset: 1, color: '#8b5cf6' }];
             for (const s of stops) {
               grad.addColorStop(s.offset, s.color);
             }
+            ctx.fillStyle = grad;
+            ctx.fill();
+          } else if (fill.type === 'radial-gradient') {
+            const cx = bounds.x + bounds.width / 2;
+            const cy = bounds.y + bounds.height / 2;
+            const r = Math.max(bounds.width, bounds.height) / 2;
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(1, r));
+            const stops = fill.stops || [{ offset: 0, color: fill.color || '#3b82f6' }, { offset: 1, color: '#8b5cf6' }];
+            for (const s of stops) {
+              grad.addColorStop(s.offset, s.color);
+            }
+            ctx.fillStyle = grad;
+            ctx.fill();
+          } else if (fill.type === 'angular-gradient' || fill.type === 'conic-gradient') {
+            const cx = bounds.x + bounds.width / 2;
+            const cy = bounds.y + bounds.height / 2;
+            if (typeof ctx.createConicGradient === 'function') {
+              const grad = ctx.createConicGradient(0, cx, cy);
+              const stops = fill.stops || [{ offset: 0, color: fill.color || '#3b82f6' }, { offset: 1, color: '#8b5cf6' }];
+              for (const s of stops) {
+                grad.addColorStop(s.offset, s.color);
+              }
+              ctx.fillStyle = grad;
+              ctx.fill();
+            } else {
+              const r = Math.max(bounds.width, bounds.height) / 2;
+              const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(1, r));
+              const stops = fill.stops || [{ offset: 0, color: fill.color || '#3b82f6' }, { offset: 1, color: '#8b5cf6' }];
+              for (const s of stops) grad.addColorStop(s.offset, s.color);
+              ctx.fillStyle = grad;
+              ctx.fill();
+            }
+          } else if (fill.type === 'diamond-gradient') {
+            const cx = bounds.x + bounds.width / 2;
+            const cy = bounds.y + bounds.height / 2;
+            const r = Math.hypot(bounds.width, bounds.height) / 2;
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(1, r));
+            const stops = fill.stops || [{ offset: 0, color: fill.color || '#3b82f6' }, { offset: 1, color: '#8b5cf6' }];
+            for (const s of stops) grad.addColorStop(s.offset, s.color);
             ctx.fillStyle = grad;
             ctx.fill();
           } else if (fill.type === 'image' || fill.type === 'video') {
@@ -354,18 +396,73 @@ export class CanvasRenderer {
     // Reset shadow before stroke/clipping
     ctx.shadowColor = 'transparent';
 
-    // Strokes
+    // Strokes (Multi-stroke stack, alignments, per-side weights, caps, joins, dash patterns)
     if (node.style?.strokes && node.style.strokes.length > 0) {
       for (const stroke of node.style.strokes) {
         if (stroke.visible === false) continue;
+        ctx.save();
         ctx.strokeStyle = stroke.color || '#3b82f6';
         ctx.lineWidth = stroke.width || 1;
-        if (stroke.style === 'dashed' || stroke.dash) {
-          ctx.setLineDash(Array.isArray(stroke.dash) ? stroke.dash : [6, 4]);
+        ctx.lineCap = stroke.strokeCap || stroke.cap || 'butt';
+        ctx.lineJoin = stroke.strokeJoin || stroke.join || 'miter';
+        if (stroke.opacity !== undefined && stroke.opacity < 1) {
+          ctx.globalAlpha *= Math.max(0, Math.min(1, Number(stroke.opacity)));
+        }
+        const dash = stroke.dashPattern || stroke.dash;
+        if (stroke.style === 'dashed' || dash) {
+          ctx.setLineDash(Array.isArray(dash) ? dash : [6, 4]);
         } else {
           ctx.setLineDash([]);
         }
-        ctx.stroke();
+
+        const align = stroke.align || stroke.strokeAlign || 'center';
+        if (align === 'inside') {
+          ctx.save();
+          ctx.clip();
+          ctx.lineWidth = (stroke.width || 1) * 2;
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          ctx.stroke();
+        }
+
+        // Per-side strokeWeights support for frames/rectangles when defined
+        const weights = stroke.strokeWeights || node.style?.strokeWeights;
+        if (weights && typeof weights === 'object' && (node.type === 'rectangle' || node.type === 'frame')) {
+          ctx.save();
+          ctx.beginPath();
+          if (weights.top > 0) {
+            ctx.lineWidth = weights.top;
+            ctx.beginPath();
+            ctx.moveTo(bounds.x, bounds.y);
+            ctx.lineTo(bounds.x + bounds.width, bounds.y);
+            ctx.stroke();
+          }
+          if (weights.right > 0) {
+            ctx.lineWidth = weights.right;
+            ctx.beginPath();
+            ctx.moveTo(bounds.x + bounds.width, bounds.y);
+            ctx.lineTo(bounds.x + bounds.width, bounds.y + bounds.height);
+            ctx.stroke();
+          }
+          if (weights.bottom > 0) {
+            ctx.lineWidth = weights.bottom;
+            ctx.beginPath();
+            ctx.moveTo(bounds.x, bounds.y + bounds.height);
+            ctx.lineTo(bounds.x + bounds.width, bounds.y + bounds.height);
+            ctx.stroke();
+          }
+          if (weights.left > 0) {
+            ctx.lineWidth = weights.left;
+            ctx.beginPath();
+            ctx.moveTo(bounds.x, bounds.y);
+            ctx.lineTo(bounds.x, bounds.y + bounds.height);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        ctx.restore();
       }
       ctx.setLineDash([]);
     }

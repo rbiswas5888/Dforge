@@ -70,7 +70,9 @@ function serveStaticFile(req, res) {
     res.writeHead(200, {
       'Content-Type': contentType,
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'no-cache'
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
     });
 
     fs.createReadStream(filePath).pipe(res);
@@ -269,6 +271,12 @@ const server = http.createServer(async (req, res) => {
   if (requestPath === '/') req.url = req.url.replace('/', '/index.html');
   if (requestPath === '/preview' || requestPath === '/preview/') {
     req.url = req.url.replace(requestPath, '/preview.html');
+  }
+
+  // Directly serve stylesheets and font/image assets so browser receives pure MIME types without Vite wrapping
+  if (requestPath.endsWith('.css') || req.headers.accept?.includes('text/css') || requestPath.endsWith('.woff2') || requestPath.endsWith('.woff') || requestPath.endsWith('.png') || requestPath.endsWith('.svg') || requestPath.endsWith('.ico')) {
+    serveStaticFile(req, res);
+    return;
   }
 
   vite.middlewares(req, res, error => {

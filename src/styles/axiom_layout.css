@@ -581,21 +581,38 @@ img.axiom-spark-icon {
 
 /* Professional grouped workspace controls */
 .top-bar.global-command-bar {
-  gap: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   min-width: 0;
+  position: relative;
+  overflow: hidden;
 }
 
 .top-bar-left {
+  display: flex;
+  align-items: center;
   min-width: 0;
   gap: 8px;
+  flex: 0 1 auto;
+  overflow: hidden;
 }
 
 .top-bar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
+  position: relative;
+  z-index: 10;
+  margin: 0 4px;
 }
 
 .top-bar-right {
-  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
   min-width: 0;
   justify-content: flex-end;
   gap: 6px;
@@ -610,6 +627,7 @@ img.axiom-spark-icon {
 }
 
 .project-title-input {
+  display: none !important;
   min-width: 90px;
   max-width: 170px;
 }
@@ -968,6 +986,108 @@ img.axiom-spark-icon {
   background: var(--surface-hover);
 }
 
+/* Color Picker Gradient & Contrast Enhancements */
+.cp-gradient-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 6px;
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+}
+
+.cp-gradient-type-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cp-gradient-type-select {
+  height: 24px;
+  font-size: 10px;
+  flex: 1;
+}
+
+.cp-gradient-track-wrapper {
+  position: relative;
+  height: 18px;
+  border-radius: var(--radius-xs);
+  cursor: copy;
+  user-select: none;
+}
+
+.cp-gradient-track {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-xs);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cp-gradient-stop-pin {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  z-index: 2;
+  transition: transform 0.1s ease;
+}
+
+.cp-gradient-stop-pin:hover,
+.cp-gradient-stop-pin.active {
+  transform: translate(-50%, -50%) scale(1.25);
+  box-shadow: 0 0 0 2px var(--brand-accent), 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.cp-gradient-stop-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.cp-contrast-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 3px 6px;
+  border-radius: var(--radius-xs);
+  font-size: 9px;
+  font-weight: 600;
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+}
+
+.cp-contrast-badge.cp-contrast-pass {
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #10b981;
+}
+
+.cp-contrast-badge.cp-contrast-warn {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #f59e0b;
+}
+
+.cp-contrast-badge.cp-contrast-fail {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.cp-contrast-level {
+  margin-left: auto;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .cp-sb-container {
   position: relative;
   width: 100%;
@@ -1199,15 +1319,14 @@ img.axiom-spark-icon {
   }
 
   .project-title-input {
-    width: 72px;
-    min-width: 72px;
-    max-width: 72px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: none !important;
   }
 
   .top-bar-center {
-    display: none;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
   }
 
   .top-bar-left,
@@ -1217,8 +1336,8 @@ img.axiom-spark-icon {
   }
 
   .brand-badge > span,
-  .save-badge,
-  #btnOpenCommandPalette > span:last-child {
+  .save-badge #saveStatusText,
+  #btnOpenCommandPalette .cmd-k-text {
     display: none;
   }
 
@@ -1232,6 +1351,80 @@ img.axiom-spark-icon {
     width: 292px;
     flex-basis: 292px;
     min-width: 272px;
+  }
+}
+
+@media (max-width: 1400px) {
+  #btnQuickFileSwitcher {
+    display: none !important;
+  }
+
+  .project-title-input {
+    display: none !important;
+  }
+
+  .top-bar.global-command-bar {
+    gap: 6px;
+    padding: 0 10px;
+  }
+
+  .top-bar-left,
+  .top-bar-right {
+    gap: 4px;
+  }
+}
+
+@media (max-width: 1300px) {
+  .zoom-pill #btnZoomOut,
+  .zoom-pill #btnZoomIn,
+  .zoom-pill #btnZoomFit {
+    display: none !important;
+  }
+
+  .zoom-pill {
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+  }
+
+  .top-bar-center .mode-tab {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .app-menu-bar .menu-btn {
+    padding-right: 3px;
+    padding-left: 3px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 1150px) {
+  .top-action-menu-panel {
+    width: min(300px, calc(100vw - 20px));
+  }
+
+  .top-action-menu-panel .app-menu-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .top-action-menu-panel .menu-btn {
+    width: 100%;
+    text-align: left;
+  }
+
+  .top-action-menu-panel .dropdown-menu,
+  .top-action-menu-panel .menu-item.open .dropdown-menu {
+    position: static;
+    width: auto;
+    min-width: 0;
+    margin: 0 0 4px 8px;
+    border: 0;
+    border-left: 1px solid var(--border-subtle);
+    border-radius: 0;
+    box-shadow: none;
   }
 }
 

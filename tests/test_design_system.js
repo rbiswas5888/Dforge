@@ -250,4 +250,57 @@ assert.strictEqual(registry.system.status, 'published');
 assert.strictEqual(registry.system.history[0].id, release.id);
 console.log('   ✓ Design System release v%s successfully published and recorded in version history.', release.version);
 
+// 8. Figma Token Architecture, Scopes & Industry Starters (Book Alignment)
+console.log('8. Testing Figma 3-Tier Hierarchy, Scopes & Industry Starters...');
+const bookDoc = createInitialDocument('Figma Book Alignment Spec');
+const bookRegistry = new DesignSystemRegistry(bookDoc);
+
+// A. Test Healthcare and Education Starters
+bookRegistry.initializeWithStarter('healthcare', 'Healthcare Clinical UI');
+assert.ok(bookRegistry.getAllTokens().some(t => t.name === 'Color / Safe' && t.value === '#16a34a'));
+assert.ok(bookRegistry.getAllTokens().some(t => t.name === 'Color / Alert' && t.value === '#dc2626'));
+
+const eduRegistry = new DesignSystemRegistry(createInitialDocument('Education DS'));
+eduRegistry.initializeWithStarter('education', 'EdTech LMS System');
+assert.ok(eduRegistry.getAllTokens().some(t => t.name === 'Color / Progress' && t.value === '#059669'));
+
+// B. Test 3-Tier Hierarchy (Primitive -> Semantic -> Component)
+const primToken = bookRegistry.addToken('color', 'blue-500', '#3b82f6', { tier: 'primitive' });
+assert.strictEqual(primToken.tier, 'primitive');
+
+const semToken = bookRegistry.addToken('color', 'action.primary', primToken.value, { 
+  isSemantic: true,
+  refId: primToken.id,
+  tier: 'semantic'
+});
+assert.strictEqual(semToken.tier, 'semantic');
+
+const compToken = bookRegistry.addToken('color', 'button.primary.bg', semToken.value, {
+  componentId: 'cmp_button_1',
+  tier: 'component'
+});
+assert.strictEqual(compToken.tier, 'component');
+
+assert.ok(bookRegistry.getTokensByTier('primitive').length >= 1);
+assert.ok(bookRegistry.getTokensByTier('semantic').length >= 1);
+assert.ok(bookRegistry.getTokensByTier('component').length >= 1);
+
+// C. Test Dev Mode Code Syntax
+bookRegistry.setTokenCodeSyntax(semToken.id, {
+  css: 'var(--color-action-primary)',
+  tailwind: 'bg-primary-500',
+  react: 'theme.colors.action.primary'
+});
+assert.strictEqual(bookRegistry.system.tokens[semToken.id].codeSyntax.css, 'var(--color-action-primary)');
+assert.strictEqual(bookRegistry.system.tokens[semToken.id].codeSyntax.tailwind, 'bg-primary-500');
+
+// D. Test Variable Scopes & Types
+const radiusVar = bookRegistry.createVariable('corner.radius.card', 'number', 12, {
+  scopes: ['corner_radius']
+});
+assert.strictEqual(radiusVar.type, 'number');
+assert.ok(bookRegistry.getVariablesByScope('corner_radius').some(v => v.id === radiusVar.id));
+
+console.log('   ✓ 3-tier token hierarchy, variable scopes, and industry starters verified.');
+
 console.log('\n🎉 ALL UNIFIED DESIGN SYSTEM TESTS PASSED SUCCESSFULLY (100% SPEC COMPLIANCE)!');
