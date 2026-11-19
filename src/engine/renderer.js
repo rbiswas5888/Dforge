@@ -149,6 +149,12 @@ export class CanvasRenderer {
     // 6. Render Smart Snap Alignment Guides
     this.drawSnapGuides(ctx);
 
+    // 6.5 Render Persistent User Guides & Advanced Smart Redline Measurements
+    if (this.rulerEngine) {
+      this.rulerEngine.drawCanvasGuides(ctx);
+      this.rulerEngine.drawSmartMeasurements(ctx, page, boundsCache);
+    }
+
     // 7. Render Selection Overlays, Bounding Boxes & Resize Handles
     this.drawSelection(ctx, page, boundsCache);
 

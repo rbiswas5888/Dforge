@@ -201,5 +201,30 @@ export function findSnapGuides(page, activeBounds, activeIds = [], threshold = 6
     }
   }
 
+  // Check snapping against persistent user guides
+  if (Array.isArray(page.guides)) {
+    for (const guide of page.guides) {
+      if (guide.type === 'vertical') {
+        for (const tx of targetEdgesX) {
+          const diff = Math.abs(tx - guide.position);
+          if (diff < minDiffX) {
+            minDiffX = diff;
+            snapX = guide.position - (tx - activeBounds.x);
+            guides.push({ type: 'vertical', x: guide.position });
+          }
+        }
+      } else if (guide.type === 'horizontal') {
+        for (const ty of targetEdgesY) {
+          const diff = Math.abs(ty - guide.position);
+          if (diff < minDiffY) {
+            minDiffY = diff;
+            snapY = guide.position - (ty - activeBounds.y);
+            guides.push({ type: 'horizontal', y: guide.position });
+          }
+        }
+      }
+    }
+  }
+
   return { snapX, snapY, guides };
 }
