@@ -238,7 +238,12 @@ const icons = {
   X,
   Zap,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  AlertTriangle: TriangleAlert,
+  RefreshCw: RotateCcw,
+  Repeat: ArrowLeftRight,
+  CheckCircle2: Check,
+  Layout: LayoutDashboard
 };
 
 const mountedRoots = new WeakMap();
