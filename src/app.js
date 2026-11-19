@@ -7,6 +7,7 @@
 import {
   createInitialDocument,
   createNode,
+  generateId,
   addPageToDoc,
   duplicatePageInDoc,
   deletePageFromDoc,
@@ -2160,6 +2161,15 @@ export class DesignForgeApp {
       if (ctxMenu) ctxMenu.style.display = 'none';
     });
 
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const ctxMenu = document.getElementById('canvasContextMenu');
+        if (ctxMenu && ctxMenu.style.display !== 'none') {
+          ctxMenu.style.display = 'none';
+        }
+      }
+    });
+
     // File Menu Actions
     document.getElementById('menuNewProject')?.addEventListener('click', () => {
       this.openNewProjectDialog();
@@ -2176,6 +2186,9 @@ export class DesignForgeApp {
     // Edit Menu Actions
     document.getElementById('menuUndo')?.addEventListener('click', () => this.undo());
     document.getElementById('menuRedo')?.addEventListener('click', () => this.redo());
+    document.getElementById('menuCut')?.addEventListener('click', () => this.cutSelected());
+    document.getElementById('menuCopy')?.addEventListener('click', () => this.copySelected());
+    document.getElementById('menuPaste')?.addEventListener('click', () => this.paste());
     document.getElementById('menuDuplicate')?.addEventListener('click', () => this.duplicateSelected());
     document.getElementById('menuDelete')?.addEventListener('click', () => this.deleteSelected());
     document.getElementById('menuSelectAll')?.addEventListener('click', () => this.selectAll());
@@ -2258,21 +2271,49 @@ export class DesignForgeApp {
     });
 
     // Context Menu Buttons
-    document.getElementById('ctxDuplicate')?.addEventListener('click', () => this.duplicateSelected());
-    document.getElementById('ctxDelete')?.addEventListener('click', () => this.deleteSelected());
-    document.getElementById('ctxGroup')?.addEventListener('click', () => this.groupSelected());
-    document.getElementById('ctxUngroup')?.addEventListener('click', () => this.ungroupSelected());
-    document.getElementById('ctxAddAutoLayout')?.addEventListener('click', () => this.addAutoLayoutToSelected());
-    document.getElementById('ctxCreateComponent')?.addEventListener('click', () => this.createComponentFromSelection());
-    document.getElementById('ctxBringToFront')?.addEventListener('click', () => this.reorderSelected('top'));
-    document.getElementById('ctxSendToBack')?.addEventListener('click', () => this.reorderSelected('bottom'));
-    document.getElementById('ctxBooleanUnion')?.addEventListener('click', () => this.booleanSelected('union'));
-    document.getElementById('ctxBooleanSubtract')?.addEventListener('click', () => this.booleanSelected('subtract'));
-    document.getElementById('ctxBooleanIntersect')?.addEventListener('click', () => this.booleanSelected('intersect'));
-    document.getElementById('ctxBooleanExclude')?.addEventListener('click', () => this.booleanSelected('exclude'));
-    document.getElementById('ctxFlatten')?.addEventListener('click', () => this.flattenSelected());
-    document.getElementById('ctxExportPng')?.addEventListener('click', () => this.exportSelectedAsPng());
-    document.getElementById('ctxExportSvg')?.addEventListener('click', () => this.exportSelectedAsSvg());
+    const hideCtxMenu = () => {
+      const ctxMenu = document.getElementById('canvasContextMenu');
+      if (ctxMenu) ctxMenu.style.display = 'none';
+    };
+
+    document.getElementById('ctxCut')?.addEventListener('click', () => { hideCtxMenu(); this.cutSelected(); });
+    document.getElementById('ctxCopy')?.addEventListener('click', () => { hideCtxMenu(); this.copySelected(); });
+    document.getElementById('ctxPaste')?.addEventListener('click', () => { hideCtxMenu(); this.paste(); });
+    document.getElementById('ctxPasteHere')?.addEventListener('click', () => { hideCtxMenu(); this.paste(this.lastContextMenuCoords); });
+    document.getElementById('ctxDuplicate')?.addEventListener('click', () => { hideCtxMenu(); this.duplicateSelected(); });
+    document.getElementById('ctxDelete')?.addEventListener('click', () => { hideCtxMenu(); this.deleteSelected(); });
+    document.getElementById('ctxRename')?.addEventListener('click', () => { hideCtxMenu(); this.openBulkRenameModal(); });
+    document.getElementById('ctxLock')?.addEventListener('click', () => {
+      hideCtxMenu();
+      const sel = this.engine.getSelection();
+      for (const id of sel) this.engine.toggleLock(id);
+      this.renderer.render();
+      this.updateInspector();
+      this.updateLayersTree();
+    });
+    document.getElementById('ctxHide')?.addEventListener('click', () => {
+      hideCtxMenu();
+      const sel = this.engine.getSelection();
+      for (const id of sel) this.engine.toggleVisibility(id);
+      this.renderer.render();
+      this.updateInspector();
+      this.updateLayersTree();
+    });
+    document.getElementById('ctxGroup')?.addEventListener('click', () => { hideCtxMenu(); this.groupSelected(); });
+    document.getElementById('ctxUngroup')?.addEventListener('click', () => { hideCtxMenu(); this.ungroupSelected(); });
+    document.getElementById('ctxAddAutoLayout')?.addEventListener('click', () => { hideCtxMenu(); this.addAutoLayoutToSelected(); });
+    document.getElementById('ctxCreateComponent')?.addEventListener('click', () => { hideCtxMenu(); this.createComponentFromSelection(); });
+    document.getElementById('ctxBringToFront')?.addEventListener('click', () => { hideCtxMenu(); this.reorderSelected('top'); });
+    document.getElementById('ctxSendToBack')?.addEventListener('click', () => { hideCtxMenu(); this.reorderSelected('bottom'); });
+    document.getElementById('ctxBooleanUnion')?.addEventListener('click', () => { hideCtxMenu(); this.booleanSelected('union'); });
+    document.getElementById('ctxBooleanSubtract')?.addEventListener('click', () => { hideCtxMenu(); this.booleanSelected('subtract'); });
+    document.getElementById('ctxBooleanIntersect')?.addEventListener('click', () => { hideCtxMenu(); this.booleanSelected('intersect'); });
+    document.getElementById('ctxBooleanExclude')?.addEventListener('click', () => { hideCtxMenu(); this.booleanSelected('exclude'); });
+    document.getElementById('ctxFlatten')?.addEventListener('click', () => { hideCtxMenu(); this.flattenSelected(); });
+    document.getElementById('ctxSelectAll')?.addEventListener('click', () => { hideCtxMenu(); this.selectAll(); });
+    document.getElementById('ctxZoomFit')?.addEventListener('click', () => { hideCtxMenu(); this.zoomToFit(); });
+    document.getElementById('ctxExportPng')?.addEventListener('click', () => { hideCtxMenu(); this.exportSelectedAsPng(); });
+    document.getElementById('ctxExportSvg')?.addEventListener('click', () => { hideCtxMenu(); this.exportSelectedAsSvg(); });
   }
 
   // --- Right Sidebar: Persistent Properties & AI Workspace (Section 4 & Appendix A2) ---
@@ -3015,17 +3056,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     // Canvas Context Menu (Right-click)
     canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      const coords = renderer.screenToCanvas(e.clientX, e.clientY);
-      const hitNodeId = renderer.hitTest(coords.x, coords.y);
-      if (hitNodeId && !engine.getSelection().includes(hitNodeId)) {
-        engine.setSelection([hitNodeId]);
-      }
-      const ctxMenu = document.getElementById('canvasContextMenu');
-      if (ctxMenu) {
-        ctxMenu.style.display = 'block';
-        ctxMenu.style.left = `${Math.min(e.clientX, window.innerWidth - 220)}px`;
-        ctxMenu.style.top = `${Math.min(e.clientY, window.innerHeight - 260)}px`;
-      }
+      this.openContextMenu(e.clientX, e.clientY, 'canvas');
     }, listenerOptions);
 
     canvas.addEventListener('mousedown', async (e) => {
@@ -6918,17 +6949,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       if (!item) return;
       e.preventDefault();
       const id = item.dataset.nodeId;
-      const selected = this.engine.getSelection();
-      if (!selected.includes(id)) {
-        this.engine.setSelection([id]);
-        this.lastSelectedLayerId = id;
-      }
-      const ctxMenu = document.getElementById('canvasContextMenu');
-      if (ctxMenu) {
-        ctxMenu.style.display = 'block';
-        ctxMenu.style.left = `${Math.min(e.clientX, window.innerWidth - 220)}px`;
-        ctxMenu.style.top = `${Math.min(e.clientY, window.innerHeight - 260)}px`;
-      }
+      this.openContextMenu(e.clientX, e.clientY, 'layers', id);
     });
 
     // 5. Tree <-> Canvas Hover Synchronization
@@ -7162,6 +7183,230 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   // --- Manipulations & Shortcuts ---
   undo() { this.engine.undo(); }
   redo() { this.engine.redo(); }
+
+  copySelected() {
+    const sel = this.engine.getSelection();
+    if (!sel || sel.length === 0) return;
+    const page = this.engine.getActivePage();
+    if (!page) return;
+
+    const clipboardData = [];
+    const collectSubtree = (nodeId) => {
+      const node = page.nodes[nodeId];
+      if (!node) return null;
+      const clone = JSON.parse(JSON.stringify(node));
+      const children = [];
+      if (node.childIds && node.childIds.length > 0) {
+        for (const cid of node.childIds) {
+          const c = collectSubtree(cid);
+          if (c) children.push(c);
+        }
+      }
+      return { node: clone, children };
+    };
+
+    for (const id of sel) {
+      const item = collectSubtree(id);
+      if (item) clipboardData.push(item);
+    }
+
+    if (clipboardData.length === 0) return;
+    this.clipboard = clipboardData;
+    this.showToast(`Copied ${clipboardData.length} layer(s) to clipboard`, 'info', 1800);
+  }
+
+  cutSelected() {
+    const sel = this.engine.getSelection();
+    if (!sel || sel.length === 0) return;
+    this.copySelected();
+    this.deleteSelected();
+    this.showToast(`Cut ${sel.length} layer(s)`, 'info', 1800);
+  }
+
+  paste(targetCoords = null) {
+    if (!this.clipboard || this.clipboard.length === 0) {
+      this.showToast('Clipboard is empty', 'warning', 1800);
+      return;
+    }
+
+    const page = this.engine.getActivePage();
+    if (!page) return;
+
+    let minX = Infinity;
+    let minY = Infinity;
+    for (const item of this.clipboard) {
+      if (item.node.transform) {
+        minX = Math.min(minX, item.node.transform.x);
+        minY = Math.min(minY, item.node.transform.y);
+      }
+    }
+    if (minX === Infinity) { minX = 0; minY = 0; }
+
+    const offsetX = targetCoords ? (targetCoords.x - minX) : 24;
+    const offsetY = targetCoords ? (targetCoords.y - minY) : 24;
+
+    const newRootIds = [];
+    const allPastedNodes = [];
+
+    const instantiateSubtree = (item, parentId = null) => {
+      const freshId = generateId(item.node.type || 'node');
+      const clone = JSON.parse(JSON.stringify(item.node));
+      clone.id = freshId;
+      clone.parentId = parentId;
+      if (!parentId && clone.transform) {
+        clone.transform.x += offsetX;
+        clone.transform.y += offsetY;
+      }
+      clone.childIds = [];
+      allPastedNodes.push(clone);
+
+      if (item.children && item.children.length > 0) {
+        for (const childItem of item.children) {
+          const childId = instantiateSubtree(childItem, freshId);
+          clone.childIds.push(childId);
+        }
+      }
+      return freshId;
+    };
+
+    for (const item of this.clipboard) {
+      const newRootId = instantiateSubtree(item, null);
+      newRootIds.push(newRootId);
+    }
+
+    if (allPastedNodes.length === 0) return;
+
+    this.engine.execute({
+      type: 'paste-nodes',
+      description: `Paste ${newRootIds.length} object(s)`,
+      execute: (eng) => {
+        const p = eng.getActivePage();
+        for (const node of allPastedNodes) {
+          p.nodes[node.id] = node;
+          if (!node.parentId) {
+            p.rootIds.push(node.id);
+          } else if (p.nodes[node.parentId]) {
+            if (!p.nodes[node.parentId].childIds.includes(node.id)) {
+              p.nodes[node.parentId].childIds.push(node.id);
+            }
+          }
+        }
+        eng.setSelection(newRootIds);
+        return {
+          type: 'undo-paste',
+          description: 'Undo Paste',
+          execute: (e) => {
+            const pg = e.getActivePage();
+            for (const node of allPastedNodes) {
+              delete pg.nodes[node.id];
+              if (!node.parentId) {
+                pg.rootIds = pg.rootIds.filter(id => id !== node.id);
+              } else if (pg.nodes[node.parentId]) {
+                pg.nodes[node.parentId].childIds = pg.nodes[node.parentId].childIds.filter(id => id !== node.id);
+              }
+            }
+            e.setSelection([]);
+            return null;
+          }
+        };
+      }
+    });
+
+    this.renderer.render();
+    this.updateInspector();
+    this.updateLayersTree();
+    this.showToast(`Pasted ${newRootIds.length} object(s)`, 'success', 1800);
+  }
+
+  openContextMenu(clientX, clientY, source = 'canvas', targetNodeId = null) {
+    if (source === 'canvas') {
+      const coords = this.renderer.screenToCanvas(clientX, clientY);
+      const hitNodeId = this.renderer.hitTest(coords.x, coords.y);
+      if (hitNodeId) {
+        if (!this.engine.getSelection().includes(hitNodeId)) {
+          this.engine.setSelection([hitNodeId]);
+        }
+      } else {
+        this.engine.setSelection([]);
+      }
+      this.lastContextMenuCoords = coords;
+      this.renderer.render();
+      this.updateInspector();
+      this.updateLayersTree();
+    } else if (source === 'layers' && targetNodeId) {
+      if (!this.engine.getSelection().includes(targetNodeId)) {
+        this.engine.setSelection([targetNodeId]);
+        this.lastSelectedLayerId = targetNodeId;
+      }
+      this.lastContextMenuCoords = null;
+      this.renderer.render();
+      this.updateInspector();
+      this.updateLayersTree();
+    }
+
+    const ctxMenu = document.getElementById('canvasContextMenu');
+    if (!ctxMenu) return;
+
+    const selection = this.engine.getSelection();
+    const hasSelection = selection.length > 0;
+    const hasMultiple = selection.length > 1;
+    const hasClipboard = Boolean(this.clipboard && this.clipboard.length > 0);
+    const page = this.engine.getActivePage();
+    const isSingleFrameOrGroup = selection.length === 1 && (page?.nodes[selection[0]]?.type === 'frame' || page?.nodes[selection[0]]?.type === 'group');
+
+    const setItemState = (id, enabled, text = null) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle('disabled', !enabled);
+      if (text !== null) {
+        const span = el.querySelector('span');
+        el.firstChild.textContent = text + (span ? ' ' : '');
+      }
+    };
+
+    setItemState('ctxCut', hasSelection);
+    setItemState('ctxCopy', hasSelection);
+    setItemState('ctxPaste', hasClipboard);
+    setItemState('ctxPasteHere', hasClipboard && source === 'canvas');
+    setItemState('ctxDuplicate', hasSelection);
+    setItemState('ctxDelete', hasSelection);
+
+    setItemState('ctxRename', hasSelection);
+
+    const allLocked = hasSelection && selection.every(id => page?.nodes[id]?.locked);
+    setItemState('ctxLock', hasSelection, allLocked ? 'Unlock Selection' : 'Lock Selection');
+
+    const allHidden = hasSelection && selection.every(id => page?.nodes[id]?.visible === false);
+    setItemState('ctxHide', hasSelection, allHidden ? 'Unhide Selection' : 'Hide Selection');
+
+    setItemState('ctxGroup', hasMultiple);
+    setItemState('ctxUngroup', isSingleFrameOrGroup);
+    setItemState('ctxAddAutoLayout', hasSelection);
+    setItemState('ctxCreateComponent', hasSelection);
+
+    setItemState('ctxBringToFront', hasSelection);
+    setItemState('ctxSendToBack', hasSelection);
+
+    setItemState('ctxBooleanUnion', hasMultiple);
+    setItemState('ctxBooleanSubtract', hasMultiple);
+    setItemState('ctxBooleanIntersect', hasMultiple);
+    setItemState('ctxBooleanExclude', hasMultiple);
+    setItemState('ctxFlatten', hasSelection);
+
+    setItemState('ctxSelectAll', true);
+    setItemState('ctxZoomFit', true);
+    setItemState('ctxExportPng', hasSelection);
+    setItemState('ctxExportSvg', hasSelection);
+
+    ctxMenu.style.display = 'block';
+
+    const menuW = ctxMenu.offsetWidth || 210;
+    const menuH = ctxMenu.offsetHeight || 380;
+    const posX = Math.max(8, Math.min(clientX, window.innerWidth - menuW - 12));
+    const posY = Math.max(8, Math.min(clientY, window.innerHeight - menuH - 12));
+    ctxMenu.style.left = `${posX}px`;
+    ctxMenu.style.top = `${posY}px`;
+  }
 
   duplicateSelected() {
     const selectedIds = this.engine.getSelection();

@@ -1527,18 +1527,30 @@ body, html {
 }
 
 .context-menu {
-  position: absolute;
+  position: fixed;
   background: #161a26;
   border: 1px solid #2d364f;
   border-radius: var(--radius-sm);
   box-shadow: 0 14px 40px rgba(0,0,0,0.65);
   padding: 4px;
-  min-width: 190px;
-  z-index: 500;
+  min-width: 210px;
+  max-height: 85vh;
+  overflow-y: auto;
+  z-index: 10000;
+  backdrop-filter: blur(8px);
+}
+
+.context-menu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.context-menu::-webkit-scrollbar-thumb {
+  background: #2d364f;
+  border-radius: 2px;
 }
 
 .context-menu-item {
-  padding: 6px 10px;
+  padding: 6px 12px;
   font-size: 12px;
   color: var(--text-main);
   border-radius: 4px;
@@ -1546,11 +1558,28 @@ body, html {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+  user-select: none;
 }
 
 .context-menu-item:hover {
   background: var(--accent-blue);
   color: #ffffff;
+}
+
+.context-menu-item:hover span {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.context-menu-item.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: default;
+}
+
+.context-menu-item.disabled:hover {
+  background: transparent;
+  color: var(--text-main);
 }
 
 .context-menu-item span {

@@ -42,6 +42,36 @@ export class ShortcutRegistry {
     });
 
     this.register({
+      id: 'copy',
+      name: 'Copy',
+      category: 'Edit',
+      macKey: '⌘C',
+      winKey: 'Ctrl+C',
+      match: (e) => (isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'c',
+      handler: () => this.app.copySelected?.()
+    });
+
+    this.register({
+      id: 'cut',
+      name: 'Cut',
+      category: 'Edit',
+      macKey: '⌘X',
+      winKey: 'Ctrl+X',
+      match: (e) => (isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'x',
+      handler: () => this.app.cutSelected?.()
+    });
+
+    this.register({
+      id: 'paste',
+      name: 'Paste',
+      category: 'Edit',
+      macKey: '⌘V',
+      winKey: 'Ctrl+V',
+      match: (e) => (isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'v',
+      handler: () => this.app.paste?.()
+    });
+
+    this.register({
       id: 'duplicate',
       name: 'Duplicate',
       category: 'Edit',
