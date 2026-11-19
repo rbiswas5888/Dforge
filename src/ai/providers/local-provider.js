@@ -264,13 +264,17 @@ export class LocalProvider extends BaseProvider {
       operations: [{ op: 'createTree', rootNode: rootFrame, allNodes }]
     };
   }
-  }
 
   synthesizePricingTable() {
     const rootFrame = createNode('frame', {
       name: 'AI Generated: SaaS Pricing Section',
+      componentId: 'paper',
       transform: { x: 80, y: 920, width: 1080, height: 460 },
       style: { fills: [{ type: 'solid', color: '#090d16', opacity: 1 }], strokes: [{ color: '#1e293b', width: 1 }], cornerRadius: 20 },
+      tokenBindings: {
+        'style.fills.0.color': 'token_bg_main',
+        'style.strokes.0.color': 'token_border_subtle'
+      },
       layout: { mode: 'stack-vertical', paddingTop: 36, paddingLeft: 36, paddingRight: 36, paddingBottom: 36, gap: 28, alignItems: 'center' }
     });
 
@@ -278,7 +282,8 @@ export class LocalProvider extends BaseProvider {
       parentId: rootFrame.id,
       name: 'Title',
       transform: { x: 0, y: 0, width: 600, height: 32 },
-      text: { content: 'Predictable Cloud Pricing Plans', fontSize: 24, fontWeight: '800', textAlign: 'center', color: '#ffffff' }
+      text: { content: 'Predictable Cloud Pricing Plans', fontSize: 24, fontWeight: '800', textAlign: 'center', color: '#ffffff' },
+      tokenBindings: { 'text.color': 'token_text_primary' }
     });
     rootFrame.childIds.push(header.id);
 
@@ -301,11 +306,17 @@ export class LocalProvider extends BaseProvider {
       const card = createNode('frame', {
         parentId: cardsRow.id,
         name: `Tier / ${t.name}`,
+        componentId: 'card',
         transform: { x: 0, y: 0, width: 320, height: 320 },
         style: {
           fills: [{ type: 'solid', color: t.highlight ? '#1a2436' : '#111827', opacity: 1 }],
           strokes: [{ color: t.highlight ? '#38bdf8' : '#1f2937', width: t.highlight ? 2 : 1 }],
           cornerRadius: 16
+        },
+        tokenBindings: {
+          'style.fills.0.color': 'token_bg_surface',
+          'style.strokes.0.color': 'token_border_subtle',
+          'style.cornerRadius': 'token_radius_md'
         },
         layout: { mode: 'stack-vertical', paddingTop: 28, paddingLeft: 24, paddingRight: 24, paddingBottom: 28, gap: 16 }
       });
@@ -319,19 +330,26 @@ export class LocalProvider extends BaseProvider {
         parentId: card.id,
         name: 'Price',
         transform: { x: 0, y: 0, width: 270, height: 36 },
-        text: { content: t.price, fontSize: 32, fontWeight: '800', color: '#ffffff' }
+        text: { content: t.price, fontSize: 32, fontWeight: '800', color: '#ffffff' },
+        tokenBindings: { 'text.color': 'token_text_primary' }
       });
       const tDesc = createNode('text', {
         parentId: card.id,
         name: 'Desc',
         transform: { x: 0, y: 0, width: 270, height: 36 },
-        text: { content: t.desc, fontSize: 13, fontWeight: '400', color: '#94a3b8' }
+        text: { content: t.desc, fontSize: 13, fontWeight: '400', color: '#94a3b8' },
+        tokenBindings: { 'text.color': 'token_text_muted' }
       });
       const btn = createNode('frame', {
         parentId: card.id,
         name: 'CTA',
+        componentId: 'button',
         transform: { x: 0, y: 0, width: 272, height: 44 },
         style: { fills: [{ type: 'solid', color: t.highlight ? '#0284c7' : '#1e293b', opacity: 1 }], cornerRadius: 8 },
+        tokenBindings: {
+          'style.fills.0.color': t.highlight ? 'token_brand_primary' : 'token_bg_surface',
+          'style.cornerRadius': 'token_radius_sm'
+        },
         layout: { mode: 'stack-horizontal', alignItems: 'center', justifyContent: 'center' },
         semanticTag: 'button'
       });
@@ -359,8 +377,13 @@ export class LocalProvider extends BaseProvider {
   synthesizeHeroSection() {
     const heroFrame = createNode('frame', {
       name: 'AI Generated: Hero Landing Section',
+      componentId: 'paper',
       transform: { x: 80, y: 920, width: 1100, height: 400 },
       style: { fills: [{ type: 'solid', color: '#090d16', opacity: 1 }], strokes: [{ color: '#1e293b', width: 1 }], cornerRadius: 24 },
+      tokenBindings: {
+        'style.fills.0.color': 'token_bg_main',
+        'style.strokes.0.color': 'token_border_subtle'
+      },
       layout: { mode: 'stack-vertical', paddingTop: 56, paddingLeft: 60, paddingRight: 60, paddingBottom: 56, gap: 20, alignItems: 'center', justifyContent: 'center' }
     });
 
@@ -383,14 +406,16 @@ export class LocalProvider extends BaseProvider {
       parentId: heroFrame.id,
       name: 'Headline',
       transform: { x: 0, y: 0, width: 840, height: 68 },
-      text: { content: 'Design with Pure Vector Precision.\nCompile Directly to Production React.', fontSize: 34, fontWeight: '800', textAlign: 'center', color: '#ffffff', lineHeight: 1.2 }
+      text: { content: 'Design with Pure Vector Precision.\nCompile Directly to Production React.', fontSize: 34, fontWeight: '800', textAlign: 'center', color: '#ffffff', lineHeight: 1.2 },
+      tokenBindings: { 'text.color': 'token_text_primary' }
     });
 
     const sub = createNode('text', {
       parentId: heroFrame.id,
       name: 'Sub',
       transform: { x: 0, y: 0, width: 680, height: 40 },
-      text: { content: 'The professional design environment that transforms visual ideas into interactive prototypes and clean TypeScript components in one continuous flow.', fontSize: 15, fontWeight: '400', textAlign: 'center', color: '#94a3b8' }
+      text: { content: 'The professional design environment that transforms visual ideas into interactive prototypes and clean TypeScript components in one continuous flow.', fontSize: 15, fontWeight: '400', textAlign: 'center', color: '#94a3b8' },
+      tokenBindings: { 'text.color': 'token_text_muted' }
     });
 
     const ctaRow = createNode('frame', {
@@ -403,8 +428,13 @@ export class LocalProvider extends BaseProvider {
     const pBtn = createNode('frame', {
       parentId: ctaRow.id,
       name: 'Primary CTA',
+      componentId: 'button',
       transform: { x: 0, y: 0, width: 160, height: 48 },
       style: { fills: [{ type: 'solid', color: '#2563eb', opacity: 1 }], cornerRadius: 10 },
+      tokenBindings: {
+        'style.fills.0.color': 'token_brand_primary',
+        'style.cornerRadius': 'token_radius_sm'
+      },
       layout: { mode: 'stack-horizontal', alignItems: 'center', justifyContent: 'center' },
       semanticTag: 'button'
     });
@@ -419,8 +449,13 @@ export class LocalProvider extends BaseProvider {
     const sBtn = createNode('frame', {
       parentId: ctaRow.id,
       name: 'Secondary CTA',
+      componentId: 'button',
       transform: { x: 0, y: 0, width: 140, height: 48 },
       style: { fills: [{ type: 'solid', color: '#1e293b', opacity: 1 }], strokes: [{ color: '#334155', width: 1 }], cornerRadius: 10 },
+      tokenBindings: {
+        'style.fills.0.color': 'token_bg_surface',
+        'style.cornerRadius': 'token_radius_sm'
+      },
       layout: { mode: 'stack-horizontal', alignItems: 'center', justifyContent: 'center' },
       semanticTag: 'button'
     });
@@ -445,21 +480,33 @@ export class LocalProvider extends BaseProvider {
   synthesizeAuthCard() {
     const card = createNode('frame', {
       name: 'AI Generated: Auth Card',
+      componentId: 'card',
       transform: { x: 80, y: 920, width: 400, height: 440 },
       style: { fills: [{ type: 'solid', color: '#111827', opacity: 1 }], strokes: [{ color: '#1f2937', width: 1 }], cornerRadius: 16 },
+      tokenBindings: {
+        'style.fills.0.color': 'token_bg_surface',
+        'style.strokes.0.color': 'token_border_subtle',
+        'style.cornerRadius': 'token_radius_md'
+      },
       layout: { mode: 'stack-vertical', paddingTop: 36, paddingLeft: 32, paddingRight: 32, paddingBottom: 36, gap: 18 }
     });
     const title = createNode('text', {
       parentId: card.id,
       name: 'Title',
       transform: { x: 0, y: 0, width: 336, height: 26 },
-      text: { content: 'Sign In to Workspace', fontSize: 20, fontWeight: '700', color: '#ffffff' }
+      text: { content: 'Sign In to Workspace', fontSize: 20, fontWeight: '700', color: '#ffffff' },
+      tokenBindings: { 'text.color': 'token_text_primary' }
     });
     const emailField = createNode('frame', {
       parentId: card.id,
       name: 'Input Email',
+      componentId: 'textfield',
       transform: { x: 0, y: 0, width: 336, height: 46 },
       style: { fills: [{ type: 'solid', color: '#1e293b', opacity: 1 }], cornerRadius: 8 },
+      tokenBindings: {
+        'style.fills.0.color': 'token_bg_elevated',
+        'style.cornerRadius': 'token_radius_sm'
+      },
       layout: { mode: 'stack-horizontal', alignItems: 'center', paddingLeft: 14 },
       semanticTag: 'input'
     });
@@ -474,8 +521,13 @@ export class LocalProvider extends BaseProvider {
     const passField = createNode('frame', {
       parentId: card.id,
       name: 'Input Password',
+      componentId: 'textfield',
       transform: { x: 0, y: 0, width: 336, height: 46 },
       style: { fills: [{ type: 'solid', color: '#1e293b', opacity: 1 }], cornerRadius: 8 },
+      tokenBindings: {
+        'style.fills.0.color': 'token_bg_elevated',
+        'style.cornerRadius': 'token_radius_sm'
+      },
       layout: { mode: 'stack-horizontal', alignItems: 'center', paddingLeft: 14 },
       semanticTag: 'input'
     });
@@ -490,8 +542,13 @@ export class LocalProvider extends BaseProvider {
     const submitBtn = createNode('frame', {
       parentId: card.id,
       name: 'Submit Button',
+      componentId: 'button',
       transform: { x: 0, y: 0, width: 336, height: 46 },
       style: { fills: [{ type: 'solid', color: '#2563eb', opacity: 1 }], cornerRadius: 8 },
+      tokenBindings: {
+        'style.fills.0.color': 'token_brand_primary',
+        'style.cornerRadius': 'token_radius_sm'
+      },
       layout: { mode: 'stack-horizontal', alignItems: 'center', justifyContent: 'center' },
       semanticTag: 'button'
     });

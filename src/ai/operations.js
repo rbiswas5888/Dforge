@@ -20,6 +20,7 @@ export class OperationExecutor {
     const page = this.engine.getActivePage();
 
     const report = {
+      success: true,
       description,
       timestamp: new Date().toISOString(),
       createdNodeIds: [],
