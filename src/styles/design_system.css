@@ -575,3 +575,89 @@
   border-bottom: 1px solid var(--border-subtle);
   vertical-align: middle;
 }
+
+/* ==========================================================================
+   AG Grid React — Official Design System Theme Styles (Quartz & Alpine)
+   Conforms to AG Grid Getting Started Guide & Theme Variable Architecture
+   ========================================================================== */
+
+.ag-theme-quartz,
+.ag-theme-alpine {
+  --ag-font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --ag-font-size: 13px;
+  --ag-grid-size: 6px;
+  --ag-border-radius: 8px;
+  --ag-background-color: #ffffff;
+  --ag-foreground-color: #0f172a;
+  --ag-data-color: #1e293b;
+  --ag-secondary-foreground-color: #64748b;
+  --ag-header-background-color: #f8fafc;
+  --ag-header-foreground-color: #334155;
+  --ag-header-cell-hover-background-color: #f1f5f9;
+  --ag-border-color: #e2e8f0;
+  --ag-row-border-color: #f1f5f9;
+  --ag-row-hover-color: #f8fafc;
+  --ag-selected-row-background-color: rgba(59, 130, 246, 0.08);
+  --ag-odd-row-background-color: #ffffff;
+  --ag-range-selection-border-color: #3b82f6;
+  --ag-cell-horizontal-padding: 16px;
+  --ag-header-height: 48px;
+  --ag-row-height: 42px;
+  
+  border: 1px solid var(--ag-border-color);
+  border-radius: var(--ag-border-radius);
+  font-family: var(--ag-font-family);
+  font-size: var(--ag-font-size);
+  color: var(--ag-foreground-color);
+  background-color: var(--ag-background-color);
+  box-sizing: border-box;
+}
+
+/* AG Grid Dark Mode (Quartz Dark / Alpine Dark / theme-axiom-dark) */
+.ag-theme-quartz-dark,
+.ag-theme-alpine-dark,
+body.theme-axiom-dark .ag-theme-quartz,
+body.theme-axiom-dark .ag-theme-alpine {
+  --ag-background-color: #161b22;
+  --ag-foreground-color: #f0f6fc;
+  --ag-data-color: #e6edf3;
+  --ag-secondary-foreground-color: #8b949e;
+  --ag-header-background-color: #0d1117;
+  --ag-header-foreground-color: #8b949e;
+  --ag-header-cell-hover-background-color: #21262d;
+  --ag-border-color: #30363d;
+  --ag-row-border-color: #21262d;
+  --ag-row-hover-color: #1c2128;
+  --ag-selected-row-background-color: rgba(56, 189, 248, 0.15);
+  --ag-odd-row-background-color: #161b22;
+  --ag-range-selection-border-color: #38bdf8;
+}
+
+.ag-header {
+  background-color: var(--ag-header-background-color);
+  border-bottom: 1px solid var(--ag-border-color);
+  font-weight: 600;
+}
+
+.ag-header-cell {
+  padding: 0 var(--ag-cell-horizontal-padding);
+  color: var(--ag-header-foreground-color);
+  display: flex;
+  align-items: center;
+}
+
+.ag-cell {
+  padding: 0 var(--ag-cell-horizontal-padding);
+  color: var(--ag-data-color);
+  border-bottom: 1px solid var(--ag-row-border-color);
+  display: flex;
+  align-items: center;
+}
+
+.ag-row:hover {
+  background-color: var(--ag-row-hover-color);
+}
+
+.ag-row.ag-row-selected {
+  background-color: var(--ag-selected-row-background-color);
+}
