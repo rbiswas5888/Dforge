@@ -560,6 +560,16 @@ export class ShortcutRegistry {
     });
 
     this.register({
+      id: 'guides',
+      name: 'Toggle Guides',
+      category: 'View',
+      macKey: '⇧;',
+      winKey: 'Shift+;',
+      match: (e) => !e.metaKey && !e.ctrlKey && e.shiftKey && e.key === ';',
+      handler: () => this.app.toggleGuides()
+    });
+
+    this.register({
       id: 'toggleUI',
       name: 'Hide / Show Panels',
       category: 'View',

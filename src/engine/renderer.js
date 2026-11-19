@@ -167,6 +167,11 @@ export class CanvasRenderer {
     // 8. Render Collaborative / Review Comments
     this.drawComments(ctx);
 
+    // 8.5 Render Real-time Multiplayer Remote Collaborator Cursors & Selections
+    if (this.collabClient) {
+      this.collabClient.drawRemotePeers(ctx);
+    }
+
     // 9. Draw live shape creation preview
     if (this.creationPreview) {
       this.drawCreationPreview(ctx);

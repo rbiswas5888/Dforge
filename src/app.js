@@ -66,6 +66,8 @@ import { WorkspaceStore } from './engine/workspace_store.js';
 import { AuthService, DEMO_ACCOUNTS } from './engine/auth_service.js';
 import { mountLucideIcons } from './ui/lucide-icons.js';
 import { FontManager, defaultFontManager } from './editor-core/font-manager.js';
+import { RulerGuideMeasurementEngine } from './editor-core/ruler-guide-engine.js';
+import { CollabClient } from './collab/client/collab_client.js';
 
 export class DesignForgeApp {
   constructor() {
@@ -154,6 +156,10 @@ export class DesignForgeApp {
     // DOM references
     this.canvas = document.getElementById('canvas2d');
     this.renderer = new CanvasRenderer(this.canvas, this.engine);
+    this.rulerEngine = new RulerGuideMeasurementEngine(this);
+    this.renderer.rulerEngine = this.rulerEngine;
+    this.collabClient = new CollabClient(this);
+    this.renderer.collabClient = this.collabClient;
     this.colorPicker = new ColorPickerPopover();
     this.shortcuts = new ShortcutRegistry(this);
 
@@ -1988,7 +1994,11 @@ export class DesignForgeApp {
       }
     };
     placeAppMenu();
-    window.addEventListener('resize', placeAppMenu);
+    window.addEventListener('resize', () => {
+      placeAppMenu();
+      this.renderer?.resize?.();
+      this.rulerEngine?.updateRulerSizes();
+    });
 
     // Initialize Figma Universal Modal & Prompt System
     this.initFigmaModals();
@@ -2977,10 +2987,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const rv = document.getElementById('canvasRulerV');
     if (!rh || !rv || !this.showRulers) return;
 
-    // Display basic coordinate tick markers
-    const origin = this.renderer.canvasToScreen(0, 0);
-    rh.textContent = `  X: ${Math.round(-this.renderer.panX / this.renderer.zoom)} px`;
-    rv.textContent = `  Y: ${Math.round(-this.renderer.panY / this.renderer.zoom)}`;
+    if (this.rulerEngine) {
+      this.rulerEngine.renderRulers();
+    }
   }
 
   bindCanvasEvents() {
@@ -3026,6 +3035,15 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       if (isHand) {
         this.dragState = { type: 'pan', startX: e.clientX, startY: e.clientY };
         canvas.style.cursor = 'grabbing';
+        return;
+      }
+
+      // 0. Check interactive guide click/drag
+      const hitGuide = this.rulerEngine?.hitTestGuide(e.clientX, e.clientY);
+      if (hitGuide && !hitGuide.locked) {
+        this.rulerEngine.selectedGuide = hitGuide;
+        this.rulerEngine.startGuidePointerTracking(hitGuide, e.altKey);
+        this.renderer.render();
         return;
       }
 
@@ -3198,6 +3216,18 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       const canvasCoords = renderer.screenToCanvas(e.clientX, e.clientY);
 
       if (!this.dragState) {
+        // Guide hover detection for cursor feedback
+        const hoverGuide = this.rulerEngine?.hitTestGuide(e.clientX, e.clientY);
+        if (hoverGuide) {
+          canvas.style.cursor = hoverGuide.type === 'horizontal' ? 'row-resize' : 'col-resize';
+          this.rulerEngine.hoveredGuide = hoverGuide;
+          renderer.render();
+        } else if (this.rulerEngine?.hoveredGuide) {
+          this.rulerEngine.hoveredGuide = null;
+          canvas.style.cursor = '';
+          renderer.render();
+        }
+
         // Distance measurement on Alt / Option hover
         if (e.altKey && engine.getSelection().length > 0) {
           const hoveredId = renderer.hitTest(canvasCoords.x, canvasCoords.y);
@@ -7322,9 +7352,34 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
   toggleRulers() {
     this.showRulers = !this.showRulers;
-    const r = document.getElementById('canvasRulers');
-    if (r) r.style.display = this.showRulers ? 'block' : 'none';
+    const rh = document.getElementById('canvasRulerH');
+    const rv = document.getElementById('canvasRulerV');
+    if (rh) rh.style.display = this.showRulers ? 'block' : 'none';
+    if (rv) rv.style.display = this.showRulers ? 'block' : 'none';
+    if (this.showRulers && this.rulerEngine) {
+      this.rulerEngine.updateRulerSizes();
+    }
+    this.renderer?.render?.();
     this.showToast(this.showRulers ? 'Rulers Enabled (⇧R)' : 'Rulers Hidden');
+  }
+
+  toggleGuides() {
+    if (this.rulerEngine) {
+      this.rulerEngine.toggleGuidesVisibility();
+    }
+  }
+
+  toggleLockGuides() {
+    if (this.rulerEngine) {
+      this.rulerEngine.toggleLockGuides();
+    }
+  }
+
+  clearAllGuides() {
+    if (this.rulerEngine) {
+      this.rulerEngine.clearAllGuides();
+      this.showToast('All guides cleared');
+    }
   }
 
   toggleUI() {

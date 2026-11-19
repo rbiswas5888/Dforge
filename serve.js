@@ -11,6 +11,7 @@ import { createServer as createViteServer } from 'vite';
 import { createInitialDocument } from './src/engine/document.js';
 import { CommandEngine } from './src/engine/commands.js';
 import { DesignMcpServer } from './src/mcp/server/design_server.js';
+import { CollabHub } from './src/collab/server/collab_hub.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -146,9 +147,23 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Real-Time Multi-User Collaboration API Endpoints (Section 7)
+  if (req.url.startsWith('/api/collab')) {
+    const parsedUrl = new URL(req.url, `http://${req.headers.host || '127.0.0.1:3001'}`);
+    let body = {};
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+      body = await parseJsonBody(req).catch(() => ({}));
+    }
+    const result = collabHub.handleHttpRequest(req, res, parsedUrl.pathname, parsedUrl.searchParams, body);
+    if (result) {
+      return sendJson(res, result.status, result.body);
+    }
+    return sendJson(res, 404, { success: false, message: 'Collab endpoint not found' });
+  }
+
   // Preview API Endpoints (Blueprint Section 11)
   if (req.url.startsWith('/api/preview')) {
-    const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost:3000'}`);
+    const parsedUrl = new URL(req.url, `http://${req.headers.host || '127.0.0.1:3001'}`);
     const pathname = parsedUrl.pathname;
 
     try {
@@ -481,6 +496,8 @@ const server = http.createServer(async (req, res) => {
     serveStaticFile(req, res);
   });
 });
+
+const collabHub = new CollabHub(server, { path: '/ws/collab' });
 
 let currentPort = PORT;
 
