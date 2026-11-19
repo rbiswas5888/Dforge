@@ -62,3 +62,12 @@ def test_generate_ui_endpoint():
     data = res.json()
     assert data["success"] is True
     assert "dfir" in data
+
+
+def test_benchmarks_endpoint():
+    res = client.get("/api/v1/benchmarks")
+    assert res.status_code == 200
+    data = res.json()
+    assert "summary_metrics" in data
+    assert data["summary_metrics"]["dfir_validity_pct"] >= 95.0
+    assert data["acceptance_criteria_status"]["overall_status"] == "EXCEEDS_ACCEPTANCE_TARGETS"

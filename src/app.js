@@ -58,6 +58,7 @@ import {
   MUI_COMPONENT_CATALOG
 } from './engine/design_system/index.js';
 import { generateQRCodeSVG } from './editor-core/qr-code.js';
+import { DFUXWorkspaceView } from './ui/dfux_workspace.js';
 import { ColorPickerPopover } from './editor-core/color-picker.js';
 import { collectDocumentColors } from './editor-core/document-colors.js';
 import { buildSelectionColorUpdates, collectSelectionColors } from './editor-core/selection-colors.js';
@@ -2339,6 +2340,15 @@ export class DesignForgeApp {
       setSidebarMode('ai');
     });
 
+    const btnDfux = document.getElementById('tabModeDfux');
+    btnDfux?.addEventListener('click', () => {
+      this.openDfuxWorkspace();
+    });
+
+    document.getElementById('menuOpenDfuxWorkspace')?.addEventListener('click', () => {
+      this.openDfuxWorkspace();
+    });
+
     // Pin side-by-side button
     btnPin?.addEventListener('click', () => {
       const isPinned = sidebar.classList.toggle('side-by-side');
@@ -2732,6 +2742,35 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const count = Object.keys(page.nodes).length;
     targetEl.textContent = `Context: Entire Document (${count} layers)`;
     subEl.textContent = `${this.doc.tokens?.length || 19} Design Tokens • ${page.name}`;
+  }
+
+  openDfuxWorkspace(section = 'overview') {
+    if (!this.dfuxWorkspace) {
+      this.dfuxWorkspace = new DFUXWorkspaceView(this);
+      const appContainer = document.querySelector('.app-container') || document.body;
+      this.dfuxWorkspace.mount(appContainer);
+    }
+    const canvasContainer = document.querySelector('.main-content-area') || document.querySelector('.canvas-container') || document.querySelector('main');
+    if (canvasContainer) {
+      canvasContainer.style.display = 'none';
+    }
+    this.dfuxWorkspace.setSection(section);
+    this.dfuxWorkspace.show();
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === 'dfux'));
+  }
+
+  showMainCanvas() {
+    if (this.dfuxWorkspace) {
+      this.dfuxWorkspace.hide();
+    }
+    const canvasContainer = document.querySelector('.main-content-area') || document.querySelector('.canvas-container') || document.querySelector('main');
+    if (canvasContainer) {
+      canvasContainer.style.display = '';
+    }
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === 'design'));
+    if (this.renderer) {
+      this.renderer.render();
+    }
   }
 
   // --- Assets & Pages Initializer ---

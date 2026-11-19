@@ -3,6 +3,7 @@ UI & DFIR Generation API Routes
 """
 
 import time
+from typing import Dict, Any
 from fastapi import APIRouter, HTTPException
 from ..model_manager.manager import model_manager
 from ..models.requests import GenerateUIRequest, GenerateDFIRRequest
@@ -52,7 +53,7 @@ async def generate_dfir(req: GenerateDFIRRequest):
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
 
 
-@router.post("/ui", response_model=GenerateUIResponse)
+@router.post("/generate/ui", response_model=GenerateUIResponse)
 async def generate_ui(req: GenerateUIRequest):
     """High-level natural language prompt to UI generation endpoint."""
     dfir_req = GenerateDFIRRequest(
