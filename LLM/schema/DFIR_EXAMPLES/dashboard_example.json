@@ -1,0 +1,182 @@
+{
+  "$schema": "https://designforge.ai/schemas/dfir-v1.json",
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Enterprise Banking Dashboard",
+    "description": "Enterprise cloud analytics and transaction monitor",
+    "domain": "Fintech",
+    "industry": "Financial Services",
+    "platform": "desktop",
+    "viewport": { "width": 1440, "height": 900 },
+    "createdAt": "2026-11-19T10:00:00Z",
+    "author": "DF-UX Intelligence"
+  },
+  "tokens": {
+    "colors": {
+      "brand_primary": "#2563EB",
+      "brand_accent": "#8B5CF6",
+      "bg_dark": "#0F172A",
+      "surface_card": "#1E293B",
+      "text_main": "#F8FAFC",
+      "text_muted": "#94A3B8"
+    },
+    "spacing": {
+      "sm": 8,
+      "md": 16,
+      "lg": 24
+    },
+    "radii": {
+      "card": 12,
+      "pill": 9999
+    }
+  },
+  "root": {
+    "id": "frame_root_desktop",
+    "type": "frame",
+    "name": "Desktop App Shell",
+    "transform": { "x": 0, "y": 0, "width": 1440, "height": 900 },
+    "layout": { "mode": "stack-horizontal", "alignItems": "stretch" },
+    "style": {
+      "fills": [{ "type": "solid", "color": "#0F172A" }]
+    },
+    "children": [
+      {
+        "id": "frame_sidebar",
+        "type": "frame",
+        "name": "Sidebar Navigation",
+        "transform": { "x": 0, "y": 0, "width": 260, "height": 900 },
+        "layout": {
+          "mode": "stack-vertical",
+          "paddingTop": 24,
+          "paddingBottom": 24,
+          "paddingLeft": 20,
+          "paddingRight": 20,
+          "gap": 16
+        },
+        "style": {
+          "fills": [{ "type": "solid", "color": "#111827" }],
+          "strokes": [{ "color": "#1F2937", "width": 1, "align": "inside" }]
+        },
+        "children": [
+          {
+            "id": "text_logo",
+            "type": "text",
+            "name": "App Brand Logo",
+            "transform": { "x": 0, "y": 0, "width": 220, "height": 32 },
+            "text": {
+              "content": "⚡ DesignForge Banking",
+              "fontSize": 18,
+              "fontWeight": "700",
+              "color": "#38BDF8"
+            }
+          },
+          {
+            "id": "frame_nav_item_overview",
+            "type": "frame",
+            "name": "Nav Item Overview",
+            "transform": { "x": 0, "y": 0, "width": 220, "height": 40 },
+            "layout": { "mode": "stack-horizontal", "alignItems": "center", "paddingLeft": 12, "paddingRight": 12 },
+            "style": {
+              "fills": [{ "type": "solid", "color": "#1E293B" }],
+              "cornerRadius": 8
+            },
+            "children": [
+              {
+                "id": "text_nav_overview",
+                "type": "text",
+                "name": "Label Overview",
+                "transform": { "x": 0, "y": 0, "width": 180, "height": 20 },
+                "text": {
+                  "content": "📊 Overview",
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#F8FAFC"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "frame_content",
+        "type": "frame",
+        "name": "Main Dashboard View",
+        "transform": { "x": 260, "y": 0, "width": 1180, "height": 900 },
+        "layout": {
+          "mode": "stack-vertical",
+          "paddingTop": 32,
+          "paddingBottom": 32,
+          "paddingLeft": 32,
+          "paddingRight": 32,
+          "gap": 24,
+          "sizingHorizontal": "fill"
+        },
+        "style": { "fills": [] },
+        "children": [
+          {
+            "id": "text_header_title",
+            "type": "text",
+            "name": "Dashboard Title",
+            "transform": { "x": 0, "y": 0, "width": 800, "height": 36 },
+            "text": {
+              "content": "Portfolio & Transactions",
+              "fontSize": 24,
+              "fontWeight": "700",
+              "color": "#F8FAFC"
+            }
+          },
+          {
+            "id": "frame_kpi_row",
+            "type": "frame",
+            "name": "Metrics Cards Row",
+            "transform": { "x": 0, "y": 0, "width": 1116, "height": 140 },
+            "layout": { "mode": "stack-horizontal", "gap": 20, "sizingHorizontal": "fill" },
+            "style": { "fills": [] },
+            "children": [
+              {
+                "id": "card_balance",
+                "type": "frame",
+                "name": "Total Balance Card",
+                "transform": { "x": 0, "y": 0, "width": 350, "height": 140 },
+                "layout": { "mode": "stack-vertical", "paddingTop": 20, "paddingLeft": 20, "paddingRight": 20, "paddingBottom": 20, "gap": 8 },
+                "style": {
+                  "fills": [{ "type": "solid", "color": "#1E293B" }],
+                  "cornerRadius": 12,
+                  "strokes": [{ "color": "#334155", "width": 1 }]
+                },
+                "children": [
+                  {
+                    "id": "text_balance_label",
+                    "type": "text",
+                    "name": "Balance Label",
+                    "transform": { "x": 0, "y": 0, "width": 300, "height": 16 },
+                    "text": { "content": "Total Balance", "fontSize": 13, "fontWeight": "500", "color": "#94A3B8" }
+                  },
+                  {
+                    "id": "text_balance_val",
+                    "type": "text",
+                    "name": "Balance Value",
+                    "transform": { "x": 0, "y": 0, "width": 300, "height": 36 },
+                    "text": { "content": "$2,845,920.40", "fontSize": 28, "fontWeight": "800", "color": "#F8FAFC" }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "uxRationale": {
+    "userGoals": [
+      "Access portfolio balance at a glance",
+      "Navigate banking features easily via sidebar"
+    ],
+    "informationArchitecture": "Two-pane layout with persistent vertical navigation and fluid analytics canvas",
+    "heuristicsApplied": [
+      "Visibility of system status",
+      "Consistency and standards"
+    ],
+    "accessibilityNotes": "High contrast ratio exceeding WCAG AAA (9.8:1)"
+  }
+}

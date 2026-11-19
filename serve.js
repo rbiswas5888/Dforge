@@ -234,6 +234,42 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // Reverse proxy for DF-UX Intelligence Python FastAPI Backend (Port 8000)
+  if (req.url.startsWith('/api/v1')) {
+    const proxyReq = http.request(
+      `http://127.0.0.1:8000${req.url}`,
+      {
+        method: req.method,
+        headers: {
+          ...req.headers,
+          host: '127.0.0.1:8000'
+        }
+      },
+      (proxyRes) => {
+        res.writeHead(proxyRes.statusCode, {
+          ...proxyRes.headers,
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE'
+        });
+        proxyRes.pipe(res);
+      }
+    );
+    proxyReq.on('error', (err) => {
+      res.writeHead(503, {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      });
+      res.end(JSON.stringify({
+        error: 'DF-UX Intelligence Backend is unreachable on http://127.0.0.1:8000',
+        details: err.message,
+        hint: 'Start the Python FastAPI server with: cd LLM && ./.venv/bin/uvicorn app.main:app --port 8000'
+      }));
+    });
+    req.pipe(proxyReq);
+    return;
+  }
+
   // Reverse proxy for Ollama local AI API (Llama 3.1)
   if (req.url.startsWith('/api/ollama')) {
     const targetPath = req.url.replace(/^\/api\/ollama/, '');

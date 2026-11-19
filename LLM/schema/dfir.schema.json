@@ -1,0 +1,286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://designforge.ai/schemas/dfir-v1.json",
+  "title": "DesignForge Intermediate Representation (DFIR)",
+  "description": "Standardized, model-independent JSON intermediate representation for AI-generated UI designs and UX structures in DesignForge AI.",
+  "type": "object",
+  "required": ["version", "metadata", "root"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": {
+      "type": "string",
+      "enum": ["1.0.0", "1.0"]
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "domain": { "type": "string" },
+        "industry": { "type": "string" },
+        "platform": {
+          "type": "string",
+          "enum": ["desktop", "tablet", "mobile", "responsive", "universal"]
+        },
+        "viewport": {
+          "type": "object",
+          "properties": {
+            "width": { "type": "number", "minimum": 1 },
+            "height": { "type": "number", "minimum": 1 }
+          },
+          "required": ["width", "height"]
+        },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "author": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "tokens": {
+      "type": "object",
+      "properties": {
+        "colors": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "typography": {
+          "type": "object",
+          "additionalProperties": { "type": "object" }
+        },
+        "spacing": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "radii": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "shadows": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "root": { "$ref": "#/$defs/DFIRNode" },
+    "uxRationale": {
+      "type": "object",
+      "properties": {
+        "userGoals": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "informationArchitecture": { "type": "string" },
+        "heuristicsApplied": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "accessibilityNotes": { "type": "string" },
+        "designSystemRationale": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "DFIRNode": {
+      "type": "object",
+      "required": ["id", "type", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "frame",
+            "group",
+            "rectangle",
+            "ellipse",
+            "text",
+            "vector",
+            "image",
+            "component",
+            "instance"
+          ]
+        },
+        "name": { "type": "string" },
+        "visible": { "type": "boolean", "default": true },
+        "locked": { "type": "boolean", "default": false },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1, "default": 1 },
+        "componentId": { "type": ["string", "null"] },
+        "variantProperties": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "transform": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number", "default": 0 },
+            "y": { "type": "number", "default": 0 },
+            "width": { "type": "number", "minimum": 0 },
+            "height": { "type": "number", "minimum": 0 },
+            "rotation": { "type": "number", "default": 0 },
+            "scaleX": { "type": "number", "default": 1 },
+            "scaleY": { "type": "number", "default": 1 }
+          }
+        },
+        "layout": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["none", "stack-horizontal", "stack-vertical", "grid", "absolute"],
+              "default": "none"
+            },
+            "wrap": {
+              "type": "string",
+              "enum": ["no_wrap", "wrap"],
+              "default": "no_wrap"
+            },
+            "gap": { "type": "number", "default": 0 },
+            "paddingTop": { "type": "number", "default": 0 },
+            "paddingRight": { "type": "number", "default": 0 },
+            "paddingBottom": { "type": "number", "default": 0 },
+            "paddingLeft": { "type": "number", "default": 0 },
+            "alignItems": {
+              "type": "string",
+              "enum": ["start", "center", "end", "stretch"],
+              "default": "start"
+            },
+            "justifyContent": {
+              "type": "string",
+              "enum": ["start", "center", "end", "space-between", "space-around"],
+              "default": "start"
+            },
+            "sizingHorizontal": {
+              "type": "string",
+              "enum": ["fixed", "hug", "fill"],
+              "default": "fixed"
+            },
+            "sizingVertical": {
+              "type": "string",
+              "enum": ["fixed", "hug", "fill"],
+              "default": "fixed"
+            },
+            "gridColumns": { "type": "integer", "minimum": 1 },
+            "gridRows": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "style": {
+          "type": "object",
+          "properties": {
+            "fills": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": { "type": "string", "enum": ["solid", "gradient-linear", "gradient-radial", "image"] },
+                  "color": { "type": "string" },
+                  "opacity": { "type": "number", "minimum": 0, "maximum": 1, "default": 1 },
+                  "stops": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "offset": { "type": "number" },
+                        "color": { "type": "string" }
+                      }
+                    }
+                  },
+                  "assetUrl": { "type": "string" }
+                }
+              }
+            },
+            "strokes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "color": { "type": "string" },
+                  "width": { "type": "number", "default": 1 },
+                  "align": { "type": "string", "enum": ["inside", "center", "outside"], "default": "inside" },
+                  "style": { "type": "string", "enum": ["solid", "dashed", "dotted"], "default": "solid" }
+                }
+              }
+            },
+            "cornerRadius": { "type": "number", "default": 0 },
+            "cornerRadii": {
+              "type": "array",
+              "items": { "type": "number" },
+              "minItems": 4,
+              "maxItems": 4
+            },
+            "shadows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "x": { "type": "number", "default": 0 },
+                  "y": { "type": "number", "default": 4 },
+                  "blur": { "type": "number", "default": 8 },
+                  "spread": { "type": "number", "default": 0 },
+                  "color": { "type": "string", "default": "rgba(0,0,0,0.25)" },
+                  "inner": { "type": "boolean", "default": false }
+                }
+              }
+            }
+          }
+        },
+        "text": {
+          "type": "object",
+          "properties": {
+            "content": { "type": "string" },
+            "fontFamily": { "type": "string", "default": "Inter" },
+            "fontSize": { "type": "number", "default": 14 },
+            "fontWeight": { "type": "string", "default": "400" },
+            "lineHeight": { "type": ["number", "string"] },
+            "letterSpacing": { "type": "number", "default": 0 },
+            "textAlign": { "type": "string", "enum": ["left", "center", "right", "justify"], "default": "left" },
+            "color": { "type": "string" }
+          }
+        },
+        "vector": {
+          "type": "object",
+          "properties": {
+            "pathData": { "type": "string" },
+            "fillRule": { "type": "string", "enum": ["nonzero", "evenodd"], "default": "nonzero" }
+          }
+        },
+        "accessibility": {
+          "type": "object",
+          "properties": {
+            "role": { "type": "string" },
+            "ariaLabel": { "type": "string" },
+            "semanticTag": { "type": "string" },
+            "tabIndex": { "type": "integer" }
+          }
+        },
+        "interactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "trigger": { "type": "string", "enum": ["onClick", "onHover", "onPress", "onDrag", "afterDelay"] },
+              "action": { "type": "string", "enum": ["navigate", "openOverlay", "closeOverlay", "toggleState"] },
+              "targetId": { "type": "string" },
+              "transition": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string", "enum": ["instant", "dissolve", "slide", "smartAnimate"], "default": "instant" },
+                  "duration": { "type": "number", "default": 300 },
+                  "easing": { "type": "string", "default": "ease-out" }
+                }
+              }
+            }
+          }
+        },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/DFIRNode" },
+          "default": []
+        }
+      }
+    }
+  }
+}
