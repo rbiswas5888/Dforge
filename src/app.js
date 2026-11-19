@@ -7775,7 +7775,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   }
 
   // --- Native AI Assistant & Markdown Generation (Section 5 & 6) ---
-  async handleAiGenerate() {
+  async handleAiGenerate(overridePrompt = null) {
     const diffBox = document.getElementById('aiDiffBox');
     const applyBtn = document.getElementById('btnAiApply');
     const progressBar = document.getElementById('aiProgressBar');
@@ -7787,7 +7787,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     if (applyBtn) applyBtn.style.display = 'none';
 
     try {
-      if (this.aiInputMode === 'markdown') {
+      if (this.aiInputMode === 'markdown' && !overridePrompt) {
         const mdText = document.getElementById('aiMarkdownInput')?.value?.trim();
         if (!mdText) throw new Error('Please enter or import a Markdown specification.');
 
@@ -7816,7 +7816,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         }
       } else {
         const promptInput = document.getElementById('aiPromptInput');
-        const prompt = promptInput?.value?.trim();
+        const prompt = (typeof overridePrompt === 'string' && overridePrompt.trim()) ? overridePrompt.trim() : promptInput?.value?.trim();
         if (!prompt) throw new Error('Please enter a prompt.');
 
         this.pendingAiPlan = await this.ai.generateDesignPlan(prompt, (prog) => {
@@ -8328,6 +8328,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       if (aiPromptInp) aiPromptInp.value = promptText;
       this.switchToAiTab();
       await this.handleAiGenerate(promptText);
+      if (this.pendingAiPlan) {
+        this.handleAiApply();
+        this.showToast('✨ Wireframe generated and applied to canvas!', 'success', 3000);
+      }
     };
 
     aiSubmitBtn?.addEventListener('click', submitAiPrompt);
