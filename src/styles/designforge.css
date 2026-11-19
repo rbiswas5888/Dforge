@@ -38,6 +38,15 @@ body.theme-dark {
   --header-height: 48px;
   --sidebar-width: 272px;
   --inspector-width: 312px;
+  --menu-bg: #161a26;
+  --menu-border: #2d364f;
+  --menu-shadow: 0 14px 40px rgba(0, 0, 0, 0.65);
+  --menu-text: #f3f4f6;
+  --menu-text-dim: #94a3b8;
+  --menu-hover-bg: #4f46e5;
+  --menu-hover-text: #ffffff;
+  --menu-divider: #2d364f;
+  --menu-disabled: rgba(243, 244, 246, 0.35);
 }
 
 body.theme-axiom-light,
@@ -68,6 +77,17 @@ body.theme-light {
   --text-secondary: #475569;
   --brand-accent: #4F46E5;
   --brand-action: #4338CA;
+  --brand-accent-soft: #4F46E5;
+  --guide-info: #0284C7;
+  --menu-bg: #ffffff;
+  --menu-border: #e2e8f0;
+  --menu-shadow: 0 12px 32px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.06);
+  --menu-text: #0f172a;
+  --menu-text-dim: #64748b;
+  --menu-hover-bg: #4f46e5;
+  --menu-hover-text: #ffffff;
+  --menu-divider: #e2e8f0;
+  --menu-disabled: rgba(15, 23, 42, 0.35);
   --brand-accent-soft: #4F46E5;
   --guide-info: #0284C7;
 }
@@ -1528,16 +1548,18 @@ body, html {
 
 .context-menu {
   position: fixed;
-  background: #161a26;
-  border: 1px solid #2d364f;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 14px 40px rgba(0,0,0,0.65);
-  padding: 4px;
+  background: var(--menu-bg, #161a26);
+  border: 1px solid var(--menu-border, #2d364f);
+  border-radius: var(--radius-sm, 6px);
+  box-shadow: var(--menu-shadow, 0 14px 40px rgba(0,0,0,0.65));
+  padding: 5px;
   min-width: 210px;
   max-height: 85vh;
   overflow-y: auto;
   z-index: 10000;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--menu-text, #f3f4f6);
 }
 
 .context-menu::-webkit-scrollbar {
@@ -1545,14 +1567,15 @@ body, html {
 }
 
 .context-menu::-webkit-scrollbar-thumb {
-  background: #2d364f;
+  background: var(--menu-border, #2d364f);
   border-radius: 2px;
 }
 
 .context-menu-item {
   padding: 6px 12px;
   font-size: 12px;
-  color: var(--text-main);
+  font-weight: 500;
+  color: var(--menu-text, #f3f4f6);
   border-radius: 4px;
   cursor: pointer;
   display: flex;
@@ -1560,37 +1583,145 @@ body, html {
   justify-content: space-between;
   gap: 16px;
   user-select: none;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 
 .context-menu-item:hover {
-  background: var(--accent-blue);
-  color: #ffffff;
+  background: var(--menu-hover-bg, var(--accent-blue));
+  color: var(--menu-hover-text, #ffffff) !important;
 }
 
 .context-menu-item:hover span {
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.9) !important;
 }
 
 .context-menu-item.disabled {
-  opacity: 0.35;
+  opacity: 0.38;
   pointer-events: none;
   cursor: default;
+  color: var(--menu-disabled, rgba(255, 255, 255, 0.35)) !important;
 }
 
 .context-menu-item.disabled:hover {
-  background: transparent;
-  color: var(--text-main);
+  background: transparent !important;
+  color: var(--menu-disabled) !important;
 }
 
 .context-menu-item span {
   font-size: 11px;
-  color: var(--text-dim);
+  font-weight: 400;
+  color: var(--menu-text-dim, #94a3b8);
 }
 
 .context-menu-divider {
   height: 1px;
-  background: #2d364f;
+  background: var(--menu-divider, #2d364f);
   margin: 4px 0;
+}
+
+/* Explicit Light Mode Override for Context Menu */
+body.theme-axiom-light .context-menu,
+body.theme-light .context-menu {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.06) !important;
+  color: #0f172a !important;
+}
+
+body.theme-axiom-light .context-menu-item,
+body.theme-light .context-menu-item {
+  color: #0f172a !important;
+}
+
+body.theme-axiom-light .context-menu-item span,
+body.theme-light .context-menu-item span {
+  color: #64748b !important;
+}
+
+body.theme-axiom-light .context-menu-divider,
+body.theme-light .context-menu-divider {
+  background: #e2e8f0 !important;
+}
+
+body.theme-axiom-light .context-menu-item:hover,
+body.theme-light .context-menu-item:hover {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+}
+
+body.theme-axiom-light .context-menu-item:hover span,
+body.theme-light .context-menu-item:hover span {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+body.theme-axiom-light .context-menu-item.disabled,
+body.theme-light .context-menu-item.disabled {
+  opacity: 0.38 !important;
+  color: #94a3b8 !important;
+}
+
+/* Explicit Dark Mode Override for Context Menu */
+body.theme-axiom-dark .context-menu,
+body.theme-dark .context-menu {
+  background: #161a26 !important;
+  border-color: #2d364f !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65) !important;
+  color: #f3f4f6 !important;
+}
+
+body.theme-axiom-dark .context-menu-item,
+body.theme-dark .context-menu-item {
+  color: #f3f4f6 !important;
+}
+
+body.theme-axiom-dark .context-menu-item span,
+body.theme-dark .context-menu-item span {
+  color: #94a3b8 !important;
+}
+
+body.theme-axiom-dark .context-menu-divider,
+body.theme-dark .context-menu-divider {
+  background: #2d364f !important;
+}
+
+body.theme-axiom-dark .context-menu-item:hover,
+body.theme-dark .context-menu-item:hover {
+  background: #6366f1 !important;
+  color: #ffffff !important;
+}
+
+body.theme-axiom-dark .context-menu-item:hover span,
+body.theme-dark .context-menu-item:hover span {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Explicit High-Contrast Override for Context Menu */
+body.theme-high-contrast .context-menu {
+  background: #000000 !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 0 2px #ffffff !important;
+  color: #ffffff !important;
+}
+
+body.theme-high-contrast .context-menu-item {
+  color: #ffffff !important;
+}
+
+body.theme-high-contrast .context-menu-item span {
+  color: #ffff00 !important;
+}
+
+body.theme-high-contrast .context-menu-divider {
+  background: #ffffff !important;
+}
+
+body.theme-high-contrast .context-menu-item:hover {
+  background: #ffff00 !important;
+  color: #000000 !important;
+}
+
+body.theme-high-contrast .context-menu-item:hover span {
+  color: #000000 !important;
 }
 
 /* ==========================================================================

@@ -755,6 +755,49 @@ img.axiom-spark-icon {
   max-width: calc(100% - 24px);
 }
 
+body.theme-axiom-light .tool-shelf,
+body.theme-light .tool-shelf {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.08) !important;
+  color: #0f172a !important;
+}
+
+body.theme-axiom-light .tool-shelf .shelf-divider,
+body.theme-light .tool-shelf .shelf-divider {
+  background: rgba(0, 0, 0, 0.1) !important;
+}
+
+body.theme-axiom-light .mode-rail-btn,
+body.theme-light .mode-rail-btn,
+body.theme-axiom-light .tool-shelf .tool-btn,
+body.theme-light .tool-shelf .tool-btn {
+  color: #475569 !important;
+}
+
+body.theme-axiom-light .mode-rail-btn:hover,
+body.theme-light .mode-rail-btn:hover,
+body.theme-axiom-light .tool-shelf .tool-btn:hover,
+body.theme-light .tool-shelf .tool-btn:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: #0f172a !important;
+}
+
+body.theme-axiom-light .mode-rail-btn.active,
+body.theme-light .mode-rail-btn.active,
+body.theme-axiom-light .tool-shelf .tool-btn.active,
+body.theme-light .tool-shelf .tool-btn.active {
+  background: rgba(79, 70, 229, 0.15) !important;
+  color: #4f46e5 !important;
+  border-color: rgba(79, 70, 229, 0.3) !important;
+}
+
+body.theme-high-contrast .tool-shelf {
+  background: #000000 !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 0 2px #ffffff !important;
+}
+
 .tool-pod {
   display: inline-flex;
   align-items: center;

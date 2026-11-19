@@ -8564,7 +8564,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const btn = document.getElementById('btnToggleTheme');
     if (btn) {
       const themeIcon = btn.querySelector('#themeModeIcon');
-      if (themeIcon) themeIcon.dataset.icon = next === 'axiom-light' ? 'Sun' : (next === 'high-contrast' ? 'Eye' : 'Moon');
+      if (themeIcon) {
+        themeIcon.dataset.icon = next === 'axiom-light' ? 'Sun' : (next === 'high-contrast' ? 'Eye' : 'Moon');
+        mountLucideIcons(btn);
+      }
       btn.title = `Theme: ${next.replace('-', ' ').toUpperCase()} (Click to cycle themes)`;
     }
     this.renderer.render();
@@ -8937,12 +8940,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     // 5. Restore Saved Theme
     const savedTheme = (typeof localStorage !== 'undefined' ? localStorage.getItem('designforge_theme') : null) || 'axiom-dark';
-    document.body.className = `theme-${savedTheme}`;
-    const themeBtn = document.getElementById('btnToggleTheme');
-    if (themeBtn) {
-      const themeIcon = themeBtn.querySelector('#themeModeIcon');
-      if (themeIcon) themeIcon.dataset.icon = savedTheme === 'axiom-light' ? 'Sun' : (savedTheme === 'high-contrast' ? 'Eye' : 'Moon');
-    }
+    this.toggleTheme(savedTheme);
   }
 
   setAxiomMode(mode) {

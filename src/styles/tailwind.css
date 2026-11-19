@@ -4,7 +4,9 @@
 
 /* DesignForge AI Tailwind Theme Extensions: Light & Dark Modes */
 @layer base {
-  :root {
+  :root,
+  body.theme-axiom-dark,
+  body.theme-dark {
     --tw-bg-canvas: #090d16;
     --tw-surface: #161b22;
     --tw-surface-raised: #21262d;
@@ -13,7 +15,8 @@
     --tw-text-muted: #8b949e;
   }
 
-  body.theme-axiom-light {
+  body.theme-axiom-light,
+  body.theme-light {
     --tw-bg-canvas: #f8fafc;
     --tw-surface: #ffffff;
     --tw-surface-raised: #f1f5f9;
@@ -23,38 +26,67 @@
   }
 }
 
-/* Light Mode Overrides for Core UI Elements when theme-axiom-light is active */
-body.theme-axiom-light {
+/* Light Mode Overrides for Core UI Elements when theme-axiom-light or theme-light is active */
+body.theme-axiom-light,
+body.theme-light {
   background-color: var(--tw-bg-canvas) !important;
   color: var(--tw-text) !important;
 }
 
 body.theme-axiom-light .top-bar,
+body.theme-light .top-bar,
 body.theme-axiom-light .left-sidebar,
+body.theme-light .left-sidebar,
+body.theme-axiom-light .right-inspector,
+body.theme-light .right-inspector,
 body.theme-axiom-light .right-sidebar,
+body.theme-light .right-sidebar,
 body.theme-axiom-light .floating-toolbar,
+body.theme-light .floating-toolbar,
 body.theme-axiom-light .palette-dialog,
-body.theme-axiom-light .figma-modal {
+body.theme-light .palette-dialog,
+body.theme-axiom-light .figma-modal,
+body.theme-light .figma-modal,
+body.theme-axiom-light .top-action-menu-panel,
+body.theme-light .top-action-menu-panel {
   background-color: #ffffff !important;
   border-color: #e2e8f0 !important;
   color: #0f172a !important;
 }
 
 body.theme-axiom-light .prop-input,
+body.theme-light .prop-input,
 body.theme-axiom-light .prop-select,
-body.theme-axiom-light .ai-textarea-input {
+body.theme-light .prop-select,
+body.theme-axiom-light .ai-textarea-input,
+body.theme-light .ai-textarea-input,
+body.theme-axiom-light .zoom-pill,
+body.theme-light .zoom-pill {
   background-color: #f1f5f9 !important;
   border-color: #cbd5e1 !important;
   color: #0f172a !important;
 }
 
 body.theme-axiom-light .tree-item:hover,
-body.theme-axiom-light .tool-btn:hover {
+body.theme-light .tree-item:hover,
+body.theme-axiom-light .layer-item:hover,
+body.theme-light .layer-item:hover,
+body.theme-axiom-light .tool-btn:hover,
+body.theme-light .tool-btn:hover {
   background-color: #f1f5f9 !important;
   color: #0f172a !important;
 }
 
-body.theme-axiom-light .bottom-bar {
+body.theme-axiom-light .tool-shelf,
+body.theme-light .tool-shelf {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: #0f172a !important;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.08) !important;
+}
+
+body.theme-axiom-light .bottom-bar,
+body.theme-light .bottom-bar {
   background-color: #ffffff !important;
   border-color: #e2e8f0 !important;
   color: #64748b !important;
