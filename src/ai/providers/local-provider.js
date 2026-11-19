@@ -34,8 +34,17 @@ export class LocalProvider extends BaseProvider {
     const cleanPrompt = prompt.trim().toLowerCase();
     let plan;
 
+    // 0. Enterprise Banking Operations Command Centre
+    if (
+      cleanPrompt.includes('banking') ||
+      cleanPrompt.includes('command centre') ||
+      cleanPrompt.includes('command center') ||
+      (cleanPrompt.includes('operations') && cleanPrompt.includes('dashboard'))
+    ) {
+      plan = this.synthesizeBankingOperationsDashboard();
+    }
     // 1. Enterprise SaaS Dashboard
-    if (cleanPrompt.includes('dashboard') || cleanPrompt.includes('saas') || cleanPrompt.includes('kpi') || cleanPrompt.includes('fintech')) {
+    else if (cleanPrompt.includes('dashboard') || cleanPrompt.includes('saas') || cleanPrompt.includes('kpi') || cleanPrompt.includes('fintech')) {
       plan = this.synthesizeEnterpriseDashboard();
     }
     // 2. SaaS Pricing Table

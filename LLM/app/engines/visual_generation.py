@@ -51,6 +51,17 @@ class VisualGenerationEngine:
         root_width = float(viewport["width"])
         root_height = float(viewport["height"])
 
+        prompt_lower = (prompt or "").lower()
+        is_banking_ops = (
+            "banking" in prompt_lower or
+            "command centre" in prompt_lower or
+            "command center" in prompt_lower or
+            ("operations" in prompt_lower and "dashboard" in prompt_lower) or
+            "fintech dashboard" in prompt_lower
+        )
+        if is_banking_ops and platform == "desktop":
+            root_height = 3200.0
+
         root = DFIRNode(
             id=generate_node_id("frame_artboard"),
             type="frame",
@@ -61,7 +72,7 @@ class VisualGenerationEngine:
                 alignItems="stretch"
             ),
             style=DFIRStyle(
-                fills=[DFIRFill(type="solid", color=tokens_map["bg"])],
+                fills=[DFIRFill(type="solid", color="#F8FAFC" if is_banking_ops else tokens_map["bg"])],
                 cornerRadius=12 if platform == "mobile" else 0
             ),
             accessibility={"semanticTag": "main", "role": "main"}
@@ -95,6 +106,17 @@ class VisualGenerationEngine:
 
     @classmethod
     def _build_desktop_shell(cls, root: DFIRNode, domain: str, tokens: Dict[str, str], w: float, h: float, prompt: str):
+        prompt_lower = (prompt or "").lower()
+        if (
+            "banking" in prompt_lower or
+            "command centre" in prompt_lower or
+            "command center" in prompt_lower or
+            ("operations" in prompt_lower and "dashboard" in prompt_lower) or
+            "fintech dashboard" in prompt_lower
+        ):
+            cls._build_banking_command_centre(root, tokens, w, h, prompt)
+            return
+
         sidebar_w = 250.0
 
         # Sidebar Navigation
@@ -355,6 +377,674 @@ class VisualGenerationEngine:
             table_card.children.append(row_frame)
 
         main_content.children.append(table_card)
+
+        # Assemble Root
+        root.children.append(sidebar)
+        root.children.append(main_content)
+
+    @classmethod
+    def _build_banking_command_centre(cls, root: DFIRNode, tokens: Dict[str, str], w: float, h: float, prompt: str):
+        sidebar_w = 248.0
+        content_w = w - sidebar_w  # 1192.0
+        c_pad = 24.0
+        card_container_w = content_w - (c_pad * 2)  # 1144.0
+
+        # Colors as defined in prompt
+        c_blue_950 = "#071B36"
+        c_blue_900 = "#0B2545"
+        c_blue_800 = "#123B68"
+        c_blue_700 = "#1757A6"
+        c_blue_600 = "#1769D2"
+        c_blue_500 = "#287FE5"
+        c_blue_100 = "#E1EFFF"
+        c_neutral_900 = "#1D2939"
+        c_neutral_700 = "#475467"
+        c_neutral_600 = "#667085"
+        c_neutral_200 = "#EAECF0"
+        c_neutral_50 = "#F8FAFC"
+        c_white = "#FFFFFF"
+        c_success = "#16A36A"
+        c_success_bg = "#E8F7EF"
+        c_warning = "#D99016"
+        c_warning_bg = "#FFF5DF"
+        c_critical = "#DC4242"
+        c_critical_bg = "#FDECEC"
+        c_ai = "#7956D8"
+        c_ai_bg = "#F1EDFF"
+        c_teal = "#159A9C"
+
+        # --- SIDEBAR (248px) ---
+        sidebar = DFIRNode(
+            id=generate_node_id("sb"),
+            type="frame",
+            name="Sidebar Navigation",
+            componentId="paper",
+            tokenBindings={"style.fills.0.color": "token_bg_surface", "style.strokes.0.color": "token_border_subtle"},
+            transform=DFIRTransform(x=0, y=0, width=sidebar_w, height=h),
+            layout=DFIRLayout(
+                mode="stack-vertical",
+                paddingTop=24, paddingBottom=24, paddingLeft=16, paddingRight=16, gap=10
+            ),
+            style=DFIRStyle(
+                fills=[DFIRFill(type="solid", color=c_blue_950)],
+                strokes=[DFIRStroke(color="#102A4E", width=1, align="inside")]
+            ),
+            accessibility={"semanticTag": "nav", "role": "navigation"}
+        )
+
+        logo = DFIRNode(
+            id=generate_node_id("logo"),
+            type="text",
+            name="Bank Brand Logo",
+            transform=DFIRTransform(width=sidebar_w - 32, height=32),
+            text=DFIRText(content="⚡ BANCORP COMMAND", fontSize=15, fontWeight="800", color=c_white)
+        )
+        sidebar.children.append(logo)
+
+        nav_items = [
+            ("Overview", "📊", True),
+            ("Transactions", "💳", False),
+            ("Payments", "💸", False),
+            ("Reconciliation", "⚖️", False),
+            ("Settlement", "🤝", False),
+            ("Risk & Fraud", "🛡️", False),
+            ("Exceptions", "⚠️", False),
+            ("Reports & Analytics", "📈", False),
+            ("Operational Teams", "👥", False),
+            ("System Monitoring", "🖥️", False)
+        ]
+
+        for label, icon, is_active in nav_items:
+            nav_item = DFIRNode(
+                id=generate_node_id("nav"),
+                type="frame",
+                name=f"Nav / {label}",
+                transform=DFIRTransform(width=sidebar_w - 32, height=36),
+                layout=DFIRLayout(mode="stack-horizontal", alignItems="center", paddingLeft=12, paddingRight=12),
+                style=DFIRStyle(
+                    fills=[DFIRFill(type="solid", color=c_blue_700 if is_active else "transparent")],
+                    cornerRadius=6
+                ),
+                children=[
+                    DFIRNode(
+                        id=generate_node_id("nav_txt"),
+                        type="text",
+                        name="Label",
+                        transform=DFIRTransform(width=sidebar_w - 56, height=18),
+                        text=DFIRText(content=f"{icon}  {label}", fontSize=13, fontWeight="600" if is_active else "400", color=c_white if is_active else "#98A2B3")
+                    )
+                ]
+            )
+            sidebar.children.append(nav_item)
+
+        # --- MAIN CONTENT WORKSPACE ---
+        main_content = DFIRNode(
+            id=generate_node_id("main"),
+            type="frame",
+            name="Operations Workspace",
+            transform=DFIRTransform(x=sidebar_w, y=0, width=content_w, height=h),
+            layout=DFIRLayout(
+                mode="stack-vertical",
+                paddingTop=20, paddingBottom=40, paddingLeft=c_pad, paddingRight=c_pad, gap=20, sizingHorizontal="fill"
+            ),
+            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_neutral_50)])
+        )
+
+        # 1. TOP NAVIGATION (64px)
+        top_nav = DFIRNode(
+            id=generate_node_id("top_nav"),
+            type="frame",
+            name="Top Navigation Header",
+            transform=DFIRTransform(width=card_container_w, height=54),
+            layout=DFIRLayout(mode="stack-horizontal", justifyContent="space-between", alignItems="center", paddingLeft=16, paddingRight=16),
+            style=DFIRStyle(
+                fills=[DFIRFill(type="solid", color=c_white)],
+                strokes=[DFIRStroke(color=c_neutral_200, width=1)],
+                cornerRadius=8
+            ),
+            children=[
+                DFIRNode(
+                    id=generate_node_id("org"),
+                    type="text",
+                    name="Org Selector",
+                    transform=DFIRTransform(width=280, height=20),
+                    text=DFIRText(content="🏢 Global Banking Corp • Production Ledger", fontSize=13, fontWeight="600", color=c_blue_900)
+                ),
+                DFIRNode(
+                    id=generate_node_id("search"),
+                    type="frame",
+                    name="Global Search Field",
+                    componentId="textfield",
+                    transform=DFIRTransform(width=340, height=36),
+                    layout=DFIRLayout(mode="stack-horizontal", alignItems="center", paddingLeft=12),
+                    style=DFIRStyle(fills=[DFIRFill(type="solid", color="#F2F4F7")], cornerRadius=6),
+                    children=[
+                        DFIRNode(
+                            id=generate_node_id("search_txt"),
+                            type="text",
+                            name="Search Placeholder",
+                            transform=DFIRTransform(width=310, height=18),
+                            text=DFIRText(content="🔍 Search Transaction ID, UTR, Account, Exception...", fontSize=12, color=c_neutral_600)
+                        )
+                    ]
+                ),
+                DFIRNode(
+                    id=generate_node_id("meta_right"),
+                    type="frame",
+                    name="Top Nav Metadata & User",
+                    transform=DFIRTransform(width=380, height=36),
+                    layout=DFIRLayout(mode="stack-horizontal", alignItems="center", justifyContent="end", gap=12),
+                    style=DFIRStyle(fills=[]),
+                    children=[
+                        DFIRNode(id=generate_node_id("date"), type="text", name="Date Filter", transform=DFIRTransform(width=130, height=18), text=DFIRText(content="📅 Last 24 Hours • Live", fontSize=12, fontWeight="500", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("env"), type="text", name="Env Pill", transform=DFIRTransform(width=120, height=18), text=DFIRText(content="🟢 PROD • Mumbai DC", fontSize=12, fontWeight="600", color=c_success)),
+                        DFIRNode(id=generate_node_id("notif"), type="text", name="Notifications", transform=DFIRTransform(width=40, height=18), text=DFIRText(content="🔔 14", fontSize=12, fontWeight="700", color=c_blue_600)),
+                        DFIRNode(id=generate_node_id("avatar"), type="text", name="User Profile", transform=DFIRTransform(width=70, height=18), text=DFIRText(content="👤 Ops Lead", fontSize=12, fontWeight="600", color=c_blue_900))
+                    ]
+                )
+            ]
+        )
+        main_content.children.append(top_nav)
+
+        # 2. SECTION A — PAGE HEADER
+        sec_a = DFIRNode(
+            id=generate_node_id("sec_a"),
+            type="frame",
+            name="Section A: Page Header Bar",
+            transform=DFIRTransform(width=card_container_w, height=64),
+            layout=DFIRLayout(mode="stack-horizontal", justifyContent="space-between", alignItems="center"),
+            style=DFIRStyle(fills=[]),
+            children=[
+                DFIRNode(
+                    id=generate_node_id("title_grp"),
+                    type="frame",
+                    name="Title & Subtitle",
+                    transform=DFIRTransform(width=680, height=54),
+                    layout=DFIRLayout(mode="stack-vertical", gap=4),
+                    style=DFIRStyle(fills=[]),
+                    children=[
+                        DFIRNode(id=generate_node_id("t"), type="text", name="Title", transform=DFIRTransform(width=600, height=28), text=DFIRText(content="Banking Operations Overview", fontSize=24, fontWeight="700", color=c_blue_950)),
+                        DFIRNode(id=generate_node_id("st"), type="text", name="Subtitle", transform=DFIRTransform(width=680, height=18), text=DFIRText(content="Monitor transaction processing, financial performance, risk and operational efficiency.", fontSize=13, color=c_neutral_600))
+                    ]
+                ),
+                DFIRNode(
+                    id=generate_node_id("actions_grp"),
+                    type="frame",
+                    name="Header Actions & Status",
+                    transform=DFIRTransform(width=420, height=40),
+                    layout=DFIRLayout(mode="stack-horizontal", alignItems="center", justifyContent="end", gap=12),
+                    style=DFIRStyle(fills=[]),
+                    children=[
+                        DFIRNode(
+                            id=generate_node_id("status_badge"),
+                            type="frame",
+                            name="SLA Status Badge",
+                            transform=DFIRTransform(width=160, height=32),
+                            layout=DFIRLayout(mode="stack-horizontal", alignItems="center", justifyContent="center"),
+                            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_success_bg)], strokes=[DFIRStroke(color="#B7E6CD", width=1)], cornerRadius=16),
+                            children=[
+                                DFIRNode(id=generate_node_id("sb_txt"), type="text", name="Text", transform=DFIRTransform(width=140, height=16), text=DFIRText(content="● SLA: 99.4% (Optimal)", fontSize=11, fontWeight="600", color=c_success, textAlign="center"))
+                            ]
+                        ),
+                        DFIRNode(
+                            id=generate_node_id("export_btn"),
+                            type="frame",
+                            name="Export Report Action",
+                            componentId="button",
+                            tokenBindings={"style.fills.0.color": "token_brand_primary", "style.cornerRadius": "token_radius_sm"},
+                            transform=DFIRTransform(width=170, height=36),
+                            layout=DFIRLayout(mode="stack-horizontal", alignItems="center", justifyContent="center"),
+                            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_blue_600)], cornerRadius=6),
+                            children=[
+                                DFIRNode(id=generate_node_id("eb_txt"), type="text", name="Label", transform=DFIRTransform(width=140, height=18), text=DFIRText(content="📥 Export Report (CSV)", fontSize=12, fontWeight="600", color=c_white, textAlign="center"))
+                            ]
+                        )
+                    ]
+                )
+            ]
+        )
+        main_content.children.append(sec_a)
+
+        # 3. SECTION B — 4 EXECUTIVE KPI CARDS
+        sec_b = DFIRNode(
+            id=generate_node_id("sec_b"),
+            type="frame",
+            name="Section B: Executive KPI Cards",
+            transform=DFIRTransform(width=card_container_w, height=140),
+            layout=DFIRLayout(mode="stack-horizontal", gap=16, sizingHorizontal="fill"),
+            style=DFIRStyle(fills=[])
+        )
+
+        kpi_card_w = (card_container_w - (3 * 16)) / 4  # 274px
+        kpi_specs = [
+            {"lbl": "Total Transaction Volume", "val": "₹248.6 Cr", "chg": "▲ +12.8% vs prev period", "sub": "Mini line trend: Steady velocity", "color": c_blue_600},
+            {"lbl": "Successful Transactions", "val": "98.42%", "chg": "▲ +1.24%", "sub": "1,842,500 / 1,872,000 attempts", "color": c_success},
+            {"lbl": "Pending Transactions", "val": "12,845", "chg": "▲ +8.2%", "sub": "Hourly trend peak (Ageing >30m: 142)", "color": c_warning},
+            {"lbl": "Failed Transactions", "val": "1,248", "chg": "Rate: 0.12%", "sub": "Primary: Bank Host Timeout (68%)", "color": c_critical}
+        ]
+
+        for spec in kpi_specs:
+            card = DFIRNode(
+                id=generate_node_id("kpi"),
+                type="frame",
+                name=f"KPI / {spec['lbl']}",
+                componentId="card",
+                tokenBindings={"style.fills.0.color": "token_bg_surface", "style.cornerRadius": "token_radius_md"},
+                transform=DFIRTransform(width=kpi_card_w, height=140),
+                layout=DFIRLayout(mode="stack-vertical", paddingTop=16, paddingLeft=18, paddingRight=18, paddingBottom=16, gap=6),
+                style=DFIRStyle(
+                    fills=[DFIRFill(type="solid", color=c_white)],
+                    strokes=[DFIRStroke(color=c_neutral_200, width=1)],
+                    cornerRadius=10,
+                    shadows=[DFIRShadow(y=2, blur=8, color="rgba(16,24,40,0.04)")]
+                ),
+                children=[
+                    DFIRNode(id=generate_node_id("kl"), type="text", name="Label", transform=DFIRTransform(width=kpi_card_w - 36, height=16), text=DFIRText(content=spec["lbl"], fontSize=12, fontWeight="600", color=c_neutral_600)),
+                    DFIRNode(id=generate_node_id("kv"), type="text", name="Value", transform=DFIRTransform(width=kpi_card_w - 36, height=34), text=DFIRText(content=spec["val"], fontSize=24, fontWeight="700", color=c_blue_950)),
+                    DFIRNode(id=generate_node_id("kc"), type="text", name="Change", transform=DFIRTransform(width=kpi_card_w - 36, height=16), text=DFIRText(content=spec["chg"], fontSize=11, fontWeight="600", color=spec["color"])),
+                    DFIRNode(id=generate_node_id("ks"), type="text", name="Subtext", transform=DFIRTransform(width=kpi_card_w - 36, height=14), text=DFIRText(content=spec["sub"], fontSize=10, color=c_neutral_600))
+                ]
+            )
+            sec_b.children.append(card)
+        main_content.children.append(sec_b)
+
+        # 4. SECTION C — TRANSACTION ANALYTICS (Line Chart Container)
+        sec_c = DFIRNode(
+            id=generate_node_id("sec_c"),
+            type="frame",
+            name="Section C: Transaction Volume & Performance Chart",
+            componentId="card",
+            transform=DFIRTransform(width=card_container_w, height=270),
+            layout=DFIRLayout(mode="stack-vertical", paddingTop=20, paddingLeft=22, paddingRight=22, paddingBottom=20, gap=14),
+            style=DFIRStyle(
+                fills=[DFIRFill(type="solid", color=c_white)],
+                strokes=[DFIRStroke(color=c_neutral_200, width=1)],
+                cornerRadius=10
+            ),
+            children=[
+                DFIRNode(
+                    id=generate_node_id("chart_header"),
+                    type="frame",
+                    name="Chart Header & Filter Tabs",
+                    transform=DFIRTransform(width=card_container_w - 44, height=32),
+                    layout=DFIRLayout(mode="stack-horizontal", justifyContent="space-between", alignItems="center"),
+                    style=DFIRStyle(fills=[]),
+                    children=[
+                        DFIRNode(id=generate_node_id("ct"), type="text", name="Title", transform=DFIRTransform(width=420, height=20), text=DFIRText(content="Transaction Volume & Processing Performance (Multi-Series)", fontSize=14, fontWeight="600", color=c_blue_900)),
+                        DFIRNode(id=generate_node_id("c_tabs"), type="text", name="Filter Tabs", transform=DFIRTransform(width=280, height=20), text=DFIRText(content="[24 Hours (Active)]  •  7 Days  •  30 Days  •  90 Days", fontSize=11, fontWeight="600", color=c_blue_600, textAlign="right"))
+                    ]
+                ),
+                DFIRNode(
+                    id=generate_node_id("chart_stage"),
+                    type="frame",
+                    name="Multi-Series Chart Stage Visual",
+                    transform=DFIRTransform(width=card_container_w - 44, height=170),
+                    layout=DFIRLayout(mode="stack-vertical", justifyContent="center", alignItems="center", gap=8),
+                    style=DFIRStyle(fills=[DFIRFill(type="solid", color="#F8FAFC")], strokes=[DFIRStroke(color=c_neutral_200, width=1)], cornerRadius=6),
+                    children=[
+                        DFIRNode(id=generate_node_id("c_vis"), type="text", name="Visual Curves Representation", transform=DFIRTransform(width=800, height=50), text=DFIRText(content="📈 ━━━━━ Volume ₹ (Peak: ₹38.4 Cr/hr) ━━━━━ Success Rate: 98.42% ━━━━━ Failure Rate: 0.12%", fontSize=13, fontWeight="600", color=c_blue_600, textAlign="center")),
+                        DFIRNode(id=generate_node_id("c_grid"), type="text", name="Axes & Time Scale", transform=DFIRTransform(width=800, height=20), text=DFIRText(content="00:00        04:00        08:00        12:00 (Peak)        16:00        20:00        23:59 (Current)", fontSize=11, color=c_neutral_600, textAlign="center"))
+                    ]
+                )
+            ]
+        )
+        main_content.children.append(sec_c)
+
+        # 5. SECTION D — PAYMENT CHANNEL ANALYTICS (Donut & Status Progress)
+        sec_d = DFIRNode(
+            id=generate_node_id("sec_d"),
+            type="frame",
+            name="Section D: Payment Channels & Status",
+            transform=DFIRTransform(width=card_container_w, height=240),
+            layout=DFIRLayout(mode="stack-horizontal", gap=16),
+            style=DFIRStyle(fills=[])
+        )
+        half_card_w = (card_container_w - 16) / 2  # 564px
+
+        card_d1 = DFIRNode(
+            id=generate_node_id("card_d1"),
+            type="frame",
+            name="Card 1: Payment Channel Distribution",
+            componentId="card",
+            transform=DFIRTransform(width=half_card_w, height=240),
+            layout=DFIRLayout(mode="stack-vertical", paddingTop=18, paddingLeft=20, paddingRight=20, paddingBottom=18, gap=10),
+            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], strokes=[DFIRStroke(color=c_neutral_200, width=1)], cornerRadius=10),
+            children=[
+                DFIRNode(id=generate_node_id("d1_t"), type="text", name="Title", transform=DFIRTransform(width=half_card_w - 40, height=20), text=DFIRText(content="Payment Channel Distribution (Donut Metrics)", fontSize=13, fontWeight="600", color=c_blue_900)),
+                DFIRNode(id=generate_node_id("ch1"), type="text", name="UPI", transform=DFIRTransform(width=half_card_w - 40, height=24), text=DFIRText(content="• UPI: 48.2% (₹120.1 Cr • 902,400 TXs)", fontSize=12, fontWeight="600", color=c_blue_600)),
+                DFIRNode(id=generate_node_id("ch2"), type="text", name="NEFT", transform=DFIRTransform(width=half_card_w - 40, height=24), text=DFIRText(content="• NEFT: 24.1% (₹60.0 Cr • 451,200 TXs)", fontSize=12, fontWeight="600", color=c_teal)),
+                DFIRNode(id=generate_node_id("ch3"), type="text", name="IMPS", transform=DFIRTransform(width=half_card_w - 40, height=24), text=DFIRText(content="• IMPS: 17.5% (₹43.5 Cr • 327,600 TXs)", fontSize=12, fontWeight="600", color=c_ai)),
+                DFIRNode(id=generate_node_id("ch4"), type="text", name="RTGS", transform=DFIRTransform(width=half_card_w - 40, height=24), text=DFIRText(content="• RTGS: 10.2% (₹25.0 Cr • 190,800 TXs)", fontSize=12, fontWeight="600", color="#559EED"))
+            ]
+        )
+
+        card_d2 = DFIRNode(
+            id=generate_node_id("card_d2"),
+            type="frame",
+            name="Card 2: Transaction Status Distribution",
+            componentId="card",
+            transform=DFIRTransform(width=half_card_w, height=240),
+            layout=DFIRLayout(mode="stack-vertical", paddingTop=18, paddingLeft=20, paddingRight=20, paddingBottom=18, gap=10),
+            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], strokes=[DFIRStroke(color=c_neutral_200, width=1)], cornerRadius=10),
+            children=[
+                DFIRNode(id=generate_node_id("d2_t"), type="text", name="Title", transform=DFIRTransform(width=half_card_w - 40, height=20), text=DFIRText(content="Transaction Status Distribution (Live Volume)", fontSize=13, fontWeight="600", color=c_blue_900)),
+                DFIRNode(id=generate_node_id("st1"), type="text", name="Successful", transform=DFIRTransform(width=half_card_w - 40, height=24), text=DFIRText(content="✓ Successful: 98.42% (1,842,500 attempts)", fontSize=12, fontWeight="600", color=c_success)),
+                DFIRNode(id=generate_node_id("st2"), type="text", name="Processing", transform=DFIRTransform(width=half_card_w - 40, height=24), text=DFIRText(content="⏳ Processing: 0.80% (14,976 in-flight)", fontSize=12, fontWeight="600", color=c_blue_500)),
+                DFIRNode(id=generate_node_id("st3"), type="text", name="Pending", transform=DFIRTransform(width=half_card_w - 40, height=24), text=DFIRText(content="⏸️ Pending: 0.66% (12,845 in queue)", fontSize=12, fontWeight="600", color=c_warning)),
+                DFIRNode(id=generate_node_id("st4"), type="text", name="Failed", transform=DFIRTransform(width=half_card_w - 40, height=24), text=DFIRText(content="✕ Failed: 0.12% (1,248 exceptions)", fontSize=12, fontWeight="600", color=c_critical))
+            ]
+        )
+        sec_d.children.extend([card_d1, card_d2])
+        main_content.children.append(sec_d)
+
+        # 6. SECTION E — RISK AND FRAUD MONITORING
+        sec_e = DFIRNode(
+            id=generate_node_id("sec_e"),
+            type="frame",
+            name="Section E: Risk and Fraud Monitoring",
+            transform=DFIRTransform(width=card_container_w, height=220),
+            layout=DFIRLayout(mode="stack-horizontal", gap=16),
+            style=DFIRStyle(fills=[])
+        )
+
+        card_e1 = DFIRNode(
+            id=generate_node_id("card_e1"),
+            type="frame",
+            name="Card 1: Fraud Detection Overview",
+            componentId="card",
+            transform=DFIRTransform(width=half_card_w, height=220),
+            layout=DFIRLayout(mode="stack-vertical", paddingTop=18, paddingLeft=20, paddingRight=20, paddingBottom=18, gap=8),
+            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], strokes=[DFIRStroke(color=c_neutral_200, width=1)], cornerRadius=10),
+            children=[
+                DFIRNode(id=generate_node_id("e1_t"), type="text", name="Title", transform=DFIRTransform(width=half_card_w - 40, height=20), text=DFIRText(content="Fraud Detection & Risk Exposure", fontSize=13, fontWeight="600", color=c_blue_900)),
+                DFIRNode(id=generate_node_id("f1"), type="text", name="Exposed", transform=DFIRTransform(width=half_card_w - 40, height=20), text=DFIRText(content="• Exposed Transaction Value: ₹1.42 Cr", fontSize=12, fontWeight="700", color=c_critical)),
+                DFIRNode(id=generate_node_id("f2"), type="text", name="Flagged", transform=DFIRTransform(width=half_card_w - 40, height=20), text=DFIRText(content="• Flagged Transactions: 342  |  Under Investigation: 86", fontSize=12, color=c_neutral_700)),
+                DFIRNode(id=generate_node_id("f3"), type="text", name="Blocked", transform=DFIRTransform(width=half_card_w - 40, height=20), text=DFIRText(content="• Automated Blocked TXs: 256  |  False Positive Rate: 0.04%", fontSize=12, color=c_neutral_700))
+            ]
+        )
+
+        card_e2 = DFIRNode(
+            id=generate_node_id("card_e2"),
+            type="frame",
+            name="Card 2: Risk Severity Distribution",
+            componentId="card",
+            transform=DFIRTransform(width=half_card_w, height=220),
+            layout=DFIRLayout(mode="stack-vertical", paddingTop=18, paddingLeft=20, paddingRight=20, paddingBottom=18, gap=8),
+            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], strokes=[DFIRStroke(color=c_neutral_200, width=1)], cornerRadius=10),
+            children=[
+                DFIRNode(id=generate_node_id("e2_t"), type="text", name="Title", transform=DFIRTransform(width=half_card_w - 40, height=20), text=DFIRText(content="Risk Severity Breakdown (Active Queues)", fontSize=13, fontWeight="600", color=c_blue_900)),
+                DFIRNode(id=generate_node_id("r1"), type="text", name="Critical", transform=DFIRTransform(width=half_card_w - 40, height=20), text=DFIRText(content="🔴 Critical: 14 cases (Immediate Freeze)", fontSize=12, fontWeight="600", color=c_critical)),
+                DFIRNode(id=generate_node_id("r2"), type="text", name="High", transform=DFIRTransform(width=half_card_w - 40, height=20), text=DFIRText(content="🟠 High: 42 cases (Manual Review required)", fontSize=12, fontWeight="600", color=c_warning)),
+                DFIRNode(id=generate_node_id("r3"), type="text", name="Medium", transform=DFIRTransform(width=half_card_w - 40, height=20), text=DFIRText(content="🔵 Medium: 118 cases  |  🟢 Low: 168 cases", fontSize=12, color=c_neutral_700))
+            ]
+        )
+        sec_e.children.extend([card_e1, card_e2])
+        main_content.children.append(sec_e)
+
+        # 7. SECTION F — SETTLEMENT AND RECONCILIATION
+        sec_f = DFIRNode(
+            id=generate_node_id("sec_f"),
+            type="frame",
+            name="Section F: Settlement and Reconciliation",
+            componentId="card",
+            transform=DFIRTransform(width=card_container_w, height=200),
+            layout=DFIRLayout(mode="stack-vertical", paddingTop=18, paddingLeft=22, paddingRight=22, paddingBottom=18, gap=10),
+            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], strokes=[DFIRStroke(color=c_neutral_200, width=1)], cornerRadius=10),
+            children=[
+                DFIRNode(id=generate_node_id("f_t"), type="text", name="Title", transform=DFIRTransform(width=card_container_w - 44, height=20), text=DFIRText(content="Settlement Performance & Reconciliation Variance", fontSize=13, fontWeight="600", color=c_blue_900)),
+                DFIRNode(id=generate_node_id("f_m"), type="text", name="Metrics Summary", transform=DFIRTransform(width=card_container_w - 44, height=22), text=DFIRText(content="Total Settlement: ₹248.60 Cr  •  Reconciled: ₹234.15 Cr (94.1%)  •  Unreconciled / Pending: ₹14.45 Cr (5.9%)  •  Unmatched: 42 TXs", fontSize=12, fontWeight="600", color=c_neutral_900)),
+                DFIRNode(id=generate_node_id("f_bar"), type="frame", name="Variance Progress Bar", transform=DFIRTransform(width=card_container_w - 44, height=36), layout=DFIRLayout(mode="stack-horizontal", alignItems="center", paddingLeft=12), style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_success_bg)], cornerRadius=6), children=[
+                    DFIRNode(id=generate_node_id("f_txt"), type="text", name="Recon Label", transform=DFIRTransform(width=700, height=18), text=DFIRText(content="✓ T+0 Settlement Cycle 4 of 6 Completed • Clearing variance 0.002% within tolerance thresholds.", fontSize=12, color=c_success))
+                ])
+            ]
+        )
+        main_content.children.append(sec_f)
+
+        # 8. SECTION G — OPERATIONAL SLA MONITORING
+        sec_g = DFIRNode(
+            id=generate_node_id("sec_g"),
+            type="frame",
+            name="Section G: Operational SLA Monitoring",
+            transform=DFIRTransform(width=card_container_w, height=180),
+            layout=DFIRLayout(mode="stack-horizontal", gap=16),
+            style=DFIRStyle(fills=[])
+        )
+
+        card_g1 = DFIRNode(
+            id=generate_node_id("card_g1"),
+            type="frame",
+            name="Card 1: SLA Performance",
+            componentId="card",
+            transform=DFIRTransform(width=half_card_w, height=180),
+            layout=DFIRLayout(mode="stack-vertical", paddingTop=16, paddingLeft=20, paddingRight=20, paddingBottom=16, gap=6),
+            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], strokes=[DFIRStroke(color=c_neutral_200, width=1)], cornerRadius=10),
+            children=[
+                DFIRNode(id=generate_node_id("g1_t"), type="text", name="Title", transform=DFIRTransform(width=half_card_w - 40, height=20), text=DFIRText(content="Operational SLA Performance", fontSize=13, fontWeight="600", color=c_blue_900)),
+                DFIRNode(id=generate_node_id("g1_v"), type="text", name="Compliance Rate", transform=DFIRTransform(width=half_card_w - 40, height=30), text=DFIRText(content="99.40% Compliance (Target: 99.0%)", fontSize=18, fontWeight="700", color=c_success)),
+                DFIRNode(id=generate_node_id("g1_s"), type="text", name="Breached", transform=DFIRTransform(width=half_card_w - 40, height=18), text=DFIRText(content="Within-SLA: 99.4%  |  Breached Rate: 0.60% (112 TXs)", fontSize=12, color=c_neutral_600))
+            ]
+        )
+
+        card_g2 = DFIRNode(
+            id=generate_node_id("card_g2"),
+            type="frame",
+            name="Card 2: Processing Latency",
+            componentId="card",
+            transform=DFIRTransform(width=half_card_w, height=180),
+            layout=DFIRLayout(mode="stack-vertical", paddingTop=16, paddingLeft=20, paddingRight=20, paddingBottom=16, gap=6),
+            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], strokes=[DFIRStroke(color=c_neutral_200, width=1)], cornerRadius=10),
+            children=[
+                DFIRNode(id=generate_node_id("g2_t"), type="text", name="Title", transform=DFIRTransform(width=half_card_w - 40, height=20), text=DFIRText(content="Transaction Processing Latency", fontSize=13, fontWeight="600", color=c_blue_900)),
+                DFIRNode(id=generate_node_id("g2_v"), type="text", name="Average Latency", transform=DFIRTransform(width=half_card_w - 40, height=30), text=DFIRText(content="Avg: 118 ms  •  P95: 242 ms  •  P99: 485 ms", fontSize=18, fontWeight="700", color=c_blue_600)),
+                DFIRNode(id=generate_node_id("g2_s"), type="text", name="Latency Guarantee", transform=DFIRTransform(width=half_card_w - 40, height=18), text=DFIRText(content="Sub-500ms SLA Commitment: PASS across all payment gateways", fontSize=12, color=c_neutral_600))
+            ]
+        )
+        sec_g.children.extend([card_g1, card_g2])
+        main_content.children.append(sec_g)
+
+        # 9. SECTION H — EXCEPTION MANAGEMENT TABLE
+        sec_h = DFIRNode(
+            id=generate_node_id("sec_h"),
+            type="frame",
+            name="Section H: Operational Exceptions Table",
+            componentId="ag-grid-table",
+            transform=DFIRTransform(width=card_container_w, height=320),
+            layout=DFIRLayout(mode="stack-vertical", paddingTop=18, paddingLeft=20, paddingRight=20, paddingBottom=18, gap=10),
+            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], strokes=[DFIRStroke(color=c_neutral_200, width=1)], cornerRadius=10),
+            children=[
+                DFIRNode(
+                    id=generate_node_id("h_header"),
+                    type="frame",
+                    name="Table Title & Action Bar",
+                    transform=DFIRTransform(width=card_container_w - 40, height=28),
+                    layout=DFIRLayout(mode="stack-horizontal", justifyContent="space-between", alignItems="center"),
+                    style=DFIRStyle(fills=[]),
+                    children=[
+                        DFIRNode(id=generate_node_id("ht"), type="text", name="Title", transform=DFIRTransform(width=340, height=20), text=DFIRText(content="High-Density Operational Exceptions Queue", fontSize=13, fontWeight="600", color=c_blue_900)),
+                        DFIRNode(id=generate_node_id("ha"), type="text", name="Actions", transform=DFIRTransform(width=300, height=18), text=DFIRText(content="🔍 Filter: Critical Only  |  Bulk Action: Resolve (3)", fontSize=11, fontWeight="600", color=c_blue_600, textAlign="right"))
+                    ]
+                ),
+                # Table Header
+                DFIRNode(
+                    id=generate_node_id("tbl_th"),
+                    type="frame",
+                    name="Table Header Row",
+                    transform=DFIRTransform(width=card_container_w - 40, height=36),
+                    layout=DFIRLayout(mode="stack-horizontal", alignItems="center", paddingLeft=12, paddingRight=12),
+                    style=DFIRStyle(fills=[DFIRFill(type="solid", color="#F2F4F7")], cornerRadius=4),
+                    children=[
+                        DFIRNode(id=generate_node_id("th1"), type="text", name="Col", transform=DFIRTransform(width=140, height=16), text=DFIRText(content="Transaction ID", fontSize=11, fontWeight="600", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("th2"), type="text", name="Col", transform=DFIRTransform(width=100, height=16), text=DFIRText(content="Time", fontSize=11, fontWeight="600", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("th3"), type="text", name="Col", transform=DFIRTransform(width=90, height=16), text=DFIRText(content="Channel", fontSize=11, fontWeight="600", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("th4"), type="text", name="Col", transform=DFIRTransform(width=130, height=16), text=DFIRText(content="Amount (₹)", fontSize=11, fontWeight="600", color=c_neutral_700, textAlign="right")),
+                        DFIRNode(id=generate_node_id("th5"), type="text", name="Col", transform=DFIRTransform(width=200, height=16), text=DFIRText(content="Failure Reason", fontSize=11, fontWeight="600", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("th6"), type="text", name="Col", transform=DFIRTransform(width=90, height=16), text=DFIRText(content="Priority", fontSize=11, fontWeight="600", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("th7"), type="text", name="Col", transform=DFIRTransform(width=120, height=16), text=DFIRText(content="Assigned Team", fontSize=11, fontWeight="600", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("th8"), type="text", name="Col", transform=DFIRTransform(width=90, height=16), text=DFIRText(content="Action", fontSize=11, fontWeight="600", color=c_neutral_700, textAlign="right"))
+                    ]
+                ),
+                # Row 1
+                DFIRNode(
+                    id=generate_node_id("r1"), type="frame", name="Row: TX-984210",
+                    transform=DFIRTransform(width=card_container_w - 40, height=44),
+                    layout=DFIRLayout(mode="stack-horizontal", alignItems="center", paddingLeft=12, paddingRight=12),
+                    style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], strokes=[DFIRStroke(color="#F2F4F7", width=1)]),
+                    children=[
+                        DFIRNode(id=generate_node_id("c1"), type="text", name="ID", transform=DFIRTransform(width=140, height=16), text=DFIRText(content="TX-984210", fontSize=12, fontWeight="600", color=c_blue_600)),
+                        DFIRNode(id=generate_node_id("c2"), type="text", name="Time", transform=DFIRTransform(width=100, height=16), text=DFIRText(content="16:32:04", fontSize=12, color=c_neutral_600)),
+                        DFIRNode(id=generate_node_id("c3"), type="text", name="Channel", transform=DFIRTransform(width=90, height=16), text=DFIRText(content="NEFT", fontSize=12, fontWeight="500", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("c4"), type="text", name="Amt", transform=DFIRTransform(width=130, height=16), text=DFIRText(content="₹4,25,000.00", fontSize=12, fontWeight="700", color=c_blue_950, textAlign="right")),
+                        DFIRNode(id=generate_node_id("c5"), type="text", name="Reason", transform=DFIRTransform(width=200, height=16), text=DFIRText(content="Bank Host Timeout", fontSize=12, color=c_critical)),
+                        DFIRNode(id=generate_node_id("c6"), type="text", name="Priority", transform=DFIRTransform(width=90, height=16), text=DFIRText(content="🔴 Critical", fontSize=11, fontWeight="700", color=c_critical)),
+                        DFIRNode(id=generate_node_id("c7"), type="text", name="Team", transform=DFIRTransform(width=120, height=16), text=DFIRText(content="Settlement Ops", fontSize=12, color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("c8"), type="text", name="Action", transform=DFIRTransform(width=90, height=16), text=DFIRText(content="[Retry TX]", fontSize=11, fontWeight="600", color=c_blue_600, textAlign="right"))
+                    ]
+                ),
+                # Row 2
+                DFIRNode(
+                    id=generate_node_id("r2"), type="frame", name="Row: TX-984209",
+                    transform=DFIRTransform(width=card_container_w - 40, height=44),
+                    layout=DFIRLayout(mode="stack-horizontal", alignItems="center", paddingLeft=12, paddingRight=12),
+                    style=DFIRStyle(fills=[DFIRFill(type="solid", color="#FAFAFA")], strokes=[DFIRStroke(color="#F2F4F7", width=1)]),
+                    children=[
+                        DFIRNode(id=generate_node_id("c2_1"), type="text", name="ID", transform=DFIRTransform(width=140, height=16), text=DFIRText(content="TX-984209", fontSize=12, fontWeight="600", color=c_blue_600)),
+                        DFIRNode(id=generate_node_id("c2_2"), type="text", name="Time", transform=DFIRTransform(width=100, height=16), text=DFIRText(content="16:30:18", fontSize=12, color=c_neutral_600)),
+                        DFIRNode(id=generate_node_id("c2_3"), type="text", name="Channel", transform=DFIRTransform(width=90, height=16), text=DFIRText(content="UPI", fontSize=12, fontWeight="500", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("c2_4"), type="text", name="Amt", transform=DFIRTransform(width=130, height=16), text=DFIRText(content="₹12,400.00", fontSize=12, fontWeight="700", color=c_blue_950, textAlign="right")),
+                        DFIRNode(id=generate_node_id("c2_5"), type="text", name="Reason", transform=DFIRTransform(width=200, height=16), text=DFIRText(content="VPA Validation Error", fontSize=12, color=c_warning)),
+                        DFIRNode(id=generate_node_id("c2_6"), type="text", name="Priority", transform=DFIRTransform(width=90, height=16), text=DFIRText(content="🟠 High", fontSize=11, fontWeight="700", color=c_warning)),
+                        DFIRNode(id=generate_node_id("c2_7"), type="text", name="Team", transform=DFIRTransform(width=120, height=16), text=DFIRText(content="Channel Support", fontSize=12, color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("c2_8"), type="text", name="Action", transform=DFIRTransform(width=90, height=16), text=DFIRText(content="[Inspect]", fontSize=11, fontWeight="600", color=c_blue_600, textAlign="right"))
+                    ]
+                )
+            ]
+        )
+        main_content.children.append(sec_h)
+
+        # 10. SECTION I — RECENT TRANSACTION ACTIVITY
+        sec_i = DFIRNode(
+            id=generate_node_id("sec_i"),
+            type="frame",
+            name="Section I: Recent Transaction Stream",
+            componentId="ag-grid-table",
+            transform=DFIRTransform(width=card_container_w, height=260),
+            layout=DFIRLayout(mode="stack-vertical", paddingTop=18, paddingLeft=20, paddingRight=20, paddingBottom=18, gap=10),
+            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], strokes=[DFIRStroke(color=c_neutral_200, width=1)], cornerRadius=10),
+            children=[
+                DFIRNode(id=generate_node_id("i_t"), type="text", name="Title", transform=DFIRTransform(width=card_container_w - 40, height=20), text=DFIRText(content="Recent Transaction Stream (Audit Trail & Risk Scoring)", fontSize=13, fontWeight="600", color=c_blue_900)),
+                DFIRNode(
+                    id=generate_node_id("tx_th"), type="frame", name="Table Header",
+                    transform=DFIRTransform(width=card_container_w - 40, height=32),
+                    layout=DFIRLayout(mode="stack-horizontal", alignItems="center", paddingLeft=12, paddingRight=12),
+                    style=DFIRStyle(fills=[DFIRFill(type="solid", color="#F2F4F7")], cornerRadius=4),
+                    children=[
+                        DFIRNode(id=generate_node_id("tx1"), type="text", name="Col", transform=DFIRTransform(width=160, height=16), text=DFIRText(content="Transaction ID", fontSize=11, fontWeight="600", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("tx2"), type="text", name="Col", transform=DFIRTransform(width=160, height=16), text=DFIRText(content="Customer ID", fontSize=11, fontWeight="600", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("tx3"), type="text", name="Col", transform=DFIRTransform(width=100, height=16), text=DFIRText(content="Method", fontSize=11, fontWeight="600", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("tx4"), type="text", name="Col", transform=DFIRTransform(width=150, height=16), text=DFIRText(content="Amount (₹)", fontSize=11, fontWeight="600", color=c_neutral_700, textAlign="right")),
+                        DFIRNode(id=generate_node_id("tx5"), type="text", name="Col", transform=DFIRTransform(width=180, height=16), text=DFIRText(content="Settlement Gateway", fontSize=11, fontWeight="600", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("tx6"), type="text", name="Col", transform=DFIRTransform(width=140, height=16), text=DFIRText(content="Status", fontSize=11, fontWeight="600", color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("tx7"), type="text", name="Col", transform=DFIRTransform(width=110, height=16), text=DFIRText(content="Risk Score", fontSize=11, fontWeight="600", color=c_neutral_700, textAlign="right"))
+                    ]
+                ),
+                DFIRNode(
+                    id=generate_node_id("tx_r1"), type="frame", name="Row: TX-88301",
+                    transform=DFIRTransform(width=card_container_w - 40, height=40),
+                    layout=DFIRLayout(mode="stack-horizontal", alignItems="center", paddingLeft=12, paddingRight=12),
+                    style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], strokes=[DFIRStroke(color="#F2F4F7", width=1)]),
+                    children=[
+                        DFIRNode(id=generate_node_id("tr1"), type="text", name="ID", transform=DFIRTransform(width=160, height=16), text=DFIRText(content="TX-88301 • UPI", fontSize=12, fontWeight="600", color=c_blue_600)),
+                        DFIRNode(id=generate_node_id("tr2"), type="text", name="Cust", transform=DFIRTransform(width=160, height=16), text=DFIRText(content="CUST-7721 (Verified)", fontSize=12, color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("tr3"), type="text", name="Method", transform=DFIRTransform(width=100, height=16), text=DFIRText(content="UPI / QR", fontSize=12, color=c_neutral_600)),
+                        DFIRNode(id=generate_node_id("tr4"), type="text", name="Amt", transform=DFIRTransform(width=150, height=16), text=DFIRText(content="₹24,500.00", fontSize=12, fontWeight="700", color=c_blue_950, textAlign="right")),
+                        DFIRNode(id=generate_node_id("tr5"), type="text", name="Gate", transform=DFIRTransform(width=180, height=16), text=DFIRText(content="HDFC Node-1", fontSize=12, color=c_neutral_600)),
+                        DFIRNode(id=generate_node_id("tr6"), type="text", name="Stat", transform=DFIRTransform(width=140, height=16), text=DFIRText(content="✓ Completed", fontSize=12, fontWeight="600", color=c_success)),
+                        DFIRNode(id=generate_node_id("tr7"), type="text", name="Risk", transform=DFIRTransform(width=110, height=16), text=DFIRText(content="0.02 (Low)", fontSize=12, color=c_neutral_600, textAlign="right"))
+                    ]
+                ),
+                DFIRNode(
+                    id=generate_node_id("tx_r2"), type="frame", name="Row: TX-88302",
+                    transform=DFIRTransform(width=card_container_w - 40, height=40),
+                    layout=DFIRLayout(mode="stack-horizontal", alignItems="center", paddingLeft=12, paddingRight=12),
+                    style=DFIRStyle(fills=[DFIRFill(type="solid", color="#FAFAFA")], strokes=[DFIRStroke(color="#F2F4F7", width=1)]),
+                    children=[
+                        DFIRNode(id=generate_node_id("tr2_1"), type="text", name="ID", transform=DFIRTransform(width=160, height=16), text=DFIRText(content="TX-88302 • RTGS", fontSize=12, fontWeight="600", color=c_blue_600)),
+                        DFIRNode(id=generate_node_id("tr2_2"), type="text", name="Cust", transform=DFIRTransform(width=160, height=16), text=DFIRText(content="CORP-9140 (Treasury)", fontSize=12, color=c_neutral_700)),
+                        DFIRNode(id=generate_node_id("tr2_3"), type="text", name="Method", transform=DFIRTransform(width=100, height=16), text=DFIRText(content="RTGS Rail", fontSize=12, color=c_neutral_600)),
+                        DFIRNode(id=generate_node_id("tr2_4"), type="text", name="Amt", transform=DFIRTransform(width=150, height=16), text=DFIRText(content="₹1,80,00,000.00", fontSize=12, fontWeight="700", color=c_blue_950, textAlign="right")),
+                        DFIRNode(id=generate_node_id("tr2_5"), type="text", name="Gate", transform=DFIRTransform(width=180, height=16), text=DFIRText(content="SBI Gateway Primary", fontSize=12, color=c_neutral_600)),
+                        DFIRNode(id=generate_node_id("tr2_6"), type="text", name="Stat", transform=DFIRTransform(width=140, height=16), text=DFIRText(content="✓ Completed", fontSize=12, fontWeight="600", color=c_success)),
+                        DFIRNode(id=generate_node_id("tr2_7"), type="text", name="Risk", transform=DFIRTransform(width=110, height=16), text=DFIRText(content="0.08 (Low)", fontSize=12, color=c_neutral_600, textAlign="right"))
+                    ]
+                )
+            ]
+        )
+        main_content.children.append(sec_i)
+
+        # 11. SECTION 10 — AI-POWERED OPERATIONAL INTELLIGENCE PANEL
+        sec_10 = DFIRNode(
+            id=generate_node_id("sec_10"),
+            type="frame",
+            name="Section 10: AI Operational Intelligence Panel",
+            componentId="card",
+            transform=DFIRTransform(width=card_container_w, height=220),
+            layout=DFIRLayout(mode="stack-vertical", paddingTop=18, paddingLeft=22, paddingRight=22, paddingBottom=18, gap=12),
+            style=DFIRStyle(
+                fills=[DFIRFill(type="solid", color=c_ai_bg)],
+                strokes=[DFIRStroke(color="#C4B5FD", width=1)],
+                cornerRadius=10
+            ),
+            children=[
+                DFIRNode(id=generate_node_id("ai_t"), type="text", name="Panel Title", transform=DFIRTransform(width=card_container_w - 44, height=22), text=DFIRText(content="⚡ AI Operational Intelligence & Diagnostic Insights (Real-Time)", fontSize=14, fontWeight="700", color=c_ai)),
+                DFIRNode(
+                    id=generate_node_id("ai_cards_row"),
+                    type="frame",
+                    name="AI Insights Row",
+                    transform=DFIRTransform(width=card_container_w - 44, height=140),
+                    layout=DFIRLayout(mode="stack-horizontal", gap=12, sizingHorizontal="fill"),
+                    style=DFIRStyle(fills=[]),
+                    children=[
+                        DFIRNode(
+                            id=generate_node_id("ai_c1"),
+                            type="frame",
+                            name="Insight 1: Performance",
+                            transform=DFIRTransform(width=(card_container_w - 68) / 3, height=140),
+                            layout=DFIRLayout(mode="stack-vertical", paddingTop=12, paddingLeft=14, paddingRight=14, paddingBottom=12, gap=6),
+                            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], cornerRadius=8),
+                            children=[
+                                DFIRNode(id=generate_node_id("ai_h1"), type="text", name="Head", transform=DFIRTransform(width=300, height=16), text=DFIRText(content="📈 Performance Insight", fontSize=12, fontWeight="700", color=c_blue_600)),
+                                DFIRNode(id=generate_node_id("ai_b1"), type="text", name="Body", transform=DFIRTransform(width=300, height=80), text=DFIRText(content="UPI rail throughput surged +18.4% during 14:00–16:00. Gateway headroom remained optimal (peak 42% buffer).", fontSize=11, color=c_neutral_700))
+                            ]
+                        ),
+                        DFIRNode(
+                            id=generate_node_id("ai_c2"),
+                            type="frame",
+                            name="Insight 2: Risk",
+                            transform=DFIRTransform(width=(card_container_w - 68) / 3, height=140),
+                            layout=DFIRLayout(mode="stack-vertical", paddingTop=12, paddingLeft=14, paddingRight=14, paddingBottom=12, gap=6),
+                            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], cornerRadius=8),
+                            children=[
+                                DFIRNode(id=generate_node_id("ai_h2"), type="text", name="Head", transform=DFIRTransform(width=300, height=16), text=DFIRText(content="🛡️ Risk & Fraud Pattern", fontSize=12, fontWeight="700", color=c_critical)),
+                                DFIRNode(id=generate_node_id("ai_b2"), type="text", name="Body", transform=DFIRTransform(width=300, height=80), text=DFIRText(content="Cluster of 14 rapid micro-transfers detected from Subnet 192.168.x. Auto-held ₹3.2 Lakhs for secondary biometric verification.", fontSize=11, color=c_neutral_700))
+                            ]
+                        ),
+                        DFIRNode(
+                            id=generate_node_id("ai_c3"),
+                            type="frame",
+                            name="Insight 3: Recommendation",
+                            transform=DFIRTransform(width=(card_container_w - 68) / 3, height=140),
+                            layout=DFIRLayout(mode="stack-vertical", paddingTop=12, paddingLeft=14, paddingRight=14, paddingBottom=12, gap=6),
+                            style=DFIRStyle(fills=[DFIRFill(type="solid", color=c_white)], cornerRadius=8),
+                            children=[
+                                DFIRNode(id=generate_node_id("ai_h3"), type="text", name="Head", transform=DFIRTransform(width=300, height=16), text=DFIRText(content="💡 Operational Action", fontSize=12, fontWeight="700", color=c_ai)),
+                                DFIRNode(id=generate_node_id("ai_b3"), type="text", name="Body", transform=DFIRTransform(width=300, height=80), text=DFIRText(content="Pending NEFT queue (12,845 items) approaching 17:00 clearing window. Recommend initiating secondary settlement worker.", fontSize=11, color=c_neutral_700))
+                            ]
+                        )
+                    ]
+                )
+            ]
+        )
+        main_content.children.append(sec_10)
 
         # Assemble Root
         root.children.append(sidebar)

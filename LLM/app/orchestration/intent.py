@@ -18,9 +18,9 @@ class IntentClassifier:
     }
 
     PLATFORMS = {
-        "mobile": ["mobile", "phone", "ios", "android", "375", "390", "screen"],
+        "desktop": ["desktop", "web", "dashboard", "1440", "1920", "admin", "portal", "command centre", "command center", "desktop-first"],
         "tablet": ["tablet", "ipad", "768", "834"],
-        "desktop": ["desktop", "web", "dashboard", "1440", "1920", "admin", "portal"]
+        "mobile": ["mobile", "phone", "ios", "android", "375", "390", "mobile-first"]
     }
 
     INTENTS = {
@@ -43,12 +43,25 @@ class IntentClassifier:
                 detected_domain = domain
                 break
 
-        # 2. Detect Platform
-        detected_platform = "desktop"
+        # 2. Detect Platform with weighted scoring
+        scores = {"desktop": 0, "tablet": 0, "mobile": 0}
+        if "desktop-first" in prompt_lower or "desktop first" in prompt_lower:
+            scores["desktop"] += 10
+        if "mobile-first" in prompt_lower or "mobile first" in prompt_lower:
+            scores["mobile"] += 10
+
         for platform, keywords in cls.PLATFORMS.items():
-            if any(re.search(rf"\b{k}\b", prompt_lower) for k in keywords):
-                detected_platform = platform
-                break
+            for k in keywords:
+                if re.search(rf"\b{re.escape(k)}\b", prompt_lower):
+                    scores[platform] += 1
+
+        detected_platform = "desktop"
+        if scores["desktop"] >= scores["mobile"] and scores["desktop"] >= scores["tablet"]:
+            detected_platform = "desktop"
+        elif scores["tablet"] > scores["desktop"] and scores["tablet"] >= scores["mobile"]:
+            detected_platform = "tablet"
+        elif scores["mobile"] > scores["desktop"]:
+            detected_platform = "mobile"
 
         # 3. Detect Primary Intent
         detected_intent = "create_screen"
