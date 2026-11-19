@@ -2249,6 +2249,8 @@ export class DesignForgeApp {
     document.getElementById('btnOpenLearnCenter')?.addEventListener('click', () => this.openLearnCenter());
     document.getElementById('btnToggleTheme')?.addEventListener('click', () => this.toggleTheme());
     document.getElementById('btnShareModal')?.addEventListener('click', () => this.openShareModal());
+    document.getElementById('btnTopShare')?.addEventListener('click', () => this.openShareModal());
+    this.collabClient?.connect(this.doc.id || 'fintech-experience');
     document.getElementById('menuShortcuts')?.addEventListener('click', () => this.showShortcutModal());
     document.getElementById('menuAudit')?.addEventListener('click', () => {
       this.switchToAiTab();
@@ -3214,6 +3216,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     window.addEventListener('mousemove', (e) => {
       const canvasCoords = renderer.screenToCanvas(e.clientX, e.clientY);
+
+      // Broadcast live multiplayer cursor presence (throttled 30fps)
+      this.collabClient?.broadcastPresence(canvasCoords, engine.getSelection());
 
       if (!this.dragState) {
         // Guide hover detection for cursor feedback
@@ -8712,21 +8717,38 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   }
 
 
-  openShareModal() {
+  async openShareModal() {
     const modal = document.getElementById('modalShare');
     if (!modal) return;
     modal.style.display = 'flex';
+
+    const input = document.getElementById('shareLinkInput');
+    const select = document.getElementById('sharePermissionSelect');
+
+    const updateShareLink = async () => {
+      if (input && this.collabClient) {
+        input.value = 'Generating secure environment-aware share link...';
+        const role = select?.value || 'editor';
+        const link = await this.collabClient.generateShareLink(role);
+        input.value = link;
+      }
+    };
+
+    updateShareLink();
+    select?.addEventListener('change', updateShareLink);
+    this.collabClient?.updateCollaboratorRoster();
+
     document.getElementById('btnCloseShareModal')?.addEventListener('click', () => {
       modal.style.display = 'none';
     }, { once: true });
+
     document.getElementById('btnCopyShareLink')?.addEventListener('click', () => {
-      const input = document.getElementById('shareLinkInput');
       if (input) {
         input.select();
         navigator.clipboard?.writeText(input.value);
         const btn = document.getElementById('btnCopyShareLink');
         if (btn) {
-          btn.textContent = '<span data-icon="Check"></span> Copied!';
+          btn.innerHTML = '<span data-icon="Check"></span> Copied!';
           setTimeout(() => { btn.textContent = 'Copy Link'; }, 2000);
         }
       }
