@@ -50,5 +50,6 @@ async def root():
 
 
 @app.get("/health")
+@app.get(f"{settings.api_prefix}/health")
 async def health_check():
-    return {"status": "healthy", "service": "dfux-intelligence-backend"}
+    return {"status": "healthy", "service": "dfux-intelligence-backend", "version": settings.app_version}

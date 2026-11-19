@@ -12,6 +12,7 @@ import { LocalProvider } from './providers/local-provider.js';
 import { OllamaProvider } from './providers/ollama-provider.js';
 import { OpenAIProvider } from './providers/openai-provider.js';
 import { GeminiProvider } from './providers/gemini-provider.js';
+import { DFUXProvider } from './providers/dfux-provider.js';
 import { DualReasoningOrchestrator } from './dual_reasoning.js';
 import { DesignSystemRepositoryIndexer } from './knowledge/repository_indexer.js';
 import { ReactCompiler } from '../engine/compiler.js';
@@ -32,6 +33,7 @@ export class DesignForgeAIService {
 
     // Providers registry
     this.providers = new Map();
+    this.registerProvider(new DFUXProvider({ model: 'qwen3-32b-ux' }));
     this.registerProvider(new OllamaProvider({ model: 'llama3.1' }));
     this.registerProvider(new LocalProvider());
     this.registerProvider(new OpenAIProvider());
@@ -52,8 +54,8 @@ export class DesignForgeAIService {
       if (savedEndpoint) provider.endpoint = savedEndpoint;
     }
 
-    // Load saved settings (defaults to OLLAMA with llama3.1 in browser, LOCAL in headless tests)
-    this.activeProviderName = this.loadSetting('ai_active_provider') || (typeof window !== 'undefined' ? PROVIDERS.OLLAMA : PROVIDERS.LOCAL);
+    // Load saved settings (defaults to DF-UX native local LLM in browser, LOCAL in headless tests)
+    this.activeProviderName = this.loadSetting('ai_active_provider') || (typeof window !== 'undefined' ? PROVIDERS.DFUX : PROVIDERS.LOCAL);
     this.privacyMode = this.loadSetting('ai_privacy_mode') || PRIVACY_MODES.LOCAL_ONLY;
     this.contextManager.setPrivacyMode(this.privacyMode);
 
@@ -86,7 +88,9 @@ export class DesignForgeAIService {
 
   getProvider(name = this.activeProviderName) {
     if (name === PROVIDERS.AUTO) {
-      // Automatic Selection: pick configured hosted provider, or fall back to local
+      // Automatic Selection: pick DF-UX native local engine if available, or configured hosted provider
+      const dfux = this.providers.get(PROVIDERS.DFUX);
+      if (dfux) return dfux;
       const gemini = this.providers.get(PROVIDERS.GEMINI);
       const openai = this.providers.get(PROVIDERS.OPENAI);
       if (gemini && gemini.apiKey) return gemini;
@@ -166,11 +170,11 @@ export class DesignForgeAIService {
     this.activeAbortController = new AbortController();
     const signal = this.activeAbortController.signal;
 
-    // Enforce privacy rule: LOCAL_ONLY allows local built-in and local Ollama
-    const isLocalProvider = this.activeProviderName === PROVIDERS.LOCAL || this.activeProviderName === PROVIDERS.OLLAMA;
+    // Enforce privacy rule: LOCAL_ONLY allows DF-UX local engine, local built-in and local Ollama
+    const isLocalProvider = this.activeProviderName === PROVIDERS.DFUX || this.activeProviderName === PROVIDERS.LOCAL || this.activeProviderName === PROVIDERS.OLLAMA;
     if (this.privacyMode === PRIVACY_MODES.LOCAL_ONLY && !isLocalProvider) {
       throw new ProviderError(
-        'Local-Only Privacy Mode is active. Switch privacy mode to Allow Hosted or select a Local Provider (Ollama / Built-in).',
+        'Local-Only Privacy Mode is active. Switch privacy mode to Allow Hosted or select a Local Provider (DF-UX / Ollama / Built-in).',
         this.activeProviderName
       );
     }

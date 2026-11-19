@@ -19,6 +19,7 @@ export const OPERATIONS = {
 };
 
 export const PROVIDERS = {
+  DFUX: 'dfux',
   LOCAL: 'local',
   OPENAI: 'openai',
   GEMINI: 'gemini',

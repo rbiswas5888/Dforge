@@ -741,7 +741,7 @@
           <div class="ai-assistant-header">
             <div class="ai-status-indicator">
               <span class="pulse-dot"></span>
-              <span id="aiModelStatusLabel"><span data-icon="Bot"></span> Ollama Llama 3.1 (Local AI)</span>
+              <span id="aiModelStatusLabel"><span data-icon="Zap"></span> ⚡ DF-UX Intelligence (Native Local LLM)</span>
             </div>
             <div style="display: flex; gap: 6px;">
               <button class="btn-icon-sm" id="btnAiSettingsToggle" title="Configure AI Provider & Privacy"><span data-icon="Settings"></span></button>
@@ -756,7 +756,8 @@
               <div>
                 <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Inference Provider</label>
                 <select class="prop-select" id="aiProviderSelect" style="width: 100%;">
-                  <option value="openai" selected>ChatGPT — OpenAI (GPT-4o / o1 / o3-mini)</option>
+                  <option value="dfux" selected>⚡ DF-UX Intelligence (Native Local LLM — Recommended)</option>
+                  <option value="openai">ChatGPT — OpenAI (GPT-4o / o1 / o3-mini)</option>
                   <option value="gemini">Gemini — Google (Gemini 2.5 / 1.5 Pro/Flash)</option>
                   <option value="auto">Automatic Selection (Best Available Engine)</option>
                   <option value="dual_reasoning">Dual Reasoning Mode (ChatGPT + Gemini Consolidated)</option>
@@ -768,11 +769,12 @@
               <div>
                 <label style="color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: 600;">Model Selection</label>
                 <select class="prop-select" id="aiModelSelect" style="width: 100%;">
-                  <option value="gpt-4o">gpt-4o (Omni Multimodal Reasoning — Recommended)</option>
-                  <option value="gpt-4o-mini">gpt-4o-mini (Fast & Efficient)</option>
-                  <option value="o3-mini">o3-mini (High-Tier Reasoning & Code)</option>
-                  <option value="o1">o1 (Deep Chain-of-Thought)</option>
-                  <option value="gpt-4-turbo">gpt-4-turbo</option>
+                  <option value="qwen3-32b-ux" selected>Qwen3-32B-Instruct (Structured UX Reasoning & DFIR — Recommended)</option>
+                  <option value="qwen3-vl-8b">Qwen3-VL-8B-Instruct (Vision Analysis & Multimodal UI)</option>
+                  <option value="gemma-4-12b">Gemma 4 12B (UX Heuristics & Design System Reasoning)</option>
+                  <option value="flux-2-klein">FLUX.2 Klein 4B (Visual Asset Generation)</option>
+                  <option value="gpt-4o">gpt-4o (Omni Multimodal Reasoning)</option>
+                  <option value="gemini-2.5-pro">gemini-2.5-pro (Flagship Multimodal)</option>
                 </select>
               </div>
 

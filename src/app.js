@@ -2519,7 +2519,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     // Load persisted keys and settings from localStorage
     const savedOpenAiKey = localStorage.getItem('designforge_api_key_openai') || '';
     const savedGeminiKey = localStorage.getItem('designforge_api_key_gemini') || '';
-    const savedProvider = localStorage.getItem('designforge_ai_provider') || 'openai';
+    const savedProvider = localStorage.getItem('designforge_ai_provider') || 'dfux';
     const savedModel = localStorage.getItem('designforge_ai_model') || '';
     const savedTemp = localStorage.getItem('designforge_ai_temperature') || '0.2';
 
@@ -2568,7 +2568,16 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     const populateModelOptions = (p, currentModel = null) => {
       if (!modelSelect) return;
-      if (p === 'openai') {
+      if (p === 'dfux') {
+        modelSelect.innerHTML = `
+          <option value="qwen3-32b-ux" selected>Qwen3-32B-Instruct (Structured UX Reasoning & DFIR — Recommended)</option>
+          <option value="qwen3-vl-8b">Qwen3-VL-8B-Instruct (Vision Analysis & Multimodal UI)</option>
+          <option value="gemma-4-12b">Gemma 4 12B (UX Heuristics & Design System Reasoning)</option>
+          <option value="flux-2-klein">FLUX.2 Klein 4B (Visual Asset Generation)</option>
+        `;
+        modelSelect.disabled = false;
+        if (currentModel) modelSelect.value = currentModel;
+      } else if (p === 'openai') {
         modelSelect.innerHTML = `
           <option value="gpt-4o">gpt-4o (Omni Multimodal Reasoning — Recommended)</option>
           <option value="gpt-4o-mini">gpt-4o-mini (Fast & Efficient)</option>
@@ -2595,7 +2604,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         modelSelect.disabled = true;
       } else if (p === 'auto') {
         modelSelect.innerHTML = `
-          <option value="auto-routed">Automatic Intelligent Router (Best Model per Complexity)</option>
+          <option value="auto-routed">Automatic Intelligent Router (DF-UX Native Engine)</option>
         `;
         modelSelect.disabled = true;
       } else {
@@ -2609,6 +2618,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const updateAiStatusDisplay = (p) => {
       if (statusLabel) {
         const status = {
+          dfux: ['Zap', 'DF-UX Native Local LLM (Active)'],
           ollama: ['Bot', 'Ollama Llama 3.1 (Local AI)'],
           local: ['Zap', 'Built-in Synth Engine (Offline)'],
           openai: ['Globe', 'ChatGPT — OpenAI (GPT-4o)'],
@@ -2625,10 +2635,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
         }
       }
       if (modelBadge) {
-        modelBadge.textContent = p === 'dual_reasoning' ? 'Dual (GPT-4o + Gemini)' : (p === 'auto' ? 'Auto Router' : p);
+        modelBadge.textContent = p === 'dfux' ? 'DF-UX (Local)' : (p === 'dual_reasoning' ? 'Dual (GPT-4o + Gemini)' : (p === 'auto' ? 'Auto Router' : p));
       }
       if (keyFields) {
-        keyFields.style.display = (p === 'local' || p === 'ollama') ? 'none' : 'flex';
+        keyFields.style.display = (p === 'dfux' || p === 'local' || p === 'ollama') ? 'none' : 'flex';
       }
       if (openAiKeyGroup) {
         openAiKeyGroup.style.display = (p === 'openai' || p === 'dual_reasoning' || p === 'auto') ? 'block' : 'none';
@@ -7796,7 +7806,11 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
   handleAiApply() {
     if (!this.pendingAiPlan) return;
-    this.ai.executePlan(this.pendingAiPlan);
+    if (this.pendingAiPlan.dfir) {
+      this.ai.applyDfir(this.pendingAiPlan.dfir);
+    } else {
+      this.ai.executePlan(this.pendingAiPlan);
+    }
     this.pendingAiPlan = null;
     const diffBox = document.getElementById('aiDiffBox');
     const applyBtn = document.getElementById('btnAiApply');

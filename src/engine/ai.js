@@ -61,8 +61,8 @@ export class AIEngine {
     return this.mdParser.parse(markdownText);
   }
 
-  executePlan(plan) {
-    return this.service.applyPlan(plan);
+  executePlan(plan, userApproved = true) {
+    return this.service.applyPlan(plan, userApproved);
   }
 
   /**
