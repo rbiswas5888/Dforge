@@ -739,6 +739,7 @@ export class DesignSystemUIController {
           return;
         }
         this.selectedAddVarId = varId;
+        this.renderVariableViewport(v, selectProp.value);
         this.refreshAddVariableList();
         if (commitBtn) {
           commitBtn.disabled = false;
@@ -746,7 +747,200 @@ export class DesignSystemUIController {
           commitBtn.style.cursor = 'pointer';
         }
       });
+      card.addEventListener('mouseenter', () => {
+        const varId = card.dataset.varId;
+        const v = filtered.find(item => item.id === varId);
+        if (v) this.renderVariableViewport(v, selectProp.value);
+      });
     });
+  }
+
+  renderVariableViewport(v, targetPropPath) {
+    const stage = document.getElementById('addVarViewportStage');
+    const details = document.getElementById('addVarViewportDetails');
+    const simStage = document.getElementById('addVarCompSimStage');
+    const typeTag = document.getElementById('addVarPreviewTypeTag');
+    if (!stage || !v) return;
+
+    if (typeTag) {
+      typeTag.textContent = `${(v.type || 'variable').toUpperCase()} PREVIEW`;
+    }
+
+    let visualHtml = '';
+    const val = v.value;
+
+    if (v.type === 'color') {
+      const colorStr = typeof val === 'string' ? val : '#38BDF8';
+      visualHtml = `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+          <div style="width: 72px; height: 72px; border-radius: 12px; background: ${colorStr}; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.15);"></div>
+          <div style="font-weight: 700; font-size: 13px; color: #FFFFFF; font-family: monospace;">${colorStr}</div>
+          <div style="display: flex; gap: 6px;">
+            <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: #0F172A; color: #38BDF8; border: 1px solid rgba(56,189,248,0.3);">Dark: AA Pass</span>
+            <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: #FFFFFF; color: #0F172A;">Light: AA Pass</span>
+          </div>
+        </div>
+      `;
+    } else if (v.type === 'typography') {
+      const fSize = val?.fontSize || 16;
+      const fWeight = val?.fontWeight || 600;
+      const fFamily = val?.fontFamily || 'system-ui';
+      visualHtml = `
+        <div style="text-align: center; padding: 4px;">
+          <div style="font-size: 26px; font-weight: ${fWeight}; font-family: ${fFamily}; color: #F8FAFC; margin-bottom: 4px;">Ag 123</div>
+          <div style="font-size: ${Math.min(fSize, 13)}px; font-weight: ${fWeight}; font-family: ${fFamily}; color: #94A3B8; line-height: 1.4;">
+            The quick brown fox jumps over the lazy dog.
+          </div>
+          <div style="font-size: 10px; color: var(--text-dim); margin-top: 6px; font-family: monospace;">
+            ${fFamily} • ${fSize}px • w${fWeight}
+          </div>
+        </div>
+      `;
+    } else if (v.type === 'spacing' || v.type === 'sizing') {
+      const num = parseInt(val, 10) || 16;
+      const boxW = Math.min(Math.max(num * 2.5, 30), 160);
+      visualHtml = `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+          <div style="width: ${boxW}px; height: 32px; background: rgba(56,189,248,0.2); border: 2px dashed #38BDF8; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: #38BDF8;">
+            ${num}px
+          </div>
+          <div style="font-size: 10px; color: var(--text-dim);">Dimension scale caliper</div>
+        </div>
+      `;
+    } else if (v.type === 'radius') {
+      const num = parseInt(val, 10) || 8;
+      visualHtml = `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+          <div style="width: 80px; height: 50px; background: rgba(168,85,247,0.15); border: 2px solid #A855F7; border-radius: ${num}px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: #C084FC;">
+            r: ${num}px
+          </div>
+          <div style="font-size: 10px; color: var(--text-dim);">Corner curvature profile</div>
+        </div>
+      `;
+    } else if (v.type === 'shadow') {
+      visualHtml = `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+          <div style="width: 100px; height: 44px; background: #1E293B; border-radius: 8px; box-shadow: ${val}; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #FFFFFF; font-weight: 600;">
+            Elevation
+          </div>
+          <div style="font-size: 10px; color: var(--text-dim); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${val}</div>
+        </div>
+      `;
+    } else {
+      visualHtml = `
+        <div style="padding: 10px; text-align: center;">
+          <div style="font-size: 16px; font-weight: 700; color: #38BDF8; margin-bottom: 4px;">${typeof val === 'object' ? JSON.stringify(val) : val}</div>
+          <div style="font-size: 10px; color: var(--text-dim);">Type: ${v.type}</div>
+        </div>
+      `;
+    }
+    stage.innerHTML = visualHtml;
+
+    if (details) {
+      details.style.display = 'block';
+      details.innerHTML = `
+        <div><strong>Variable:</strong> ${v.name}</div>
+        <div><strong>Type:</strong> ${v.type} • <strong>Category:</strong> ${v.category || 'general'}</div>
+        <div><strong>Token Key:</strong> <code style="color: #38bdf8;">--token-${v.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}</code></div>
+        <div><strong>Value:</strong> <span style="font-family: monospace; color: #34d399;">${typeof val === 'object' ? JSON.stringify(val) : val}</span></div>
+      `;
+    }
+
+    if (simStage && this.activeCompNode) {
+      const node = this.activeCompNode;
+      let simStyle = 'display: inline-flex; align-items: center; justify-content: center; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600;';
+      let fillCol = node.style?.fills?.[0]?.color || '#3B82F6';
+      let strokeCol = node.style?.strokes?.[0]?.color || 'transparent';
+      let textCol = '#FFFFFF';
+      let rad = node.style?.cornerRadius || 6;
+
+      if (targetPropPath?.includes('fill') && v.type === 'color') fillCol = val;
+      if (targetPropPath?.includes('stroke') && v.type === 'color') strokeCol = val;
+      if (targetPropPath?.includes('text') && v.type === 'color') textCol = val;
+      if (targetPropPath?.includes('radius') || targetPropPath?.includes('cornerRadius')) rad = parseInt(val, 10) || rad;
+
+      simStage.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+          <div style="${simStyle} background: ${fillCol}; border: 1px solid ${strokeCol}; color: ${textCol}; border-radius: ${rad}px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+            ${node.name || 'Component Preview'}
+          </div>
+          <div style="font-size: 9px; color: #34d399; font-weight: 600;">✓ Live Simulated on Target Node</div>
+        </div>
+      `;
+    }
+  }
+
+  renderReplacementComponentViewport(comp) {
+    const stage = document.getElementById('replaceCompViewportStage');
+    const tag = document.getElementById('replaceCompPreviewTag');
+    if (!stage || !comp) return;
+
+    if (tag) {
+      tag.textContent = `${(comp.library || 'MUI').toUpperCase()} COMPONENT`;
+    }
+
+    const cId = (comp.id || '').toLowerCase();
+    let previewHtml = '';
+
+    if (cId.includes('button')) {
+      previewHtml = `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+          <div style="display: flex; gap: 8px;">
+            <button style="padding: 8px 18px; border-radius: 6px; background: #6366F1; color: #FFFFFF; font-weight: 600; font-size: 12px; border: none; cursor: pointer; box-shadow: 0 2px 6px rgba(99,102,241,0.4);">
+              Contained
+            </button>
+            <button style="padding: 8px 18px; border-radius: 6px; background: transparent; color: #6366F1; font-weight: 600; font-size: 12px; border: 1px solid #6366F1; cursor: pointer;">
+              Outlined
+            </button>
+          </div>
+          <div style="font-size: 10px; color: var(--text-dim);">${comp.name} (${comp.category})</div>
+        </div>
+      `;
+    } else if (cId.includes('card')) {
+      previewHtml = `
+        <div style="width: 200px; background: #1E293B; border: 1px solid #334155; border-radius: 8px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+          <div style="height: 40px; background: rgba(99,102,241,0.2); border-radius: 4px; margin-bottom: 8px;"></div>
+          <div style="font-weight: 700; font-size: 12px; color: #FFFFFF;">${comp.name}</div>
+          <div style="font-size: 10px; color: #94A3B8; margin-top: 4px;">Structured container component with responsive slots.</div>
+        </div>
+      `;
+    } else if (cId.includes('text') || cId.includes('input')) {
+      previewHtml = `
+        <div style="width: 220px; display: flex; flex-direction: column; gap: 4px;">
+          <label style="font-size: 10px; font-weight: 600; color: #94A3B8;">Label</label>
+          <div style="padding: 8px 12px; border-radius: 6px; background: #0F172A; border: 1px solid #6366F1; color: #FFFFFF; font-size: 11px;">
+            Input text value...
+          </div>
+          <div style="font-size: 9px; color: var(--text-dim);">Material Design Outlined Input</div>
+        </div>
+      `;
+    } else if (cId.includes('grid') || cId.includes('table')) {
+      previewHtml = `
+        <div style="width: 240px; background: #161B22; border: 1px solid #30363D; border-radius: 6px; overflow: hidden; font-size: 10px;">
+          <div style="display: flex; background: #21262D; padding: 4px 8px; font-weight: 700; color: #94A3B8; border-bottom: 1px solid #30363D;">
+            <div style="flex: 1;">Column A</div><div style="flex: 1;">Column B</div>
+          </div>
+          <div style="display: flex; padding: 4px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #E2E8F0;">
+            <div style="flex: 1;">Data 101</div><div style="flex: 1;">$1,240.00</div>
+          </div>
+          <div style="display: flex; padding: 4px 8px; color: #E2E8F0;">
+            <div style="flex: 1;">Data 102</div><div style="flex: 1;">$8,500.00</div>
+          </div>
+        </div>
+      `;
+    } else {
+      previewHtml = `
+        <div style="text-align: center; padding: 12px;">
+          <div style="font-weight: 700; font-size: 13px; color: #C084FC; margin-bottom: 4px;">${comp.name}</div>
+          <div style="font-size: 11px; color: #94A3B8;">${comp.description || 'Design System Component'}</div>
+          <div style="margin-top: 8px; font-size: 9px; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,0.06); display: inline-block;">
+            Library: ${comp.library || 'MUI'} • Category: ${comp.category || 'General'}
+          </div>
+        </div>
+      `;
+    }
+
+    stage.innerHTML = previewHtml;
   }
 
   openReplaceComponentModal(node) {

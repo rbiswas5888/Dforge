@@ -7,6 +7,7 @@
 
 import { createNode, generateId } from '../../engine/document.js';
 import { DFIRCanvasBridge } from '../../ai/dfir_bridge.js';
+import { calculateNonOverlappingRootPosition } from '../../engine/layout.js';
 import { TOOL_CATEGORIES, MCP_PERMISSIONS } from '../protocol/types.js';
 
 export function registerDfMcpExtensions(server) {
@@ -81,10 +82,12 @@ export function registerDfMcpExtensions(server) {
     const isMobile = args.screenType === 'mobile';
     const width = isMobile ? 390 : 1440;
     const height = isMobile ? 844 : 900;
+    const page = engine.getActivePage();
+    const nextPos = calculateNonOverlappingRootPosition(page, width, 80);
 
     const rootFrame = createNode('frame', {
       name: `Wireframe: ${args.prompt.slice(0, 30)}`,
-      transform: { x: 100, y: 100, width, height },
+      transform: { x: nextPos.x, y: nextPos.y, width, height },
       layout: { mode: 'stack-vertical', gap: 16, paddingTop: 20, paddingRight: 24, paddingBottom: 20, paddingLeft: 24 },
       style: { fills: [{ type: 'solid', color: '#161b22' }], cornerRadius: 8, strokes: [{ color: '#30363d', width: 1 }] }
     });

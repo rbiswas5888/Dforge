@@ -5,6 +5,7 @@
 
 import { OPERATIONS } from './types.js';
 import { createNode } from '../engine/document.js';
+import { calculateNonOverlappingRootPosition } from '../engine/layout.js';
 
 export class OperationExecutor {
   constructor(commandEngine) {
@@ -32,6 +33,30 @@ export class OperationExecutor {
     const priorRootIdsSnapshot = [...page.rootIds];
     const priorTokensSnapshot = JSON.parse(JSON.stringify(this.engine.doc.tokens));
 
+    // Calculate non-overlapping canvas offset so AI-generated designs are placed next to existing designs
+    let rootShiftX = 0;
+    let rootShiftY = 0;
+    const incomingRoots = list.filter(op => {
+      const opType = op.type || op.op;
+      if (opType !== OPERATIONS.CREATE_NODE && opType !== 'createNode') return false;
+      const raw = op.node || op.payload || op;
+      return !raw.parentId;
+    });
+
+    if (incomingRoots.length > 0 && page.rootIds.length > 0) {
+      const minIncomingX = Math.min(...incomingRoots.map(op => {
+        const raw = op.node || op.payload || op;
+        return (raw.transform && typeof raw.transform.x === 'number') ? raw.transform.x : 0;
+      }));
+      const minIncomingY = Math.min(...incomingRoots.map(op => {
+        const raw = op.node || op.payload || op;
+        return (raw.transform && typeof raw.transform.y === 'number') ? raw.transform.y : 0;
+      }));
+      const nextPos = calculateNonOverlappingRootPosition(page, 1440, 80);
+      rootShiftX = nextPos.x - minIncomingX;
+      rootShiftY = nextPos.y - minIncomingY;
+    }
+
     for (const op of list) {
       const opType = op.type || op.op;
 
@@ -48,6 +73,12 @@ export class OperationExecutor {
             text: raw.text,
             semanticTag: raw.semanticTag
           });
+
+          // Offset root containers so they never overlap existing designs
+          if (!node.parentId && (rootShiftX !== 0 || rootShiftY !== 0)) {
+            node.transform.x += rootShiftX;
+            node.transform.y += rootShiftY;
+          }
 
           page.nodes[node.id] = node;
           if (node.parentId && page.nodes[node.parentId]) {

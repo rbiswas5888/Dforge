@@ -1781,7 +1781,7 @@
 
             <!-- 3b. Add Variable to Component Modal (Spec Part A, Section 2) -->
             <div class="ds-modal-backdrop" id="modalAddVariableToComponent" style="display: none;">
-              <div class="ds-modal-box" style="max-width: 680px;">
+              <div class="ds-modal-box" style="max-width: 960px; width: 92vw;">
                 <div class="ds-modal-header">
                   <div class="ds-modal-title">
                     <span style="color: #38bdf8;"><span data-icon="Layers"></span></span>
@@ -1790,37 +1790,68 @@
                   <button class="menu-dropdown-btn-sm" id="btnCloseModalAddVar" aria-label="Close"><span data-icon="X"></span></button>
                 </div>
                 <div class="ds-modal-body">
-                  <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
-                    Select an available variable from your active design system. Type compatibility is strictly verified before binding.
-                  </p>
+                  <div style="display: flex; gap: 20px; align-items: stretch;">
+                    <!-- Left: Property, Filters & Variable List -->
+                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                      <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+                        Select an available variable from your active design system. Type compatibility is strictly verified before binding.
+                      </p>
 
-                  <!-- Target Property Selector -->
-                  <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-subtle);">
-                    <label style="font-size: 11px; font-weight: 600; color: var(--text-main);">Target Property on Layer:</label>
-                    <select class="prop-select" id="addVarTargetProperty" style="min-width: 220px; font-size: 11px;"></select>
-                  </div>
+                      <!-- Target Property Selector -->
+                      <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+                        <label style="font-size: 11px; font-weight: 600; color: var(--text-main);">Target Property on Layer:</label>
+                        <select class="prop-select" id="addVarTargetProperty" style="min-width: 200px; font-size: 11px;"></select>
+                      </div>
 
-                  <!-- Search & Category Filters -->
-                  <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-                    <input type="text" class="prop-input" id="addVarSearchInput" placeholder="Search variables by name, value or type..." style="flex: 1; padding: 6px 10px; font-size: 11px;">
-                  </div>
-                  <div class="ds-filter-pills" id="addVarCategoryPills" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px;">
-                    <button type="button" class="ds-filter-pill active" data-category="all">All</button>
-                    <button type="button" class="ds-filter-pill" data-category="color">Color</button>
-                    <button type="button" class="ds-filter-pill" data-category="typography">Typography</button>
-                    <button type="button" class="ds-filter-pill" data-category="spacing">Spacing</button>
-                    <button type="button" class="ds-filter-pill" data-category="sizing">Sizing</button>
-                    <button type="button" class="ds-filter-pill" data-category="radius">Radius</button>
-                    <button type="button" class="ds-filter-pill" data-category="border">Border</button>
-                    <button type="button" class="ds-filter-pill" data-category="shadow">Shadow</button>
-                    <button type="button" class="ds-filter-pill" data-category="opacity">Opacity</button>
-                    <button type="button" class="ds-filter-pill" data-category="layout">Layout</button>
-                    <button type="button" class="ds-filter-pill" data-category="boolean">Boolean</button>
-                    <button type="button" class="ds-filter-pill" data-category="custom">Custom</button>
-                  </div>
+                      <!-- Search & Category Filters -->
+                      <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                        <input type="text" class="prop-input" id="addVarSearchInput" placeholder="Search variables by name, value or type..." style="flex: 1; padding: 6px 10px; font-size: 11px;">
+                      </div>
+                      <div class="ds-filter-pills" id="addVarCategoryPills" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px;">
+                        <button type="button" class="ds-filter-pill active" data-category="all">All</button>
+                        <button type="button" class="ds-filter-pill" data-category="color">Color</button>
+                        <button type="button" class="ds-filter-pill" data-category="typography">Typography</button>
+                        <button type="button" class="ds-filter-pill" data-category="spacing">Spacing</button>
+                        <button type="button" class="ds-filter-pill" data-category="sizing">Sizing</button>
+                        <button type="button" class="ds-filter-pill" data-category="radius">Radius</button>
+                        <button type="button" class="ds-filter-pill" data-category="border">Border</button>
+                        <button type="button" class="ds-filter-pill" data-category="shadow">Shadow</button>
+                        <button type="button" class="ds-filter-pill" data-category="opacity">Opacity</button>
+                        <button type="button" class="ds-filter-pill" data-category="layout">Layout</button>
+                        <button type="button" class="ds-filter-pill" data-category="boolean">Boolean</button>
+                        <button type="button" class="ds-filter-pill" data-category="custom">Custom</button>
+                      </div>
 
-                  <!-- Variable Items Grid/List -->
-                  <div id="addVarItemsList" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px;"></div>
+                      <!-- Variable Items Grid/List -->
+                      <div id="addVarItemsList" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px;"></div>
+                    </div>
+
+                    <!-- Right: Live Variable & Component Viewport -->
+                    <div id="addVarViewportBox" style="width: 340px; flex-shrink: 0; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 12px;">
+                      <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-weight: 700; font-size: 11px; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+                          <span data-icon="Eye"></span> Variable Viewport
+                        </span>
+                        <span id="addVarPreviewTypeTag" style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.15); color: #38bdf8; font-weight: 600;">LIVE PREVIEW</span>
+                      </div>
+
+                      <!-- Visual Swatch / Specimen Stage -->
+                      <div id="addVarViewportStage" style="min-height: 120px; border-radius: 6px; background: rgba(15, 23, 42, 0.6); border: 1px dashed var(--border-subtle); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px; text-align: center;">
+                        <div style="font-size: 11px; color: #64748b;">Select a variable on the left to inspect its live visual viewport.</div>
+                      </div>
+
+                      <!-- Variable Details Breakdown -->
+                      <div id="addVarViewportDetails" style="font-size: 10px; color: var(--text-dim); line-height: 1.5; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); display: none;"></div>
+
+                      <!-- Component Live Simulation Preview -->
+                      <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px;">
+                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Component Live Simulation</div>
+                        <div id="addVarCompSimStage" style="min-height: 80px; border-radius: 6px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; padding: 10px;">
+                          <div style="font-size: 11px; color: #64748b;">Ready to simulate binding...</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div class="ds-modal-footer">
                   <button class="ds-action-btn" id="btnCancelAddVar">Cancel</button>
@@ -1831,7 +1862,7 @@
 
             <!-- 3c. Replace Component Modal (Spec Part A, Section 3) -->
             <div class="ds-modal-backdrop" id="modalReplaceComponent" style="display: none;">
-              <div class="ds-modal-box" style="max-width: 740px;">
+              <div class="ds-modal-box" style="max-width: 980px; width: 92vw;">
                 <div class="ds-modal-header">
                   <div class="ds-modal-title">
                     <span style="color: #a855f7;"><span data-icon="RefreshCw"></span></span>
@@ -1840,20 +1871,40 @@
                   <button class="menu-dropdown-btn-sm" id="btnCloseModalReplaceComp" aria-label="Close"><span data-icon="X"></span></button>
                 </div>
                 <div class="ds-modal-body">
-                  <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
-                    Select a replacement component from Material UI or your Design System catalog. Transferable properties, compatible variable bindings, and prototype interactions will be safely preserved.
-                  </p>
+                  <div style="display: flex; gap: 20px; align-items: stretch;">
+                    <!-- Left: Search & Component Grid -->
+                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                      <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+                        Select a replacement component from Material UI or your Design System catalog. Transferable properties, compatible variable bindings, and prototype interactions will be safely preserved.
+                      </p>
 
-                  <div style="margin-bottom: 10px;">
-                    <input type="text" class="prop-input" id="replaceCompSearchInput" placeholder="Search replacement components (Button, Card, TextField, Alert, etc.)..." style="width: 100%; padding: 6px 10px; font-size: 11px;">
-                  </div>
+                      <div style="margin-bottom: 10px;">
+                        <input type="text" class="prop-input" id="replaceCompSearchInput" placeholder="Search replacement components (Button, Card, TextField, Alert, etc.)..." style="width: 100%; padding: 6px 10px; font-size: 11px;">
+                      </div>
 
-                  <div id="replaceCompCatalogGrid" style="max-height: 240px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin-bottom: 14px;"></div>
+                      <div id="replaceCompCatalogGrid" style="max-height: 280px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-bottom: 10px;"></div>
+                    </div>
 
-                  <!-- Transferability Analysis Preview -->
-                  <div id="replaceCompTransferReport" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px; font-size: 11px; display: none;">
-                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Transfer Compatibility Analysis:</div>
-                    <div id="replaceCompTransferDetails" style="color: var(--text-dim); line-height: 1.5;"></div>
+                    <!-- Right: Component Preview Viewport Box -->
+                    <div id="replaceCompViewportBox" style="width: 350px; flex-shrink: 0; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 12px;">
+                      <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-weight: 700; font-size: 11px; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+                          <span data-icon="Eye"></span> Component Viewport
+                        </span>
+                        <span id="replaceCompPreviewTag" style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(168,85,247,0.15); color: #c084fc; font-weight: 600;">INTERACTIVE PREVIEW</span>
+                      </div>
+
+                      <!-- Viewport Visual Stage -->
+                      <div id="replaceCompViewportStage" style="min-height: 140px; border-radius: 6px; background: rgba(15, 23, 42, 0.6); border: 1px dashed var(--border-subtle); display: flex; align-items: center; justify-content: center; padding: 14px;">
+                        <div style="font-size: 11px; color: #64748b;">Select a component on the left to preview it in this viewport.</div>
+                      </div>
+
+                      <!-- Transferability Analysis Preview -->
+                      <div id="replaceCompTransferReport" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px; font-size: 11px; display: none;">
+                        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Transfer Compatibility Analysis:</div>
+                        <div id="replaceCompTransferDetails" style="color: var(--text-dim); line-height: 1.5;"></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="ds-modal-footer">
@@ -1865,7 +1916,7 @@
 
             <!-- 3d. Replace Variable Modal (Spec Part A, Section 3) -->
             <div class="ds-modal-backdrop" id="modalReplaceVariable" style="display: none;">
-              <div class="ds-modal-box" style="max-width: 600px;">
+              <div class="ds-modal-box" style="max-width: 960px; width: 90vw;">
                 <div class="ds-modal-header">
                   <div class="ds-modal-title">
                     <span style="color: #38bdf8;"><span data-icon="Repeat"></span></span>
@@ -1874,11 +1925,42 @@
                   <button class="menu-dropdown-btn-sm" id="btnCloseModalReplaceVar" aria-label="Close"><span data-icon="X"></span></button>
                 </div>
                 <div class="ds-modal-body">
-                  <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
-                    Select a compatible replacement variable. Current bindings on this layer will update cleanly without altering unrelated properties.
-                  </p>
-                  <div id="replaceVarCurrentInfo" style="margin-bottom: 12px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border-subtle); font-size: 11px;"></div>
-                  <div id="replaceVarCandidatesList" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
+                  <div style="display: flex; gap: 20px; align-items: stretch;">
+                    <!-- Left: Current info & Candidates -->
+                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                      <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+                        Select a compatible replacement variable. Current bindings on this layer will update cleanly without altering unrelated properties.
+                      </p>
+                      <div id="replaceVarCurrentInfo" style="margin-bottom: 12px; padding: 10px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border-subtle); font-size: 11px;"></div>
+                      <div id="replaceVarCandidatesList" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
+                    </div>
+
+                    <!-- Right: Live Variable Viewport & Simulation Box -->
+                    <div id="replaceVarViewportBox" style="width: 340px; flex-shrink: 0; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 12px;">
+                      <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-weight: 700; font-size: 11px; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+                          <span data-icon="Eye"></span> Variable Viewport
+                        </span>
+                        <span id="replaceVarPreviewTypeTag" style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.15); color: #38bdf8; font-weight: 600;">LIVE PREVIEW</span>
+                      </div>
+
+                      <!-- Visual Swatch / Specimen Stage -->
+                      <div id="replaceVarViewportStage" style="min-height: 120px; border-radius: 6px; background: rgba(15, 23, 42, 0.6); border: 1px dashed var(--border-subtle); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px; text-align: center;">
+                        <div style="font-size: 11px; color: #64748b;">Select a replacement variable on the left to inspect its live visual viewport.</div>
+                      </div>
+
+                      <!-- Variable Details Breakdown -->
+                      <div id="replaceVarViewportDetails" style="font-size: 10px; color: var(--text-dim); line-height: 1.5; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); display: none;"></div>
+
+                      <!-- Component Live Simulation Preview -->
+                      <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px;">
+                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Component Live Simulation</div>
+                        <div id="replaceVarCompSimStage" style="min-height: 80px; border-radius: 6px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; padding: 10px;">
+                          <div style="font-size: 11px; color: #64748b;">Ready to simulate replacement...</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div class="ds-modal-footer">
                   <button class="ds-action-btn" id="btnCancelReplaceVar">Cancel</button>

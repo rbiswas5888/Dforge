@@ -6,6 +6,7 @@
 
 import { createNode, generateId } from '../engine/document.js';
 import { OPERATIONS } from './types.js';
+import { calculateNonOverlappingRootPosition } from '../engine/layout.js';
 
 export class DFIRCanvasBridge {
   constructor(document, commandEngine) {
@@ -27,6 +28,11 @@ export class DFIRCanvasBridge {
     const page = this.engine.getActivePage();
     const createdNodes = [];
     const idMap = new Map(); // DFIR id -> Native Canonical id
+
+    // Auto-calculate non-overlapping root position if canvas already has designs
+    if (!options.position && page && Array.isArray(page.rootIds) && page.rootIds.length > 0) {
+      options.position = calculateNonOverlappingRootPosition(page, dfir.root?.transform?.width || 1440, 80);
+    }
 
     // 1. Synchronize Design Tokens if present
     if (dfir.tokens && dfir.tokens.colors) {

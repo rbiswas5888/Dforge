@@ -228,3 +228,46 @@ export function findSnapGuides(page, activeBounds, activeIds = [], threshold = 6
 
   return { snapX, snapY, guides };
 }
+
+/**
+ * Calculates a non-overlapping world coordinate position for newly generated AI designs
+ * by positioning the new root container directly next to existing designs with a standard canvas gap.
+ * @param {Object} page - Active canonical page
+ * @param {number} newWidth - Desired width of the new design frame
+ * @param {number} preferredGap - Spacing gap between adjacent frames (default 80px)
+ * @returns {{ x: number, y: number }} - Optimal non-overlapping world coordinates
+ */
+export function calculateNonOverlappingRootPosition(page, newWidth = 1440, preferredGap = 80) {
+  if (!page || !Array.isArray(page.rootIds) || page.rootIds.length === 0) {
+    return { x: 0, y: 0 };
+  }
+
+  let maxX = -Infinity;
+  let topY = 0;
+  let hasValidRoots = false;
+
+  for (const rootId of page.rootIds) {
+    const node = page.nodes[rootId];
+    if (node && node.transform) {
+      const nx = typeof node.transform.x === 'number' ? node.transform.x : 0;
+      const ny = typeof node.transform.y === 'number' ? node.transform.y : 0;
+      const nw = typeof node.transform.width === 'number' ? node.transform.width : 0;
+      maxX = Math.max(maxX, nx + nw);
+      if (!hasValidRoots) {
+        topY = ny;
+        hasValidRoots = true;
+      } else {
+        topY = Math.min(topY, ny);
+      }
+    }
+  }
+
+  if (!hasValidRoots || maxX === -Infinity) {
+    return { x: 0, y: 0 };
+  }
+
+  return {
+    x: Math.round(maxX + preferredGap),
+    y: Math.round(topY)
+  };
+}
