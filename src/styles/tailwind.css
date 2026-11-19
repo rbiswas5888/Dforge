@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* DesignForge AI Tailwind Theme Extensions: Light & Dark Modes */
+@layer base {
+  :root {
+    --tw-bg-canvas: #090d16;
+    --tw-surface: #161b22;
+    --tw-surface-raised: #21262d;
+    --tw-border: #30363d;
+    --tw-text: #f0f6fc;
+    --tw-text-muted: #8b949e;
+  }
+
+  body.theme-axiom-light {
+    --tw-bg-canvas: #f8fafc;
+    --tw-surface: #ffffff;
+    --tw-surface-raised: #f1f5f9;
+    --tw-border: #e2e8f0;
+    --tw-text: #0f172a;
+    --tw-text-muted: #64748b;
+  }
+}
+
+/* Light Mode Overrides for Core UI Elements when theme-axiom-light is active */
+body.theme-axiom-light {
+  background-color: var(--tw-bg-canvas) !important;
+  color: var(--tw-text) !important;
+}
+
+body.theme-axiom-light .top-bar,
+body.theme-axiom-light .left-sidebar,
+body.theme-axiom-light .right-sidebar,
+body.theme-axiom-light .floating-toolbar,
+body.theme-axiom-light .palette-dialog,
+body.theme-axiom-light .figma-modal {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+body.theme-axiom-light .prop-input,
+body.theme-axiom-light .prop-select,
+body.theme-axiom-light .ai-textarea-input {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.theme-axiom-light .tree-item:hover,
+body.theme-axiom-light .tool-btn:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+body.theme-axiom-light .bottom-bar {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #64748b !important;
+}

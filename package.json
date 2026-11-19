@@ -31,6 +31,9 @@
     "test:all": "node tests/test_engines.js && node tests/test_import_engine.js && node tests/test_export_engine.js && node tests/test_figma_functional_map.js && node tests/test_master_implementation.js && node tests/test_v2_features.js && node tests/test_prototyping_logic_engine.js && node tests/test_advanced_figma_prototyping.js && node tests/test_mobile_preview.js && node tests/test_axiom_layout.js && node tests/test_figma_modals_and_themes.js && node tests/test_ai_engine.js && node tests/test_compiler.js && node tests/test_editor_upgrades.js && node tests/test_mcp_ecosystem.js && node tests/test_design_system.js && node tests/test_launch_acceptance_suite.js && node tests/test_boolean_and_drilldown.js && node tests/test_transform_pivot.js && node tests/test_shape_builder.js && node tests/test_document_tabs.js && node tests/test_workspace_spec.js && node tests/test_auth.js && node tests/test_multiplayer_and_design_system_upgrades.js && node tests/test_paint_engine_and_controls.js"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@grafana/faro-react": "^2.14.0",
     "@grafana/ui": "^13.3.0",
     "@mantine/carousel": "^9.8.0",
     "@mantine/charts": "^9.8.0",
@@ -45,6 +48,8 @@
     "@mantine/nprogress": "^9.8.0",
     "@mantine/spotlight": "^9.8.0",
     "@mantine/tiptap": "^9.8.0",
+    "@mui/material": "^9.5.0",
+    "@mui/system": "^9.5.0",
     "@rneui/base": "^5.0.0",
     "@rneui/themed": "^5.0.0",
     "@tiptap/extension-link": "^3.33.0",
@@ -53,6 +58,7 @@
     "@tiptap/starter-kit": "^3.33.0",
     "ag-grid-community": "^36.3.0",
     "ag-grid-react": "^36.3.0",
+    "autoprefixer": "^10.6.2",
     "dayjs": "^1.11.23",
     "embla-carousel": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
@@ -60,6 +66,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "recharts": "^3.10.1",
+    "tailwindcss": "^4.3.5",
     "vite": "^8.3.5"
   },
   "devDependencies": {
