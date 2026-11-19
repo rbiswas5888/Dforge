@@ -7,6 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 from .api.routes_models import router as models_router
 from .api.routes_generate import router as generate_router
+from .api.routes_vision import router as vision_router
+from .api.routes_ux import router as ux_router
+from .api.routes_knowledge import router as knowledge_router
+from .api.routes_datasets import router as datasets_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -28,6 +32,10 @@ app.add_middleware(
 # Mount API Routers under /api/v1
 app.include_router(models_router, prefix=settings.api_prefix)
 app.include_router(generate_router, prefix=settings.api_prefix)
+app.include_router(vision_router, prefix=settings.api_prefix)
+app.include_router(ux_router, prefix=settings.api_prefix)
+app.include_router(knowledge_router, prefix=settings.api_prefix)
+app.include_router(datasets_router, prefix=settings.api_prefix)
 
 
 @app.get("/")

@@ -8,25 +8,31 @@ from ..model_manager.manager import model_manager
 from ..models.requests import GenerateUIRequest, GenerateDFIRRequest
 from ..models.responses import GenerateUIResponse
 from ..models.dfir import DFIRDocument
+from ..engines.visual_generation import VisualGenerationEngine
+from ..orchestration.validator import DFIRValidator
+from ..orchestration.benchmark import ModelBenchmarkFramework
 
-router = APIRouter(prefix="/generate", tags=["Generation"])
+router = APIRouter(prefix="", tags=["Generation & Benchmarks"])
 
 
-@router.post("/dfir", response_model=GenerateUIResponse)
+@router.get("/benchmarks", response_model=Dict[str, Any])
+async def get_benchmarks():
+    """Run and return multi-metric evaluation benchmark results across acceptance criteria."""
+    return ModelBenchmarkFramework.run_benchmark_suite()
+
+
+@router.post("/generate/dfir", response_model=GenerateUIResponse)
 async def generate_dfir(req: GenerateDFIRRequest):
     """Generate or update structured DFIR design document from a natural language prompt."""
     start_time = time.time()
     adapter = model_manager.get_adapter()
 
     try:
-        raw_dfir = await adapter.generate_structured(
-            prompt=req.prompt,
-            schema={},
-            system_prompt="You are DF-UX Intelligence, an expert UX/UI system generating canonical DFIR documents."
-        )
+        # 1. Synthesize rich domain-specific DFIR tree
+        generated_doc = VisualGenerationEngine.generate(req.prompt, req.options)
 
-        # Validate with Pydantic v2
-        validated_doc = DFIRDocument.model_validate(raw_dfir)
+        # 2. Validate and auto-heal with DFIRValidator
+        validated_doc, validation_report = DFIRValidator.validate_and_repair(generated_doc.model_dump())
         latency = round((time.time() - start_time) * 1000, 2)
 
         return GenerateUIResponse(
@@ -36,9 +42,10 @@ async def generate_dfir(req: GenerateDFIRRequest):
                 "intent": req.intent or "create_interface",
                 "model_used": adapter.model_id,
                 "provider": adapter.provider,
+                "node_count": validation_report["node_count"],
                 "tokens_resolved": len(validated_doc.tokens.colors)
             },
-            validation={"passed": True, "schema_version": validated_doc.version},
+            validation=validation_report,
             latency_ms=latency
         )
     except Exception as e:
