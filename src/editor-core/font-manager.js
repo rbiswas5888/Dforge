@@ -10,6 +10,12 @@
  */
 
 export const SYSTEM_FONTS_CATALOG = [
+  // Primary Universal System Stacks
+  'System Default (Native OS)',
+  'system-ui',
+  '-apple-system',
+  'BlinkMacSystemFont',
+
   // macOS / iOS System Fonts
   'SF Pro',
   'SF Pro Display',
@@ -100,8 +106,8 @@ export class FontManager {
   }
 
   prepopulateSafeFonts() {
-    // Add default fallbacks that are virtually universal
-    ['Arial', 'Helvetica', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana', 'Inter', 'Roboto'].forEach(f => {
+    // Add default system fonts that are universally available
+    ['System Default (Native OS)', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'SF Pro', 'Segoe UI', 'Roboto', 'Arial', 'Helvetica', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana', 'Inter'].forEach(f => {
       this.installedFonts.add(f);
     });
   }

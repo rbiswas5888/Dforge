@@ -22,7 +22,7 @@ export class DesignSystemUIController {
     this.activeView = 'overview';
     this.activeTokenCategory = 'all';
     this.activeTheme = 'dark';
-    this.activeComponentLibrary = 'mantine';
+    this.activeComponentLibrary = 'mui'; // Default primary design system: Material UI (MUI)
     this.activeMantineCategory = 'all';
     this.activeAgGridCategory = 'all';
     this.activeGrafanaCategory = 'all';
@@ -1390,8 +1390,8 @@ export class DesignSystemUIController {
 
           <!-- Library Toggle Switcher -->
           <div style="display: flex; background: var(--bg-surface); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); gap: 4px; flex-wrap: wrap;">
-            <button type="button" class="ds-filter-pill ${lib === 'mantine' ? 'active' : ''}" data-ds-lib="mantine" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
-              Mantine UI
+            <button type="button" class="ds-filter-pill ${lib === 'mui' ? 'active' : ''}" data-ds-lib="mui" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
+              Material UI (Primary)
             </button>
             <button type="button" class="ds-filter-pill ${lib === 'aggrid' ? 'active' : ''}" data-ds-lib="aggrid" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
               AG Grid
@@ -1399,8 +1399,8 @@ export class DesignSystemUIController {
             <button type="button" class="ds-filter-pill ${lib === 'grafana' ? 'active' : ''}" data-ds-lib="grafana" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
               Grafana UI
             </button>
-            <button type="button" class="ds-filter-pill ${lib === 'mui' ? 'active' : ''}" data-ds-lib="mui" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
-              Material UI
+            <button type="button" class="ds-filter-pill ${lib === 'mantine' ? 'active' : ''}" data-ds-lib="mantine" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
+              Mantine UI
             </button>
             <button type="button" class="ds-filter-pill ${lib === 'rneui' ? 'active' : ''}" data-ds-lib="rneui" style="padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;">
               React Native

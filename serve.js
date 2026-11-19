@@ -8,9 +8,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer as createViteServer } from 'vite';
+import { createInitialDocument } from './src/engine/document.js';
+import { CommandEngine } from './src/engine/commands.js';
+import { DesignMcpServer } from './src/mcp/server/design_server.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const sharedDoc = createInitialDocument('DesignForge Platform Default');
+const sharedEngine = new CommandEngine(sharedDoc);
+const mcpServerInstance = new DesignMcpServer(sharedEngine);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const vite = await createViteServer({
@@ -231,6 +238,155 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 404, { success: false, error: 'API route not found' });
     } catch (err) {
       return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
+  // Streamable HTTP Gateway for DF-MCP Server (Specification Section 8)
+  if (req.url === '/api/mcp' || req.url.startsWith('/api/mcp?') || req.url.startsWith('/api/mcp/')) {
+    if (req.method === 'POST') {
+      try {
+        const body = await parseJsonBody(req);
+        const { id, method, params = {} } = body;
+
+        if (method === 'initialize') {
+          return sendJson(res, 200, {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              protocolVersion: '2024-11-05',
+              serverInfo: {
+                name: 'df-mcp-intelligence-server',
+                version: '2.0.0',
+                description: 'DesignForge AI Advanced MCP Server Architecture'
+              },
+              capabilities: {
+                tools: { listChanged: true },
+                resources: { subscribe: true, listChanged: true },
+                prompts: { listChanged: true }
+              }
+            }
+          });
+        }
+
+        if (method === 'ping') {
+          return sendJson(res, 200, { jsonrpc: '2.0', id, result: {} });
+        }
+
+        if (method === 'tools/list') {
+          const tools = Array.from(mcpServerInstance.tools.values()).map(t => t.definition);
+          return sendJson(res, 200, { jsonrpc: '2.0', id, result: { tools } });
+        }
+
+        if (method === 'tools/call') {
+          const { name, arguments: args = {} } = params;
+          const tool = mcpServerInstance.tools.get(name);
+          if (!tool) {
+            return sendJson(res, 200, {
+              jsonrpc: '2.0',
+              id,
+              error: { code: -32007, message: `Tool '${name}' not found on DF-MCP server` }
+            });
+          }
+          const output = await tool.handler(args);
+          return sendJson(res, 200, {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              content: [
+                {
+                  type: 'text',
+                  text: typeof output === 'string' ? output : JSON.stringify(output, null, 2)
+                }
+              ],
+              isError: false,
+              _raw: output
+            }
+          });
+        }
+
+        if (method === 'resources/list') {
+          const resources = Array.from(mcpServerInstance.resources.values()).map(r => r.definition);
+          return sendJson(res, 200, { jsonrpc: '2.0', id, result: { resources } });
+        }
+
+        if (method === 'resources/read') {
+          const { uri } = params;
+          const resource = mcpServerInstance.resources.get(uri);
+          if (!resource) {
+            return sendJson(res, 200, {
+              jsonrpc: '2.0',
+              id,
+              error: { code: -32006, message: `Resource '${uri}' not found` }
+            });
+          }
+          const data = await resource.handler(uri);
+          return sendJson(res, 200, {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              contents: [
+                {
+                  uri,
+                  mimeType: resource.definition.mimeType,
+                  text: typeof data === 'string' ? data : JSON.stringify(data, null, 2)
+                }
+              ]
+            }
+          });
+        }
+
+        if (method === 'prompts/list') {
+          const prompts = Array.from(mcpServerInstance.prompts.values()).map(p => p.definition);
+          return sendJson(res, 200, { jsonrpc: '2.0', id, result: { prompts } });
+        }
+
+        if (method === 'prompts/get') {
+          const { name, arguments: args = {} } = params;
+          const prompt = mcpServerInstance.prompts.get(name);
+          if (!prompt) {
+            return sendJson(res, 200, {
+              jsonrpc: '2.0',
+              id,
+              error: { code: -32602, message: `Prompt '${name}' not found` }
+            });
+          }
+          const messageText = await prompt.handler(args);
+          return sendJson(res, 200, {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              messages: [{ role: 'user', content: { type: 'text', text: messageText } }]
+            }
+          });
+        }
+
+        return sendJson(res, 200, {
+          jsonrpc: '2.0',
+          id,
+          error: { code: -32601, message: `Method '${method}' not implemented` }
+        });
+      } catch (err) {
+        return sendJson(res, 500, {
+          jsonrpc: '2.0',
+          error: { code: -32603, message: err.message }
+        });
+      }
+    }
+
+    if (req.method === 'GET') {
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Access-Control-Allow-Origin': '*'
+      });
+      res.end(JSON.stringify({
+        server: 'df-mcp-intelligence-server',
+        status: 'online',
+        transport: 'streamable-http',
+        toolsCount: mcpServerInstance.tools.size,
+        resourcesCount: mcpServerInstance.resources.size,
+        promptsCount: mcpServerInstance.prompts.size
+      }));
+      return;
     }
   }
 

@@ -1128,5 +1128,10 @@ export function insertMuiComponentToCanvas(app, componentId, coords = null) {
     app.showToast(`Inserted ${rootNode.name} onto canvas`, 'success');
   }
 
+  // Component Variable Modal Nudge: Prompt user on which variable to bind/use
+  if (app.dsUi && typeof app.dsUi.openAddVariableModal === 'function') {
+    app.dsUi.openAddVariableModal(rootNode);
+  }
+
   return rootNode;
 }

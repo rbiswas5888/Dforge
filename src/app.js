@@ -4446,7 +4446,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
             <option value="${cleanFont}" selected>⚠️ ${cleanFont} (Missing)</option>
           </optgroup>`;
         }
-        optHtml += `<optgroup label="Installed System Fonts">
+        optHtml += `<optgroup label="System Font Library (Primary — Recommended)">
           ${avail.systemFonts.map(f => `<option value="${f}" ${!isMissing && cleanFont.toLowerCase() === f.toLowerCase() ? 'selected' : ''}>${f}</option>`).join('')}
         </optgroup>`;
         optHtml += `<optgroup label="Popular Web Fonts">
