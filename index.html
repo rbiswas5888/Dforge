@@ -522,41 +522,6 @@
               Resolved</button>
           </div>
         </div>
-
-        <!-- Canvas Context Menu (Right-click) -->
-        <div class="context-menu" id="canvasContextMenu" style="display: none;">
-          <div class="context-menu-item" id="ctxCut">Cut <span>⌘X</span></div>
-          <div class="context-menu-item" id="ctxCopy">Copy <span>⌘C</span></div>
-          <div class="context-menu-item" id="ctxPaste">Paste <span>⌘V</span></div>
-          <div class="context-menu-item" id="ctxPasteHere">Paste Here</div>
-          <div class="context-menu-item" id="ctxDuplicate">Duplicate <span>⌘D</span></div>
-          <div class="context-menu-item" id="ctxDelete">Delete <span>⌫</span></div>
-          <div class="context-menu-divider"></div>
-          <div class="context-menu-item" id="ctxRename">Rename <span>⌘R</span></div>
-          <div class="context-menu-item" id="ctxLock">Lock / Unlock <span>⌘⇧L</span></div>
-          <div class="context-menu-item" id="ctxHide">Hide / Show <span>⌘⇧H</span></div>
-          <div class="context-menu-divider"></div>
-          <div class="context-menu-item" id="ctxGroup">Group Selection <span>⌘G</span></div>
-          <div class="context-menu-item" id="ctxUngroup">Ungroup <span>⌘⇧G</span></div>
-          <div class="context-menu-divider"></div>
-          <div class="context-menu-item" id="ctxAddAutoLayout">Add Auto Layout <span>⇧A</span></div>
-          <div class="context-menu-item" id="ctxCreateComponent">Create Component <span>⌥⌘K</span></div>
-          <div class="context-menu-divider"></div>
-          <div class="context-menu-item" id="ctxBringToFront">Bring to Front <span>⌘]</span></div>
-          <div class="context-menu-item" id="ctxSendToBack">Send to Back <span>⌘[</span></div>
-          <div class="context-menu-divider" id="ctxBooleanDivider"></div>
-          <div class="context-menu-item" id="ctxBooleanUnion">Boolean Union <span>⌥⌘U</span></div>
-          <div class="context-menu-item" id="ctxBooleanSubtract">Boolean Subtract <span>⌥⌘S</span></div>
-          <div class="context-menu-item" id="ctxBooleanIntersect">Boolean Intersect <span>⌥⌘I</span></div>
-          <div class="context-menu-item" id="ctxBooleanExclude">Boolean Exclude <span>⌥⌘X</span></div>
-          <div class="context-menu-item" id="ctxFlatten">Flatten Selection <span>⌘E</span></div>
-          <div class="context-menu-divider"></div>
-          <div class="context-menu-item" id="ctxSelectAll">Select All <span>⌘A</span></div>
-          <div class="context-menu-item" id="ctxZoomFit">Zoom to Fit <span>⌘⇧0</span></div>
-          <div class="context-menu-divider"></div>
-          <div class="context-menu-item" id="ctxExportPng">Export PNG</div>
-          <div class="context-menu-item" id="ctxExportSvg">Export SVG</div>
-        </div>
       </section>
 
       <!-- First-Class Design System Workspace (Section 2, 4-18) -->
@@ -2794,6 +2759,41 @@
               <button class="workspace-primary-btn" id="btnUnsavedSave" type="button">Save</button>
             </div>
           </div>
+        </div>
+
+        <!-- Global Context Menu (Right-click) -->
+        <div class="context-menu" id="canvasContextMenu" style="display: none;">
+          <div class="context-menu-item" id="ctxCut">Cut <span>⌘X</span></div>
+          <div class="context-menu-item" id="ctxCopy">Copy <span>⌘C</span></div>
+          <div class="context-menu-item" id="ctxPaste">Paste <span>⌘V</span></div>
+          <div class="context-menu-item" id="ctxPasteHere">Paste Here</div>
+          <div class="context-menu-item" id="ctxDuplicate">Duplicate <span>⌘D</span></div>
+          <div class="context-menu-item" id="ctxDelete">Delete <span>⌫</span></div>
+          <div class="context-menu-divider" id="ctxDivider1"></div>
+          <div class="context-menu-item" id="ctxRename">Rename <span>⌘R</span></div>
+          <div class="context-menu-item" id="ctxLock">Lock / Unlock <span>⌘⇧L</span></div>
+          <div class="context-menu-item" id="ctxHide">Hide / Show <span>⌘⇧H</span></div>
+          <div class="context-menu-divider" id="ctxDivider2"></div>
+          <div class="context-menu-item" id="ctxGroup">Group Selection <span>⌘G</span></div>
+          <div class="context-menu-item" id="ctxUngroup">Ungroup <span>⌘⇧G</span></div>
+          <div class="context-menu-divider" id="ctxDivider3"></div>
+          <div class="context-menu-item" id="ctxAddAutoLayout">Add Auto Layout <span>⇧A</span></div>
+          <div class="context-menu-item" id="ctxCreateComponent">Create Component <span>⌥⌘K</span></div>
+          <div class="context-menu-divider" id="ctxDivider4"></div>
+          <div class="context-menu-item" id="ctxBringToFront">Bring to Front <span>⌘]</span></div>
+          <div class="context-menu-item" id="ctxSendToBack">Send to Back <span>⌘[</span></div>
+          <div class="context-menu-divider" id="ctxBooleanDivider"></div>
+          <div class="context-menu-item" id="ctxBooleanUnion">Boolean Union <span>⌥⌘U</span></div>
+          <div class="context-menu-item" id="ctxBooleanSubtract">Boolean Subtract <span>⌥⌘S</span></div>
+          <div class="context-menu-item" id="ctxBooleanIntersect">Boolean Intersect <span>⌥⌘I</span></div>
+          <div class="context-menu-item" id="ctxBooleanExclude">Boolean Exclude <span>⌥⌘X</span></div>
+          <div class="context-menu-item" id="ctxFlatten">Flatten Selection <span>⌘E</span></div>
+          <div class="context-menu-divider" id="ctxDivider5"></div>
+          <div class="context-menu-item" id="ctxSelectAll">Select All <span>⌘A</span></div>
+          <div class="context-menu-item" id="ctxZoomFit">Zoom to Fit <span>⌘⇧0</span></div>
+          <div class="context-menu-divider" id="ctxDivider6"></div>
+          <div class="context-menu-item" id="ctxExportPng">Export PNG</div>
+          <div class="context-menu-item" id="ctxExportSvg">Export SVG</div>
         </div>
 
         <script type="module" src="src/app.js"></script>

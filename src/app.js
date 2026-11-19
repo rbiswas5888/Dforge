@@ -2158,7 +2158,11 @@ export class DesignForgeApp {
         document.querySelectorAll('.top-action-menu[open]').forEach(menu => menu.removeAttribute('open'));
       }
       const ctxMenu = document.getElementById('canvasContextMenu');
-      if (ctxMenu) ctxMenu.style.display = 'none';
+      if (ctxMenu && ctxMenu.style.display !== 'none') {
+        if (!event.target.closest('#canvasContextMenu') && (!this.lastContextMenuOpenedAt || Date.now() - this.lastContextMenuOpenedAt > 150)) {
+          ctxMenu.style.display = 'none';
+        }
+      }
     });
 
     window.addEventListener('keydown', (e) => {
@@ -3059,8 +3063,16 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       this.openContextMenu(e.clientX, e.clientY, 'canvas');
     }, listenerOptions);
 
+    const canvasWrapper = document.getElementById('canvasWrapper');
+    canvasWrapper?.addEventListener('contextmenu', (e) => {
+      if (e.target !== canvas && !e.target.closest('.tool-shelf, .mode-rail, .context-menu, .canvas-ruler, button, input')) {
+        e.preventDefault();
+        this.openContextMenu(e.clientX, e.clientY, 'canvas');
+      }
+    });
+
     canvas.addEventListener('mousedown', async (e) => {
-      if (e.button === 2) return; // Right-click handled by contextmenu
+      if (e.button === 2 || (e.button === 0 && e.ctrlKey)) return; // Right-click or Mac Ctrl+Click handled by contextmenu
 
       const isMiddle = e.button === 1;
       const isHand = this.isHandMode || this.currentTool === 'hand' || isMiddle;
@@ -6945,11 +6957,14 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
 
     // 4. Right Click for Context Menu
     list.addEventListener('contextmenu', (e) => {
-      const item = e.target.closest('.layer-item');
-      if (!item) return;
       e.preventDefault();
-      const id = item.dataset.nodeId;
-      this.openContextMenu(e.clientX, e.clientY, 'layers', id);
+      const item = e.target.closest('.layer-item');
+      if (item && item.dataset.nodeId) {
+        const id = item.dataset.nodeId;
+        this.openContextMenu(e.clientX, e.clientY, 'layers', id);
+      } else {
+        this.openContextMenu(e.clientX, e.clientY, 'canvas');
+      }
     });
 
     // 5. Tree <-> Canvas Hover Synchronization
@@ -7319,6 +7334,9 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
   }
 
   openContextMenu(clientX, clientY, source = 'canvas', targetNodeId = null) {
+    this.lastContextMenuOpenedAt = Date.now();
+    this.dragState = null;
+
     if (source === 'canvas') {
       const coords = this.renderer.screenToCanvas(clientX, clientY);
       const hitNodeId = this.renderer.hitTest(coords.x, coords.y);
@@ -7354,9 +7372,10 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     const page = this.engine.getActivePage();
     const isSingleFrameOrGroup = selection.length === 1 && (page?.nodes[selection[0]]?.type === 'frame' || page?.nodes[selection[0]]?.type === 'group');
 
-    const setItemState = (id, enabled, text = null) => {
+    const setItemState = (id, enabled, text = null, visible = true) => {
       const el = document.getElementById(id);
       if (!el) return;
+      el.style.display = visible ? 'flex' : 'none';
       el.classList.toggle('disabled', !enabled);
       if (text !== null) {
         const span = el.querySelector('span');
@@ -7364,48 +7383,125 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       }
     };
 
-    setItemState('ctxCut', hasSelection);
-    setItemState('ctxCopy', hasSelection);
-    setItemState('ctxPaste', hasClipboard);
-    setItemState('ctxPasteHere', hasClipboard && source === 'canvas');
-    setItemState('ctxDuplicate', hasSelection);
-    setItemState('ctxDelete', hasSelection);
+    const setDividerVisible = (id, visible) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = visible ? 'block' : 'none';
+    };
 
-    setItemState('ctxRename', hasSelection);
+    if (!hasSelection) {
+      // Empty canvas / background right-click (compact menu)
+      setItemState('ctxCut', false, null, false);
+      setItemState('ctxCopy', false, null, false);
+      setItemState('ctxPaste', hasClipboard, null, true);
+      setItemState('ctxPasteHere', hasClipboard && source === 'canvas', null, source === 'canvas');
+      setItemState('ctxDuplicate', false, null, false);
+      setItemState('ctxDelete', false, null, false);
 
-    const allLocked = hasSelection && selection.every(id => page?.nodes[id]?.locked);
-    setItemState('ctxLock', hasSelection, allLocked ? 'Unlock Selection' : 'Lock Selection');
+      setDividerVisible('ctxDivider1', false);
+      setItemState('ctxRename', false, null, false);
+      setItemState('ctxLock', false, null, false);
+      setItemState('ctxHide', false, null, false);
 
-    const allHidden = hasSelection && selection.every(id => page?.nodes[id]?.visible === false);
-    setItemState('ctxHide', hasSelection, allHidden ? 'Unhide Selection' : 'Hide Selection');
+      setDividerVisible('ctxDivider2', false);
+      setItemState('ctxGroup', false, null, false);
+      setItemState('ctxUngroup', false, null, false);
 
-    setItemState('ctxGroup', hasMultiple);
-    setItemState('ctxUngroup', isSingleFrameOrGroup);
-    setItemState('ctxAddAutoLayout', hasSelection);
-    setItemState('ctxCreateComponent', hasSelection);
+      setDividerVisible('ctxDivider3', false);
+      setItemState('ctxAddAutoLayout', false, null, false);
+      setItemState('ctxCreateComponent', false, null, false);
 
-    setItemState('ctxBringToFront', hasSelection);
-    setItemState('ctxSendToBack', hasSelection);
+      setDividerVisible('ctxDivider4', false);
+      setItemState('ctxBringToFront', false, null, false);
+      setItemState('ctxSendToBack', false, null, false);
 
-    setItemState('ctxBooleanUnion', hasMultiple);
-    setItemState('ctxBooleanSubtract', hasMultiple);
-    setItemState('ctxBooleanIntersect', hasMultiple);
-    setItemState('ctxBooleanExclude', hasMultiple);
-    setItemState('ctxFlatten', hasSelection);
+      setDividerVisible('ctxBooleanDivider', false);
+      setItemState('ctxBooleanUnion', false, null, false);
+      setItemState('ctxBooleanSubtract', false, null, false);
+      setItemState('ctxBooleanIntersect', false, null, false);
+      setItemState('ctxBooleanExclude', false, null, false);
+      setItemState('ctxFlatten', false, null, false);
 
-    setItemState('ctxSelectAll', true);
-    setItemState('ctxZoomFit', true);
-    setItemState('ctxExportPng', hasSelection);
-    setItemState('ctxExportSvg', hasSelection);
+      setDividerVisible('ctxDivider5', hasClipboard);
+      setItemState('ctxSelectAll', true, null, true);
+      setItemState('ctxZoomFit', true, null, true);
+
+      setDividerVisible('ctxDivider6', false);
+      setItemState('ctxExportPng', false, null, false);
+      setItemState('ctxExportSvg', false, null, false);
+    } else {
+      // Selection active (full object context menu)
+      setItemState('ctxCut', true, null, true);
+      setItemState('ctxCopy', true, null, true);
+      setItemState('ctxPaste', hasClipboard, null, true);
+      setItemState('ctxPasteHere', hasClipboard && source === 'canvas', null, source === 'canvas');
+      setItemState('ctxDuplicate', true, null, true);
+      setItemState('ctxDelete', true, null, true);
+
+      setDividerVisible('ctxDivider1', true);
+      setItemState('ctxRename', true, null, true);
+
+      const allLocked = selection.every(id => page?.nodes[id]?.locked);
+      setItemState('ctxLock', true, allLocked ? 'Unlock Selection' : 'Lock Selection', true);
+
+      const allHidden = selection.every(id => page?.nodes[id]?.visible === false);
+      setItemState('ctxHide', true, allHidden ? 'Unhide Selection' : 'Hide Selection', true);
+
+      setDividerVisible('ctxDivider2', hasMultiple || isSingleFrameOrGroup);
+      setItemState('ctxGroup', hasMultiple, null, hasMultiple);
+      setItemState('ctxUngroup', isSingleFrameOrGroup, null, isSingleFrameOrGroup);
+
+      setDividerVisible('ctxDivider3', true);
+      setItemState('ctxAddAutoLayout', true, null, true);
+      setItemState('ctxCreateComponent', true, null, true);
+
+      setDividerVisible('ctxDivider4', true);
+      setItemState('ctxBringToFront', true, null, true);
+      setItemState('ctxSendToBack', true, null, true);
+
+      setDividerVisible('ctxBooleanDivider', hasMultiple);
+      setItemState('ctxBooleanUnion', hasMultiple, null, hasMultiple);
+      setItemState('ctxBooleanSubtract', hasMultiple, null, hasMultiple);
+      setItemState('ctxBooleanIntersect', hasMultiple, null, hasMultiple);
+      setItemState('ctxBooleanExclude', hasMultiple, null, hasMultiple);
+      setItemState('ctxFlatten', true, null, true);
+
+      setDividerVisible('ctxDivider5', true);
+      setItemState('ctxSelectAll', true, null, true);
+      setItemState('ctxZoomFit', true, null, true);
+
+      setDividerVisible('ctxDivider6', true);
+      setItemState('ctxExportPng', true, null, true);
+      setItemState('ctxExportSvg', true, null, true);
+    }
 
     ctxMenu.style.display = 'block';
 
     const menuW = ctxMenu.offsetWidth || 210;
-    const menuH = ctxMenu.offsetHeight || 380;
-    const posX = Math.max(8, Math.min(clientX, window.innerWidth - menuW - 12));
-    const posY = Math.max(8, Math.min(clientY, window.innerHeight - menuH - 12));
-    ctxMenu.style.left = `${posX}px`;
-    ctxMenu.style.top = `${posY}px`;
+    const menuH = ctxMenu.offsetHeight || 260;
+
+    let posX = clientX;
+    let posY = clientY;
+
+    // Viewport-aware horizontal positioning:
+    if (posX + menuW > window.innerWidth - 8) {
+      posX = Math.max(8, clientX - menuW);
+    } else {
+      posX = Math.max(8, posX);
+    }
+
+    // Viewport-aware vertical positioning:
+    if (posY + menuH > window.innerHeight - 8) {
+      if (clientY - menuH >= 8) {
+        posY = clientY - menuH;
+      } else {
+        posY = Math.max(8, window.innerHeight - menuH - 8);
+      }
+    } else {
+      posY = Math.max(8, posY);
+    }
+
+    ctxMenu.style.left = `${Math.round(posX)}px`;
+    ctxMenu.style.top = `${Math.round(posY)}px`;
   }
 
   duplicateSelected() {
