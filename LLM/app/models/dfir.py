@@ -174,6 +174,7 @@ class DFIRNode(BaseModel):
     opacity: float = Field(default=1.0, ge=0.0, le=1.0)
     componentId: Optional[str] = None
     variantProperties: Optional[Dict[str, str]] = None
+    tokenBindings: Dict[str, str] = Field(default_factory=dict)
     transform: DFIRTransform = Field(default_factory=DFIRTransform)
     layout: DFIRLayout = Field(default_factory=DFIRLayout)
     style: DFIRStyle = Field(default_factory=DFIRStyle)

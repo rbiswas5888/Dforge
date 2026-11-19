@@ -755,11 +755,11 @@ export class DesignSystemUIController {
     });
   }
 
-  renderVariableViewport(v, targetPropPath) {
-    const stage = document.getElementById('addVarViewportStage');
-    const details = document.getElementById('addVarViewportDetails');
-    const simStage = document.getElementById('addVarCompSimStage');
-    const typeTag = document.getElementById('addVarPreviewTypeTag');
+  renderVariableViewport(v, targetPropPath, prefix = 'addVar') {
+    const stage = document.getElementById(`${prefix}ViewportStage`);
+    const details = document.getElementById(`${prefix}ViewportDetails`);
+    const simStage = document.getElementById(`${prefix}CompSimStage`);
+    const typeTag = document.getElementById(`${prefix}PreviewTypeTag`);
     if (!stage || !v) return;
 
     if (typeTag) {
@@ -996,11 +996,19 @@ export class DesignSystemUIController {
       }).join('');
 
       grid.querySelectorAll('.replace-comp-card').forEach(card => {
+        const target = catalog.find(x => x.id === card.dataset.compId);
+        card.addEventListener('mouseenter', () => {
+          if (target) {
+            this.renderReplacementComponentViewport(target);
+          }
+        });
         card.addEventListener('click', () => {
           this.selectedReplaceCompId = card.dataset.compId;
           renderGrid();
 
-          const target = catalog.find(x => x.id === this.selectedReplaceCompId);
+          if (target) {
+            this.renderReplacementComponentViewport(target);
+          }
           if (reportBox && details && target) {
             reportBox.style.display = 'block';
             const bindingsCount = Object.keys(node.tokenBindings || {}).length;
@@ -1025,6 +1033,9 @@ export class DesignSystemUIController {
 
     if (searchInput) searchInput.oninput = () => renderGrid();
     renderGrid();
+    if (catalog.length > 0) {
+      this.renderReplacementComponentViewport(catalog[0]);
+    }
     modal.style.display = 'flex';
   }
 
@@ -1078,9 +1089,22 @@ export class DesignSystemUIController {
         `;
       }).join('');
 
+      if (candidates.length > 0) {
+        this.renderVariableViewport(candidates[0], propertyPath, 'replaceVar');
+      }
+
       list.querySelectorAll('.replace-var-card').forEach(card => {
+        const vTarget = candidates.find(x => x.id === card.dataset.varId);
+        card.addEventListener('mouseenter', () => {
+          if (vTarget) {
+            this.renderVariableViewport(vTarget, propertyPath, 'replaceVar');
+          }
+        });
         card.addEventListener('click', () => {
           this.selectedReplaceVarId = card.dataset.varId;
+          if (vTarget) {
+            this.renderVariableViewport(vTarget, propertyPath, 'replaceVar');
+          }
           list.querySelectorAll('.replace-var-card').forEach(c => {
             const sel = c.dataset.varId === this.selectedReplaceVarId;
             c.style.background = sel ? 'rgba(56,189,248,0.1)' : 'var(--bg-surface)';

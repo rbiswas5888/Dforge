@@ -151,7 +151,11 @@ export class DFIRCanvasBridge {
         cornerRadius: dfirNode.style?.cornerRadius || 0,
         shadows: dfirNode.style?.shadows ? JSON.parse(JSON.stringify(dfirNode.style.shadows)) : []
       },
-      semanticTag: dfirNode.accessibility?.semanticTag || null
+      semanticTag: dfirNode.accessibility?.semanticTag || null,
+      tokenBindings: dfirNode.tokenBindings || dfirNode.variableBindings || {},
+      componentId: dfirNode.componentId || null,
+      variantId: dfirNode.variantId || null,
+      interactions: dfirNode.interactions || []
     };
 
     if (dfirNode.text) {

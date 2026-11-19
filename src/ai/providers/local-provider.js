@@ -80,11 +80,16 @@ export class LocalProvider extends BaseProvider {
   synthesizeEnterpriseDashboard() {
     const rootFrame = createNode('frame', {
       name: 'Enterprise Cloud SaaS Dashboard (1200px)',
+      componentId: 'paper',
       transform: { x: 80, y: 920, width: 1200, height: 760 },
       style: {
         fills: [{ type: 'solid', color: '#0b0f19', opacity: 1 }],
         strokes: [{ color: '#1e293b', width: 1, align: 'inside' }],
         cornerRadius: 16
+      },
+      tokenBindings: {
+        'style.fills.0.color': 'token_bg_main',
+        'style.strokes.0.color': 'token_border_subtle'
       },
       layout: { mode: 'stack-horizontal', alignItems: 'stretch' },
       semanticTag: 'main'
@@ -94,8 +99,13 @@ export class LocalProvider extends BaseProvider {
     const sidebar = createNode('frame', {
       parentId: rootFrame.id,
       name: 'Navigation Sidebar',
+      componentId: 'paper',
       transform: { x: 0, y: 0, width: 220, height: 760 },
       style: { fills: [{ type: 'solid', color: '#111827', opacity: 1 }], strokes: [{ color: '#1f2937', width: 1 }] },
+      tokenBindings: {
+        'style.fills.0.color': 'token_bg_surface',
+        'style.strokes.0.color': 'token_border_subtle'
+      },
       layout: { mode: 'stack-vertical', paddingTop: 24, paddingLeft: 20, paddingRight: 20, paddingBottom: 24, gap: 16 },
       semanticTag: 'nav'
     });
@@ -103,7 +113,8 @@ export class LocalProvider extends BaseProvider {
       parentId: sidebar.id,
       name: 'Logo',
       transform: { x: 0, y: 0, width: 180, height: 28 },
-      text: { content: '⚡ CloudPulse AI', fontSize: 16, fontWeight: '700', color: '#38bdf8' }
+      text: { content: '⚡ CloudPulse AI', fontSize: 16, fontWeight: '700', color: '#38bdf8' },
+      tokenBindings: { 'text.color': 'token_brand_primary' }
     });
     sidebar.childIds.push(logo.id);
 
@@ -113,6 +124,7 @@ export class LocalProvider extends BaseProvider {
       name: 'Dashboard Workspace',
       transform: { x: 220, y: 0, width: 980, height: 760 },
       style: { fills: [{ type: 'solid', color: '#090d16', opacity: 1 }] },
+      tokenBindings: { 'style.fills.0.color': 'token_bg_main' },
       layout: { mode: 'stack-vertical', paddingTop: 32, paddingLeft: 32, paddingRight: 32, paddingBottom: 32, gap: 24 }
     });
 
@@ -127,9 +139,37 @@ export class LocalProvider extends BaseProvider {
       parentId: header.id,
       name: 'Title',
       transform: { x: 0, y: 0, width: 340, height: 28 },
-      text: { content: 'Cloud Compute Infrastructure', fontSize: 22, fontWeight: '700', color: '#ffffff' }
+      text: { content: 'Cloud Compute Infrastructure', fontSize: 22, fontWeight: '700', color: '#ffffff' },
+      tokenBindings: { 'text.color': 'token_text_primary' }
     });
     header.childIds.push(title.id);
+
+    // Primary Action Button (MUI Button)
+    const headerBtn = createNode('frame', {
+      parentId: header.id,
+      name: 'Primary Button',
+      componentId: 'button',
+      transform: { x: 0, y: 0, width: 140, height: 38 },
+      style: {
+        fills: [{ type: 'solid', color: '#3b82f6', opacity: 1 }],
+        cornerRadius: 8
+      },
+      tokenBindings: {
+        'style.fills.0.color': 'token_brand_primary',
+        'style.cornerRadius': 'token_radius_sm'
+      },
+      layout: { mode: 'stack-horizontal', alignItems: 'center', justifyContent: 'center' },
+      semanticTag: 'button'
+    });
+    const headerBtnTxt = createNode('text', {
+      parentId: headerBtn.id,
+      name: 'Button Label',
+      transform: { x: 0, y: 0, width: 110, height: 18 },
+      text: { content: '+ New Cluster', fontSize: 13, fontWeight: '600', color: '#ffffff', textAlign: 'center' },
+      tokenBindings: { 'text.color': 'token_text_primary' }
+    });
+    headerBtn.childIds.push(headerBtnTxt.id);
+    header.childIds.push(headerBtn.id);
 
     // KPI Cards Row
     const kpiRow = createNode('frame', {
@@ -146,47 +186,84 @@ export class LocalProvider extends BaseProvider {
       { label: 'Monthly Compute Burn', val: '$38,490', note: 'Within $45k budget', color: '#94a3b8' }
     ];
 
-    const allNodes = [rootFrame, sidebar, logo, body, header, title, kpiRow];
+    const allNodes = [rootFrame, sidebar, logo, body, header, title, headerBtn, headerBtnTxt, kpiRow];
 
     for (const k of kpis) {
       const card = createNode('frame', {
         parentId: kpiRow.id,
         name: `KPI / ${k.label}`,
+        componentId: 'card',
         transform: { x: 0, y: 0, width: 292, height: 130 },
         style: { fills: [{ type: 'solid', color: '#131b2c', opacity: 1 }], strokes: [{ color: '#222f47', width: 1 }], cornerRadius: 12 },
+        tokenBindings: {
+          'style.fills.0.color': 'token_bg_surface',
+          'style.strokes.0.color': 'token_border_subtle',
+          'style.cornerRadius': 'token_radius_md'
+        },
         layout: { mode: 'stack-vertical', paddingTop: 20, paddingLeft: 20, paddingRight: 20, paddingBottom: 20, gap: 8 }
       });
       const lbl = createNode('text', {
         parentId: card.id,
         name: 'Label',
         transform: { x: 0, y: 0, width: 240, height: 16 },
-        text: { content: k.label, fontSize: 13, fontWeight: '500', color: '#94a3b8' }
+        text: { content: k.label, fontSize: 13, fontWeight: '500', color: '#94a3b8' },
+        tokenBindings: { 'text.color': 'token_text_muted' }
       });
       const val = createNode('text', {
         parentId: card.id,
         name: 'Value',
         transform: { x: 0, y: 0, width: 240, height: 32 },
-        text: { content: k.val, fontSize: 24, fontWeight: '800', color: '#ffffff' }
+        text: { content: k.val, fontSize: 24, fontWeight: '800', color: '#ffffff' },
+        tokenBindings: { 'text.color': 'token_text_primary' }
       });
       const note = createNode('text', {
         parentId: card.id,
         name: 'Note',
         transform: { x: 0, y: 0, width: 240, height: 16 },
-        text: { content: k.note, fontSize: 12, fontWeight: '500', color: k.color }
+        text: { content: k.note, fontSize: 12, fontWeight: '500', color: k.color },
+        tokenBindings: { 'text.color': 'token_success' }
       });
       card.childIds.push(lbl.id, val.id, note.id);
       kpiRow.childIds.push(card.id);
       allNodes.push(card, lbl, val, note);
     }
 
-    body.childIds.push(header.id, kpiRow.id);
+    // Telemetry Table (AG Grid Component)
+    const tableFrame = createNode('frame', {
+      parentId: body.id,
+      name: 'Infrastructure Telemetry Table',
+      componentId: 'ag-grid-table',
+      transform: { x: 0, y: 0, width: 916, height: 320 },
+      style: {
+        fills: [{ type: 'solid', color: '#131b2c', opacity: 1 }],
+        strokes: [{ color: '#222f47', width: 1 }],
+        cornerRadius: 12
+      },
+      tokenBindings: {
+        'style.fills.0.color': 'token_bg_surface',
+        'style.strokes.0.color': 'token_border_subtle',
+        'style.cornerRadius': 'token_radius_md'
+      },
+      layout: { mode: 'stack-vertical', paddingTop: 18, paddingLeft: 20, paddingRight: 20, paddingBottom: 18, gap: 12 }
+    });
+    const tableTitle = createNode('text', {
+      parentId: tableFrame.id,
+      name: 'Table Header',
+      transform: { x: 0, y: 0, width: 400, height: 22 },
+      text: { content: 'Cluster Node Pools & Allocations (AG Grid)', fontSize: 14, fontWeight: '700', color: '#ffffff' },
+      tokenBindings: { 'text.color': 'token_text_primary' }
+    });
+    tableFrame.childIds.push(tableTitle.id);
+    body.childIds.push(header.id, kpiRow.id, tableFrame.id);
     rootFrame.childIds.push(sidebar.id, body.id);
+    allNodes.push(tableFrame, tableTitle);
 
     return {
       intent: 'Generate Enterprise Cloud SaaS Dashboard',
       explanation: 'Constructed responsive 1200px SaaS dashboard containing navigation sidebar, KPI metric cards, and cloud telemetry headers.',
       operations: [{ op: 'createTree', rootNode: rootFrame, allNodes }]
     };
+  }
   }
 
   synthesizePricingTable() {

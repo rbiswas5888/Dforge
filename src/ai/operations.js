@@ -36,20 +36,27 @@ export class OperationExecutor {
     // Calculate non-overlapping canvas offset so AI-generated designs are placed next to existing designs
     let rootShiftX = 0;
     let rootShiftY = 0;
-    const incomingRoots = list.filter(op => {
+    const incomingRoots = [];
+    for (const op of list) {
       const opType = op.type || op.op;
-      if (opType !== OPERATIONS.CREATE_NODE && opType !== 'createNode') return false;
-      const raw = op.node || op.payload || op;
-      return !raw.parentId;
-    });
+      if (opType === OPERATIONS.CREATE_NODE || opType === 'createNode') {
+        const raw = op.node || op.payload || op;
+        if (!raw.parentId) incomingRoots.push(raw);
+      } else if (opType === 'createTree') {
+        if (op.rootNode) {
+          incomingRoots.push(op.rootNode);
+        } else if (op.allNodes) {
+          const root = op.allNodes.find(n => !n.parentId);
+          if (root) incomingRoots.push(root);
+        }
+      }
+    }
 
     if (incomingRoots.length > 0 && page.rootIds.length > 0) {
-      const minIncomingX = Math.min(...incomingRoots.map(op => {
-        const raw = op.node || op.payload || op;
+      const minIncomingX = Math.min(...incomingRoots.map(raw => {
         return (raw.transform && typeof raw.transform.x === 'number') ? raw.transform.x : 0;
       }));
-      const minIncomingY = Math.min(...incomingRoots.map(op => {
-        const raw = op.node || op.payload || op;
+      const minIncomingY = Math.min(...incomingRoots.map(raw => {
         return (raw.transform && typeof raw.transform.y === 'number') ? raw.transform.y : 0;
       }));
       const nextPos = calculateNonOverlappingRootPosition(page, 1440, 80);
@@ -71,7 +78,12 @@ export class OperationExecutor {
             layout: raw.layout,
             style: raw.style,
             text: raw.text,
-            semanticTag: raw.semanticTag
+            semanticTag: raw.semanticTag,
+            tokenBindings: raw.tokenBindings || raw.variableBindings || {},
+            componentId: raw.componentId || null,
+            variantId: raw.variantId || null,
+            interactions: raw.interactions || [],
+            metadata: raw.metadata || {}
           });
 
           // Offset root containers so they never overlap existing designs
@@ -155,11 +167,16 @@ export class OperationExecutor {
         }
 
         case 'createTree': {
-          // Bulk subtree injection
+          // Bulk subtree injection with non-overlapping offset for root frames
           const allNodes = op.allNodes || [];
           for (const n of allNodes) {
-            page.nodes[n.id] = JSON.parse(JSON.stringify(n));
-            report.createdNodeIds.push(n.id);
+            const cloned = JSON.parse(JSON.stringify(n));
+            if (!cloned.parentId && (rootShiftX !== 0 || rootShiftY !== 0) && cloned.transform) {
+              cloned.transform.x = (cloned.transform.x || 0) + rootShiftX;
+              cloned.transform.y = (cloned.transform.y || 0) + rootShiftY;
+            }
+            page.nodes[cloned.id] = cloned;
+            report.createdNodeIds.push(cloned.id);
           }
           if (op.rootNode && !page.rootIds.includes(op.rootNode.id)) {
             page.rootIds.push(op.rootNode.id);
