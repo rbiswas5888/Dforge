@@ -2144,6 +2144,22 @@ export class DesignForgeApp {
         menuItems.forEach(m => m.classList.remove('open'));
         if (!isOpen) item.classList.add('open');
       });
+
+      // Desktop application behavior: when any menu is open, hovering another menu opens it immediately
+      item.addEventListener('mouseenter', () => {
+        const anyOpen = Array.from(menuItems).some(m => m.classList.contains('open'));
+        if (anyOpen) {
+          menuItems.forEach(m => m.classList.remove('open'));
+          item.classList.add('open');
+        }
+      });
+
+      // Close dropdown when any item inside is clicked
+      item.querySelectorAll('.dropdown-item').forEach(dItem => {
+        dItem.addEventListener('click', () => {
+          menuItems.forEach(m => m.classList.remove('open'));
+        });
+      });
     });
 
     window.addEventListener('click', (event) => {
@@ -2196,6 +2212,7 @@ export class DesignForgeApp {
     document.getElementById('menuDuplicate')?.addEventListener('click', () => this.duplicateSelected());
     document.getElementById('menuDelete')?.addEventListener('click', () => this.deleteSelected());
     document.getElementById('menuSelectAll')?.addEventListener('click', () => this.selectAll());
+    document.getElementById('menuBulkRename')?.addEventListener('click', () => this.openBulkRenameModal());
     document.getElementById('menuMissingFonts')?.addEventListener('click', () => this.openMissingFontsModal());
 
     // View Menu Actions
@@ -2214,6 +2231,9 @@ export class DesignForgeApp {
       if (rh) rh.style.display = this.showRulers ? 'block' : 'none';
       if (rv) rv.style.display = this.showRulers ? 'block' : 'none';
     });
+    document.getElementById('menuOutlineView')?.addEventListener('click', () => this.toggleOutlineView());
+    document.getElementById('menuPixelGrid')?.addEventListener('click', () => this.togglePixelGrid());
+    document.getElementById('menuOpenDfuxWorkspace')?.addEventListener('click', () => this.openDfuxWorkspace());
 
     // Object Menu Actions
     document.getElementById('menuGroup')?.addEventListener('click', () => this.groupSelected());
@@ -2817,7 +2837,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
       const appContainer = document.querySelector('.app-container') || document.body;
       this.dfuxWorkspace.mount(appContainer);
     }
-    const canvasContainer = document.querySelector('.main-content-area') || document.querySelector('.canvas-container') || document.querySelector('main');
+    const canvasContainer = document.querySelector('.main-workspace') || document.querySelector('.main-content-area') || document.querySelector('.canvas-container') || document.querySelector('main');
     if (canvasContainer) {
       canvasContainer.style.display = 'none';
     }
@@ -2830,7 +2850,7 @@ Create a modern enterprise analytics dashboard with real-time KPI metrics and le
     if (this.dfuxWorkspace) {
       this.dfuxWorkspace.hide();
     }
-    const canvasContainer = document.querySelector('.main-content-area') || document.querySelector('.canvas-container') || document.querySelector('main');
+    const canvasContainer = document.querySelector('.main-workspace') || document.querySelector('.main-content-area') || document.querySelector('.canvas-container') || document.querySelector('main');
     if (canvasContainer) {
       canvasContainer.style.display = '';
     }
