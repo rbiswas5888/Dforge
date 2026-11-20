@@ -7,6 +7,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
 import { createServer as createViteServer } from 'vite';
 import { createInitialDocument } from './src/engine/document.js';
 import { CommandEngine } from './src/engine/commands.js';
@@ -15,6 +16,27 @@ import { CollabHub } from './src/collab/server/collab_hub.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Auto-spawn DF-UX Intelligence Python FastAPI backend on port 8000 if available
+const uvicornBin = path.join(__dirname, 'LLM', '.venv', 'bin', 'uvicorn');
+if (fs.existsSync(uvicornBin)) {
+  const healthReq = http.get('http://127.0.0.1:8000/health', () => {});
+  healthReq.on('error', () => {
+    try {
+      const pyProc = spawn(uvicornBin, ['app.main:app', '--host', '127.0.0.1', '--port', '8000'], {
+        cwd: path.join(__dirname, 'LLM'),
+        env: { ...process.env, PYTHONPATH: '.' },
+        stdio: 'ignore'
+      });
+      pyProc.unref();
+      process.on('exit', () => {
+        try { pyProc.kill(); } catch {}
+      });
+    } catch (e) {
+      console.warn('DF-UX auto-spawn notice:', e.message);
+    }
+  });
+}
 
 const sharedDoc = createInitialDocument('DesignForge Platform Default');
 const sharedEngine = new CommandEngine(sharedDoc);
