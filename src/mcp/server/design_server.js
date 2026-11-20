@@ -8,6 +8,7 @@ import { McpServer } from './server.js';
 import { createNode, generateId } from '../../engine/document.js';
 import { ReactCompiler } from '../../engine/compiler.js';
 import { registerDfMcpExtensions } from './df_mcp_extensions.js';
+import { registerIdeMcpExtensions } from './ide_mcp_extensions.js';
 import {
   MCP_PERMISSIONS,
   TOOL_CATEGORIES,
@@ -32,6 +33,7 @@ export class DesignMcpServer extends McpServer {
     this.registerDesignResources();
     this.registerDesignPrompts();
     registerDfMcpExtensions(this);
+    registerIdeMcpExtensions(this);
   }
 
   get doc() {

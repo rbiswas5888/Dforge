@@ -36,7 +36,10 @@ export class CompilerValidator {
     }
 
     // Build component definition set
-    const compSet = new Set((this.doc.components || []).map(c => c.id));
+    const compList = Array.isArray(this.doc.components)
+      ? this.doc.components
+      : Object.values(this.doc.components || {});
+    const compSet = new Set(compList.map(c => c.id));
 
     // Validate each page
     this.doc.pages.forEach((page, pIdx) => {
