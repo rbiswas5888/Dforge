@@ -12,9 +12,9 @@ import {
 import { CommandEngine } from '../src/engine/commands.js';
 import {
   DForgePackageManager,
-  createDForgeAuditHistory,
-  appendDForgeAuditEvent,
-  verifyDForgeAuditChain
+  createPackageIdentity,
+  createAuditEvent,
+  sha256
 } from '../src/engine/dforge_package.js';
 import {
   IDEDiscoveryEngine,
@@ -28,60 +28,61 @@ import { MCP_PERMISSIONS } from '../src/mcp/protocol/types.js';
 describe('Universal Design Package (.dforge v2.0) & Provenance', () => {
   it('initializes audit history and generates valid cryptographic SHA-256 chain', () => {
     const doc = createInitialDocument('Audit Test Doc');
-    const history = createDForgeAuditHistory(doc, { user: 'Test Operator', initialAction: 'DOCUMENT_CREATED' });
+    const manager = new DForgePackageManager(doc, { originalFileName: 'audit_test.dforge' });
+    manager.ensureIdentity(doc, 'audit_test.dforge');
 
-    assert.strictEqual(history.events.length, 1);
-    assert.strictEqual(history.events[0].action, 'DOCUMENT_CREATED');
-    assert.ok(history.events[0].eventHash);
-    assert.strictEqual(history.events[0].prevHash, '0000000000000000000000000000000000000000000000000000000000000000');
+    // First event recorded on creation
+    assert.strictEqual(manager.auditEvents.length, 1);
+    assert.strictEqual(manager.auditEvents[0].eventType, 'PACKAGE_CREATED');
+    assert.ok(manager.auditEvents[0].eventHash);
+    assert.strictEqual(manager.auditEvents[0].previousEventHash, '0'.repeat(64));
 
-    // Append second event
-    const secondEvent = appendDForgeAuditEvent(history, {
-      action: 'TOKENS_MODIFIED',
-      user: 'Test Operator',
-      details: 'Added Mantine color tokens'
+    // Record second edit
+    const secondEvent = manager.recordEdit('TOKENS_MODIFIED', { userId: 'test_analyst' }, {
+      description: 'Added Mantine color tokens'
     });
 
-    assert.strictEqual(history.events.length, 2);
-    assert.strictEqual(secondEvent.prevHash, history.events[0].eventHash);
+    assert.strictEqual(manager.auditEvents.length, 2);
+    assert.strictEqual(secondEvent.previousEventHash, manager.auditEvents[0].eventHash);
 
     // Verify chain integrity
-    const verification = verifyDForgeAuditChain(history);
+    const verification = manager.verifyAuditIntegrity();
     assert.strictEqual(verification.valid, true);
-    assert.strictEqual(verification.totalEvents, 2);
+    assert.strictEqual(verification.count, 2);
     assert.strictEqual(verification.terminalHash, secondEvent.eventHash);
   });
 
   it('detects tampering in the cryptographic audit trail', () => {
     const doc = createInitialDocument('Tamper Test Doc');
-    const history = createDForgeAuditHistory(doc);
-    appendDForgeAuditEvent(history, { action: 'NODE_ADDED', user: 'Attacker' });
+    const manager = new DForgePackageManager(doc, { originalFileName: 'tamper_test.dforge' });
+    manager.ensureIdentity(doc, 'tamper_test.dforge');
+    manager.recordEdit('NODE_ADDED', { userId: 'attacker' }, { node: 'test' });
 
     // Tamper with first event details
-    history.events[0].user = 'Impersonated User';
-    const verification = verifyDForgeAuditChain(history);
+    manager.auditEvents[0].actor.userId = 'impersonated_user';
+    const verification = manager.verifyAuditIntegrity();
 
     assert.strictEqual(verification.valid, false);
-    assert.strictEqual(verification.compromisedAtEventIndex, 0);
+    assert.strictEqual(verification.compromisedIndex, 0);
   });
 
   it('preserves packageId permanence and produces complete .dforge v2.0 manifest and project.md', () => {
     const doc = createInitialDocument('Mission Control');
     const manager = new DForgePackageManager(doc, { originalFileName: 'mission_control.dforge' });
-    const pkg1 = manager.exportPackage();
+    const pkg1 = manager.buildPackageFiles(doc);
 
     assert.ok(pkg1['manifest.json']);
     assert.ok(pkg1['project.md']);
-    assert.ok(pkg1['audit/history.json']);
+    assert.ok(pkg1['audit/audit-manifest.json']);
+    assert.ok(pkg1['audit/events/events-000001.jsonl']);
 
     const manifest1 = JSON.parse(pkg1['manifest.json']);
-    assert.strictEqual(manifest1.packageFormat, 'dforge');
-    assert.strictEqual(manifest1.version, '2.0.0');
-    assert.strictEqual(manifest1.originalFileName, 'mission_control.dforge');
+    assert.strictEqual(manifest1.formatVersion, '2.0');
+    assert.strictEqual(manifest1.identity.originalFileName, 'mission_control.dforge');
     assert.ok(manifest1.packageId);
 
     // Rebuilding preserves packageId
-    const pkg2 = manager.exportPackage();
+    const pkg2 = manager.buildPackageFiles(doc);
     const manifest2 = JSON.parse(pkg2['manifest.json']);
     assert.strictEqual(manifest2.packageId, manifest1.packageId);
     assert.strictEqual(manifest2.createdAt, manifest1.createdAt);
@@ -148,19 +149,13 @@ describe('Phase 9 Extended MCP Tools', () => {
     const engine = new CommandEngine(doc);
     const server = new DesignMcpServer(engine);
 
-    const detectResult = await server.handleCallTool({
-      params: { name: 'df_detect_installed_ides', arguments: {} }
-    }, { grantedScopes: [MCP_PERMISSIONS.DESIGN_READ] });
+    const detectResult = await server.invokeTool('df_detect_installed_ides', {});
+    assert.strictEqual(detectResult.success, true);
+    assert.ok(detectResult.environments.length > 0);
 
-    assert.strictEqual(detectResult.isError, false);
-    assert.ok(detectResult.result.environments.length > 0);
-
-    const capsResult = await server.handleCallTool({
-      params: { name: 'df_get_ide_capabilities', arguments: { ideId: 'antigravity' } }
-    }, { grantedScopes: [MCP_PERMISSIONS.DESIGN_READ] });
-
-    assert.strictEqual(capsResult.isError, false);
-    assert.strictEqual(capsResult.result.capabilities.name, 'Antigravity');
+    const capsResult = await server.invokeTool('df_get_ide_capabilities', { ideId: 'antigravity' });
+    assert.strictEqual(capsResult.success, true);
+    assert.strictEqual(capsResult.capabilities.name, 'Antigravity');
   });
 
   it('executes df_create_dxp_package, df_validate_dxp_package and df_map_design_elements', async () => {
@@ -168,33 +163,19 @@ describe('Phase 9 Extended MCP Tools', () => {
     const engine = new CommandEngine(doc);
     const server = new DesignMcpServer(engine);
 
-    const mapResult = await server.handleCallTool({
-      params: { name: 'df_map_design_elements', arguments: { targetFramework: 'react-mantine' } }
-    }, { grantedScopes: [MCP_PERMISSIONS.DESIGN_READ] });
+    const mapResult = await server.invokeTool('df_map_design_elements', { targetFramework: 'react-mantine' });
+    assert.strictEqual(mapResult.success, true);
+    assert.strictEqual(mapResult.framework, 'react-mantine');
 
-    assert.strictEqual(mapResult.isError, false);
-    assert.strictEqual(mapResult.result.framework, 'react-mantine');
+    const dxpResult = await server.invokeTool('df_create_dxp_package', {});
+    assert.strictEqual(dxpResult.success, true);
+    assert.ok(dxpResult.packageId);
 
-    const dxpResult = await server.handleCallTool({
-      params: { name: 'df_create_dxp_package', arguments: {} }
-    }, { grantedScopes: [MCP_PERMISSIONS.EXPORT_RUN] });
+    const valResult = await server.invokeTool('df_validate_dxp_package', {});
+    assert.strictEqual(valResult.valid, true);
 
-    assert.strictEqual(dxpResult.isError, false);
-    assert.ok(dxpResult.result.packageId);
-
-    const valResult = await server.handleCallTool({
-      params: { name: 'df_validate_dxp_package', arguments: {} }
-    }, { grantedScopes: [MCP_PERMISSIONS.DESIGN_READ] });
-
-    assert.strictEqual(valResult.isError, false);
-    assert.strictEqual(valResult.result.valid, true);
-
-    const transferVal = await server.handleCallTool({
-      params: { name: 'df_validate_design_transfer', arguments: {} }
-    }, { grantedScopes: [MCP_PERMISSIONS.DESIGN_READ] });
-
-    assert.strictEqual(transferVal.isError, false);
-    assert.strictEqual(transferVal.result.status, 'VERIFIED');
-    assert.ok(transferVal.result.fidelityScore >= 0.99);
+    const transferVal = await server.invokeTool('df_validate_design_transfer', {});
+    assert.strictEqual(transferVal.status, 'VERIFIED');
+    assert.ok(transferVal.fidelityScore >= 0.99);
   });
 });

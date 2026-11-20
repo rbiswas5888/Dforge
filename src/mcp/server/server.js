@@ -40,6 +40,12 @@ export class McpServer {
     });
   }
 
+  async invokeTool(name, args = {}) {
+    const tool = this.tools.get(name);
+    if (!tool) throw new Error(`Tool '${name}' not found on server '${this.name}'`);
+    return await tool.handler(args);
+  }
+
   registerResource(definition, handler) {
     if (!definition.uri) throw new Error('Resource must have a URI');
     this.resources.set(definition.uri, {

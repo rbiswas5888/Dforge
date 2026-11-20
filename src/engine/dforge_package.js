@@ -148,8 +148,10 @@ export function generateProjectMarkdown(doc, packageIdentity, auditEvents = []) 
  * Universal DForge Package Manager (v2.0)
  */
 export class DForgePackageManager {
-  constructor(options = {}) {
-    this.packageIdentity = options.identity || null;
+  constructor(docOrOptions = {}, maybeOptions = {}) {
+    const options = (docOrOptions && (docOrOptions.schemaVersion || docOrOptions.pages)) ? maybeOptions : docOrOptions;
+    this.options = options || {};
+    this.packageIdentity = this.options.identity || null;
     this.auditEvents = [];
     this.statistics = {
       totalCommittedEditOperations: 0,
@@ -166,15 +168,16 @@ export class DForgePackageManager {
   /**
    * Initializes or loads a package identity
    */
-  ensureIdentity(doc, fileName = 'Project.dforge') {
+  ensureIdentity(doc, fileName = null) {
+    const targetFileName = fileName || this.options.originalFileName || `${doc.name || 'Project'}.dforge`;
     if (!this.packageIdentity) {
-      this.packageIdentity = createPackageIdentity(fileName, doc.id || 'df_proj_default', 'DesignForge Operator');
+      this.packageIdentity = createPackageIdentity(targetFileName, doc.id || 'df_proj_default', 'DesignForge Operator');
       // Record initial CREATION event
       const creationEvent = createAuditEvent(
         this.packageIdentity,
         'PACKAGE_CREATED',
         { userId: 'operator_admin', application: 'DesignForge AI' },
-        { operation: 'CREATE', fileName, schemaVersion: DFORGE_SPEC_VERSION }
+        { operation: 'CREATE', fileName: targetFileName, schemaVersion: DFORGE_SPEC_VERSION }
       );
       this.auditEvents.push(creationEvent);
       this.statistics.openingSessions += 1;
@@ -270,7 +273,7 @@ export class DForgePackageManager {
    * Builds the complete v2.0 package structure
    */
   buildPackageFiles(doc) {
-    this.ensureIdentity(doc, `${doc.name || 'Project'}.dforge`);
+    this.ensureIdentity(doc, this.options.originalFileName || `${doc.name || 'Project'}.dforge`);
 
     const manifest = {
       packageId: this.packageIdentity.packageId,
